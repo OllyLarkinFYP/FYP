@@ -7,7 +7,7 @@
     "compilefs": "dotnet fable src/renderer/core",
     "build": "npm run compilefs && electron-webpack",
     "package": "npm run build && electron-builder",
-    "postinstall": "dotnet tool restore && npm run compilefs",
+    "postinstall": "dotnet tool restore && paket restore && npm run compilefs",
     "dev": "electron-webpack dev",
     "clean": "rimraf dist/ src/**/*.fs.js src/**/.fable/ src/**/bin/ src/**/obj/"
   },
