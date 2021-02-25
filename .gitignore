@@ -1,7 +1,13 @@
 /node_modules
 /dist
+
+# F#
 /.ionide
-src/renderer/core/obj
-src/renderer/core/bin
-src/renderer/core/**/*.js
-src/renderer/core/.fable
+**/obj
+**/bin
+**/*.fs.js
+**/.fable
+
+# Paket dependency manager
+.paket/
+paket-files/

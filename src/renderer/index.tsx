@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { hello } from './core/core.fs.js';
+import { hello } from './core-logic/core-logic.fs.js';
 
 import './styles.scss';
 

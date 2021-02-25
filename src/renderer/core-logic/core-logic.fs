@@ -1,4 +1,4 @@
-﻿namespace Core
+﻿namespace CoreLogic
 
 module Say =
     let hello name =
