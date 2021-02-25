@@ -9,5 +9,5 @@
 **/.fable
 
 # Paket dependency manager
-.paket/
-paket-files/
+/.paket
+/paket-files
