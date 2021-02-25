@@ -9,7 +9,8 @@
     "package": "npm run build && electron-builder",
     "postinstall": "dotnet tool restore && dotnet paket restore && npm run compilefs",
     "dev": "electron-webpack dev",
-    "clean": "rimraf dist/ src/**/*.fs.js src/**/.fable/ src/**/bin/ src/**/obj/"
+    "clean": "rimraf dist/ src/**/*.fs.js src/**/.fable/ src/**/bin/ src/**/obj/",
+    "test": "dotnet test"
   },
   "repository": {
     "type": "git",
