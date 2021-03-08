@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { hello } from './core-logic/core-logic.fs.js';
 
 import './styles.scss';
 
@@ -9,7 +8,7 @@ const Entry = (props: { name: string }) => {
 
   return (
     <div className='hello'>
-      <h1>{hello(props.name)}</h1>
+      <h1>Hello React!</h1>
       <h3>Counter: {count}</h3>
       <button
         onClick={() => incrementCount(count + 1)}

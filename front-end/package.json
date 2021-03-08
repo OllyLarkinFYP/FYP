@@ -3,14 +3,12 @@
   "version": "1.0.0",
   "description": "A minimal electron-webpack framework using React TypeScript and F# Fable for core application logic",
   "scripts": {
-    "start": "dotnet fable watch src/renderer/core-logic --run npm run dev",
-    "compilefs": "dotnet fable src/renderer/core-logic",
-    "build": "npm run compilefs && electron-webpack",
+    "start": "npm run dev",
+    "build": "electron-webpack",
     "package": "npm run build && electron-builder",
-    "postinstall": "dotnet tool restore && dotnet paket restore && npm run compilefs",
     "dev": "electron-webpack dev",
-    "clean": "rimraf dist/ src/**/*.fs.js src/**/.fable/ src/**/bin/ src/**/obj/",
-    "test": "dotnet test"
+    "clean": "rimraf dist/",
+    "test": ""
   },
   "repository": {
     "type": "git",
