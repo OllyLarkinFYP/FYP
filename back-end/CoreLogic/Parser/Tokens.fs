@@ -1,5 +1,6 @@
 namespace Parser
 
+open System
 open FParsec
 open AST
 open Utils
@@ -90,6 +91,46 @@ module Token =
             isAsciiLetter c || isDigit c || c = '_' || c = '$'
         IdentifierOptions(isAsciiIdStart=isAsciiIdStart, isAsciiIdContinue=isAsciiIdContinue)
         |> identifier
+
+    let pNumber : Parser<NumberT, unit> =
+        let upperAndLower c =
+            if isLower c
+            then [c; Char.ToUpper c]
+            else [Char.ToLower c; c] 
+        let charToInt c =
+            match isDigit c, isLower c with
+            | true, _ -> int c - int '0'
+            | _, true -> int c - int 'a' + 10
+            | _, false -> int c - int 'A' + 10
+        let listToNum dBase lst =
+            lst
+            |> List.rev
+            |> List.indexed
+            |> List.map (fun (i, x) -> (float <| charToInt x) * ((float dBase) ** (float i)) |> uint)
+            |> List.reduce (+)
+        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2) .>>? notFollowedBy (hex <|> pchar '_')
+        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8) .>>? notFollowedBy (hex <|> pchar '_')
+        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10) .>>? notFollowedBy (hex <|> pchar '_')
+        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16) .>>? notFollowedBy (hex <|> pchar '_')
+        let numBase b = 
+            skipChar '\'' >>? opt (anyOf ['s';'S']) .>>? skipAnyOf (upperAndLower b) 
+            |>> function
+            | Some _ -> true
+            | None -> false
+        let numberWithBase =
+            opt decimalValue 
+            .>>.? choice [
+                numBase 'b' .>>.? binaryValue
+                numBase 'o' .>>.? octalValue
+                numBase 'd' .>>.? decimalValue
+                numBase 'h' .>>.? hexValue
+            ] 
+            |>> function
+            | (size, (signed, value)) -> { NumberT.Size = size; Value = value; UnknownBits = []; Signed = signed }
+        let numberWithoutBase =
+            decimalValue
+            |>> fun x -> { NumberT.Size = None; Value = x; UnknownBits = []; Signed = false }
+        numberWithBase <|> numberWithoutBase
 
     let pComment: Parser<unit, unit> =
         let singleLine = skipString "//" .>> skipRestOfLine true
