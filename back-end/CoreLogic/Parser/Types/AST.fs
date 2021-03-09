@@ -240,7 +240,7 @@ type BinaryOperatorT =
     | BitwiseAnd
     | BitwiseOr
     | BitwiseXor
-    | BitwiseEquivalence
+    | BitwiseXnor
     | LogicalRightShift
     | LogicalLeftShift
     | ArithmaticRightShift
