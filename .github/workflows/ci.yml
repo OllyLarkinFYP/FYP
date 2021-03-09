@@ -36,6 +36,7 @@ jobs:
             - name: Build
               run: |
                   cd back-end
+                  dotnet restore
                   dotnet build
 
     build-and-test-front-end:
