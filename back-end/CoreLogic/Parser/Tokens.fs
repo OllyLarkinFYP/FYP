@@ -90,3 +90,8 @@ module Token =
             isAsciiLetter c || isDigit c || c = '_' || c = '$'
         IdentifierOptions(isAsciiIdStart=isAsciiIdStart, isAsciiIdContinue=isAsciiIdContinue)
         |> identifier
+
+    let pComment: Parser<unit, unit> =
+        let singleLine = skipString "//" .>> skipRestOfLine true
+        let multiLine = skipString "/*" .>> skipCharsTillString "*/" true 100000
+        singleLine <|> multiLine
