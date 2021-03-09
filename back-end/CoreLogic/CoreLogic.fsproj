@@ -5,6 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Parser/Types/AST.fs" />
+    <Compile Include="Parser/Utils.fs" />
+    <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
