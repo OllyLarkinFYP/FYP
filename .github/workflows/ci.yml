@@ -63,10 +63,7 @@ jobs:
                   npm run test
 
     build-and-test-back-end:
-        strategy:
-            matrix:
-                os: ["windows-latest", "macos-latest"]
-        runs-on: ${{ matrix.os }}
+        runs-on: "ubuntu-latest"
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
