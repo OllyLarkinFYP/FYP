@@ -249,7 +249,7 @@ type BinaryOperatorT =
 
 // ######### A.8.7 Numbers #########
 
-type NumberT = { Size: uint; Value: uint32; UnknownBits: uint List; Signed: bool }
+type NumberT = { Size: uint option; Value: uint32; UnknownBits: uint List; Signed: bool }
 
 
 // ######### A.9.3 Identifiers ######
