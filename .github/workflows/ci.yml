@@ -36,6 +36,7 @@ jobs:
             - name: Build
               run: |
                   cd back-end
+                  dotnet restore
                   dotnet build
 
     build-and-test-front-end:
@@ -60,3 +61,22 @@ jobs:
               run: |
                   cd front-end
                   npm run test
+
+    build-and-test-back-end:
+        runs-on: "ubuntu-latest"
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+            - name: Install Dotnet
+              uses: actions/setup-dotnet@v1
+              with:
+                  dotnet-version: "5.0.x"
+            - name: Build
+              run: |
+                  cd back-end
+                  dotnet restore
+                  dotnet build
+            - name: Test
+              run: |
+                  cd back-end
+                  dotnet test
