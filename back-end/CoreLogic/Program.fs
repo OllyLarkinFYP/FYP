@@ -1,13 +1,11 @@
-// Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
-
 open System
-
-// Define a function to construct a message to print
-let from whom =
-    sprintf "from %s" whom
+open Parser
+open FParsec
 
 [<EntryPoint>]
 let main argv =
-    let message = from "F#" // Call the function
-    printfn "Hello world %s" message
+    let testString = "always"
+    let parser = Token.Keyword.pAlways
+    let result = run parser testString
+    printfn "%A" result
     0 // return an integer exit code
