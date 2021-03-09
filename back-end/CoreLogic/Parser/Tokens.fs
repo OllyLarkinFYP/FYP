@@ -82,3 +82,11 @@ module Token =
             let pLogicalLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<" LogicalLeftShift
             let pArithmaticRightShift: Parser<BinaryOperatorT, unit> = stringReturnWs ">>>" ArithmaticRightShift
             let pArithmaticLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<<" ArithmaticLeftShift
+
+    let pIdentifier: Parser<string, unit> =
+        let isAsciiIdStart c =
+            isAsciiLetter c || c = '_'
+        let isAsciiIdContinue c =
+            isAsciiLetter c || isDigit c || c = '_' || c = '$'
+        IdentifierOptions(isAsciiIdStart=isAsciiIdStart, isAsciiIdContinue=isAsciiIdContinue)
+        |> identifier
