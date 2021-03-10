@@ -6,7 +6,6 @@ open AST
 open Token
 
 module ConstantExpression =
-
     let private opp = new OperatorPrecedenceParser<ConstantExpressionT, unit, unit>()
 
     let pConstantExpression: Parser<ConstantExpressionT, unit> = opp.ExpressionParser
@@ -74,6 +73,8 @@ module ConstantExpression =
     opp.AddOperator(PrefixOperator("^", spaces, 13, true, uniExpr ReductionXor))
     opp.AddOperator(PrefixOperator("~^", spaces, 13, true, uniExpr ReductionXnor))
     opp.AddOperator(PrefixOperator("^~", spaces, 13, true, uniExpr ReductionXnor))
+
+
 
 module Expression =
     let private opp = new OperatorPrecedenceParser<ExpressionT, unit, unit>()
