@@ -164,7 +164,7 @@ type ConstantRangeExpressionT =
 
 type ConstantExpressionT =
     | Primary of ConstantPrimaryT
-    | UniPrimary of {| Operator: UnaryOperatorT; Primary: ConstantPrimaryT |}
+    | UniExpression of {| Operator: UnaryOperatorT; Expression: ConstantExpressionT |}
     | BinaryExpression of {| LHS: ConstantExpressionT; BinOperator: BinaryOperatorT; RHS: ConstantExpressionT |}
     | CondExpression of {| Condition: ConstantExpressionT; TrueVal: ConstantExpressionT; FalseVal: ConstantExpressionT |}
 
@@ -172,11 +172,9 @@ type RangeExpressionT =
     | SingleVal of ExpressionT
     | DoubleVal of {| LHS: ExpressionT; RHS: ExpressionT |}
 
-type ConditionalExpressionT = { Condition: ExpressionT; TrueVal: ExpressionT; FalseVal: ExpressionT }
-
 type ExpressionT =
     | Primary of PrimaryT
-    | UniPrimary of {| Operator: UnaryOperatorT; Primary: PrimaryT |}
+    | UniExpression of {| Operator: UnaryOperatorT; Expression: ExpressionT |}
     | BinaryExpression of {| LHS: ExpressionT; BinOperator: BinaryOperatorT; RHS: ExpressionT |}
     | CondExpression of {| Condition: ExpressionT; TrueVal: ExpressionT; FalseVal: ExpressionT |}
 

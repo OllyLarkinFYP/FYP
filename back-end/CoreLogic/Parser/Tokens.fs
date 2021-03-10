@@ -91,6 +91,7 @@ module Token =
             isAsciiLetter c || isDigit c || c = '_' || c = '$'
         IdentifierOptions(isAsciiIdStart=isAsciiIdStart, isAsciiIdContinue=isAsciiIdContinue)
         |> identifier
+        .>> spaces
 
     let pNumber : Parser<NumberT, unit> =
         let upperAndLower c =
@@ -130,9 +131,9 @@ module Token =
         let numberWithoutBase =
             decimalValue
             |>> fun x -> { NumberT.Size = None; Value = x; UnknownBits = []; Signed = false }
-        numberWithBase <|> numberWithoutBase
+        (numberWithBase <|> numberWithoutBase) .>> spaces
 
     let pComment: Parser<unit, unit> =
         let singleLine = skipString "//" .>> skipRestOfLine true
         let multiLine = skipString "/*" .>> skipCharsTillString "*/" true 100000
-        singleLine <|> multiLine
+        (singleLine <|> multiLine) .>> spaces
