@@ -160,7 +160,7 @@ type ConstantConcatenationT = ConstantExpressionT List
 
 type ConstantRangeExpressionT =
     | Expr of ConstantExpressionT
-    | ConstRange of {| LHS: ConstantExpressionT; RHS: ConstantExpressionT |}
+    | Range of {| LHS: ConstantExpressionT; RHS: ConstantExpressionT |}
 
 type ConstantExpressionT =
     | Primary of ConstantPrimaryT
@@ -169,8 +169,8 @@ type ConstantExpressionT =
     | CondExpression of {| Condition: ConstantExpressionT; TrueVal: ConstantExpressionT; FalseVal: ConstantExpressionT |}
 
 type RangeExpressionT =
-    | SingleVal of ExpressionT
-    | DoubleVal of {| LHS: ExpressionT; RHS: ExpressionT |}
+    | Expr of ExpressionT
+    | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
 
 type ExpressionT =
     | Primary of PrimaryT
