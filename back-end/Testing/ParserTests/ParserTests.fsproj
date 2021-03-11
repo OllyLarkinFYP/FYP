@@ -11,6 +11,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Utils\Utils.fs" />
+    <Compile Include="ExpressionTests.fs" />
     <Compile Include="TokenTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
