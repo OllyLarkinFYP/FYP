@@ -266,6 +266,6 @@ module LangConstructs =
             pProceduralTimingControlStatement |>> StatementT.ProceduralTimingControl
             pConditionalStatement |>> StatementT.Conditional
             pCaseStatement |>> StatementT.Case
-            pBlockingAssignment |>> StatementT.BlockingAssignment
-            pNonBlockingAssignment |>> StatementT.NonblockingAssignment
+            pBlockingAssignment .>> Symbol.pSemiColon |>> StatementT.BlockingAssignment
+            pNonBlockingAssignment .>> Symbol.pSemiColon |>> StatementT.NonblockingAssignment
         ]
