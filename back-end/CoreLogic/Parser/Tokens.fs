@@ -46,45 +46,6 @@ module Token =
         let pOpenCBrac: Parser<unit, unit> = skipCharWs '{'
         let pCloseCBrac: Parser<unit, unit> = skipCharWs '}'
 
-    module Operator =
-        module Unary =
-            let pPlus: Parser<UnaryOperatorT, unit> = charReturnWs '+' UnaryOperatorT.Plus
-            let pMinus: Parser<UnaryOperatorT, unit> = charReturnWs '-' UnaryOperatorT.Minus
-            let pLogicalNegation: Parser<UnaryOperatorT, unit> = charReturnWs '!' LogicalNegation
-            let pBitwiseNegation: Parser<UnaryOperatorT, unit> = charReturnWs '~' BitwiseNegation
-            let pReductionAnd: Parser<UnaryOperatorT, unit> = charReturnWs '&' ReductionAnd
-            let pReductionNand: Parser<UnaryOperatorT, unit> = stringReturnWs "~&" ReductionNand
-            let pReductionOr: Parser<UnaryOperatorT, unit> = charReturnWs '|' ReductionOr
-            let pReductionNor: Parser<UnaryOperatorT, unit> = stringReturnWs "~|" ReductionNor
-            let pReductionXor: Parser<UnaryOperatorT, unit> = charReturnWs '^' ReductionXor
-            let pReductionXnor: Parser<UnaryOperatorT, unit> = stringReturnChoiceWs ["~^"; "^~"] ReductionXnor
-
-        module Binary =
-            let pPlus: Parser<BinaryOperatorT, unit> = charReturnWs '+' Plus
-            let pMinus: Parser<BinaryOperatorT, unit> = charReturnWs '-' Minus
-            let pMultiply: Parser<BinaryOperatorT, unit> = charReturnWs '*' Multiply
-            let pDivide: Parser<BinaryOperatorT, unit> = charReturnWs '/' Divide
-            let pModulus: Parser<BinaryOperatorT, unit> = charReturnWs '%' Modulus
-            let pLogicalEquality: Parser<BinaryOperatorT, unit> = stringReturnWs "==" LogicalEquality
-            let pLogicalInequality: Parser<BinaryOperatorT, unit> = stringReturnWs "!=" LogicalInequality
-            let pCaseEquality: Parser<BinaryOperatorT, unit> = stringReturnWs "===" CaseEquality
-            let pCaseInequality: Parser<BinaryOperatorT, unit> = stringReturnWs "!==" CaseInequality
-            let pLogicalAnd: Parser<BinaryOperatorT, unit> = stringReturnWs "&&" LogicalAnd
-            let pLogicalOr: Parser<BinaryOperatorT, unit> = stringReturnWs "||" LogicalOr
-            let pPower: Parser<BinaryOperatorT, unit> = stringReturnWs "**" Power
-            let pLessThan: Parser<BinaryOperatorT, unit> = charReturnWs '<' LessThan
-            let pLessThanOrEqual: Parser<BinaryOperatorT, unit> = stringReturnWs "<=" LessThanOrEqual
-            let pGreaterThan: Parser<BinaryOperatorT, unit> = charReturnWs '>' GreaterThan
-            let pGreaterThanOrEqual: Parser<BinaryOperatorT, unit> = stringReturnWs ">=" GreaterThanOrEqual
-            let pBitwiseAnd: Parser<BinaryOperatorT, unit> = charReturnWs '&' BitwiseAnd
-            let pBitwiseOr: Parser<BinaryOperatorT, unit> = charReturnWs '|' BitwiseOr
-            let pBitwiseXor: Parser<BinaryOperatorT, unit> = charReturnWs '^' BitwiseXor
-            let pBitwiseXnor: Parser<BinaryOperatorT, unit> = stringReturnChoiceWs ["~^"; "^~"] BitwiseXnor
-            let pLogicalRightShift: Parser<BinaryOperatorT, unit> = stringReturnWs ">>" LogicalRightShift
-            let pLogicalLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<" LogicalLeftShift
-            let pArithmaticRightShift: Parser<BinaryOperatorT, unit> = stringReturnWs ">>>" ArithmaticRightShift
-            let pArithmaticLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<<" ArithmaticLeftShift
-
     let pIdentifier: Parser<string, unit> =
         let isAsciiIdStart c =
             isAsciiLetter c || c = '_'
