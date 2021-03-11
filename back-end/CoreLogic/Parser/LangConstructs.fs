@@ -122,7 +122,7 @@ module LangConstructs =
         Keyword.pAssign >>. sepBy1 pNetAssignment Symbol.pComma .>> Symbol.pSemiColon
 
     let pRange = 
-        Symbol.pOpenSBrac >>. pConstantExpression .>> Symbol.pSemiColon .>>. pConstantExpression .>> Symbol.pCloseSBrac
+        Symbol.pOpenSBrac >>. pConstantExpression .>> Symbol.pColon .>>. pConstantExpression .>> Symbol.pCloseSBrac
         |>> function
         | msb, lsb -> { RangeT.MSB = msb; LSB = lsb}
 
