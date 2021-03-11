@@ -186,7 +186,7 @@ type ConstantPrimaryT =
 
 type PrimaryT =
     | Number of NumberT
-    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT |}
+    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT option |}
     | Concat of ConcatenationT
     | Brackets of ExpressionT
 

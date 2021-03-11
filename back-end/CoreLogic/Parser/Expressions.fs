@@ -95,7 +95,7 @@ module Expression =
         pNumber |>> Number
         Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac |>> Brackets
         pConcatenation |>> PrimaryT.Concat
-        pIdentifier .>> Symbol.pOpenSBrac .>>. pRangeExpression .>> Symbol.pCloseSBrac |>> fun (iden, range) ->
+        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
             PrimaryT.Ranged {| Name = iden; Range = range |}
     ] |>> Primary
 
