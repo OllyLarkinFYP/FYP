@@ -42,7 +42,7 @@ module LangConstructs =
     let pCaseItem: Parser<CaseItemT,unit> = 
         choice [
             Keyword.pDefault >>. opt Symbol.pColon >>. pStatementOrNull |>> CaseItemT.Default
-            sepBy1 pExpression Symbol.pComma .>> Symbol.pColon .>>. pStatementOrNull |>> fun (exps, s) ->
+            sepBy1 pExpression Symbol.pComma .>>? Symbol.pColon .>>. pStatementOrNull |>> fun (exps, s) ->
                 CaseItemT.Item {| Elems = exps; Body = s |}
         ]
 
