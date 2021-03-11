@@ -161,12 +161,12 @@ module LangConstructs =
                 Keyword.pLogic >>% pInputDeclarationIntermediate.Logic
                 opt Keyword.pWire >>% pInputDeclarationIntermediate.Wire
             ]
-        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers
+        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((pInputDeclarationIntermediate.Logic, signed), range), idens -> 
-            InputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Names = idens |}
-        | ((pInputDeclarationIntermediate.Wire, signed), range), idens -> 
-            InputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Names = idens |}
+        | ((pInputDeclarationIntermediate.Logic, signed), range), iden -> 
+            InputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
+        | ((pInputDeclarationIntermediate.Wire, signed), range), iden -> 
+            InputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
        
     type private pOutputDeclarationIntermediate =
         | Logic
@@ -180,14 +180,14 @@ module LangConstructs =
                 Keyword.pReg >>% pOutputDeclarationIntermediate.Reg
                 opt Keyword.pWire >>% pOutputDeclarationIntermediate.Wire
             ]
-        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers
+        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((pOutputDeclarationIntermediate.Logic, signed), range), idens -> 
-            OutputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Names = idens |}
-        | ((pOutputDeclarationIntermediate.Reg, signed), range), idens -> 
-            OutputDeclarationT.RegDec {| Range = range; Signed = Option.isSome signed; Names = idens |}
-        | ((pOutputDeclarationIntermediate.Wire, signed), range), idens -> 
-            OutputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Names = idens |}
+        | ((pOutputDeclarationIntermediate.Logic, signed), range), iden -> 
+            OutputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
+        | ((pOutputDeclarationIntermediate.Reg, signed), range), iden -> 
+            OutputDeclarationT.RegDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
+        | ((pOutputDeclarationIntermediate.Wire, signed), range), iden -> 
+            OutputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
 
     let pPortDeclaration =
         choice [

@@ -43,13 +43,13 @@ type ModuleOrGenerateItemDeclarationT =
 // ######### A.2.1.2 Port Declarations #########
 
 type InputDeclarationT = 
-    | WireDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
-    | LogicDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
+    | WireDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
+    | LogicDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
 
 type OutputDeclarationT =
-    | WireDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
-    | RegDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
-    | LogicDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
+    | WireDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
+    | RegDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
+    | LogicDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
 
 
 // ######### A.2.1.3 Type Declaration #########

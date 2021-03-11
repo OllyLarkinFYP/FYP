@@ -109,7 +109,10 @@ endmodule
 
 [<EntryPoint>]
 let main argv =
-    let parser = LangConstructs.pSourceText false
-    let result = run parser program
+    // let parser = LangConstructs.pSourceText false
+    // let result = run parser program
+    let testStr = "(input wire clk, input wire test)"
+    let parser = LangConstructs.pListOfPortDeclarations
+    let result = run parser testStr
     printfn "%A" result
     0 // return an integer exit code
