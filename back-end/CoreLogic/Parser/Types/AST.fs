@@ -43,22 +43,22 @@ type ModuleOrGenerateItemDeclarationT =
 // ######### A.2.1.2 Port Declarations #########
 
 type InputDeclarationT = 
-    | WireDec of {| Range: RangeT; Names: IdentifierT List |}
-    | LogicDec of {| Range: RangeT; Names: IdentifierT List |}
+    | WireDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
+    | LogicDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
 
 type OutputDeclarationT =
-    | WireDec of {| Range: RangeT; Names: IdentifierT List |}
-    | RegDec of {| Range: RangeT; Names: IdentifierT List |}
-    | LogicDec of {| Range: RangeT; Names: IdentifierT List |}
+    | WireDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
+    | RegDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
+    | LogicDec of {| Range: RangeT option; Signed: bool; Names: IdentifierT List |}
 
 
 // ######### A.2.1.3 Type Declaration #########
 
-type NetDeclarationT = { Range: RangeT; Names: IdentifierT List }
+type NetDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
 
-type RegDeclarationT = { Range: RangeT; Names: IdentifierT List }
+type RegDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
 
-type LogicDeclarationT = { Range: RangeT; Names: IdentifierT List }
+type LogicDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
 
 
 // ######### A.2.5 Declaration Ranges #########
@@ -74,7 +74,7 @@ type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT Lis
 
 type PortConnectionT =
     | Unnamed of ExpressionT
-    | Named of {| Name: IdentifierT; Value: ExpressionT |}
+    | Named of {| Name: IdentifierT; Value: ExpressionT option |}
 
 
 // ######### A.6.1 Continuous Assignment Statements #########
@@ -118,22 +118,20 @@ type StatementOrNullT = StatementT Option
 type ProceduralTimingControlStatementT = { Control: EventControlT; Statement: StatementOrNullT }
 
 /// Empty list means it is using '*'
-type EventControlT = EventExpressionT List
+type EventControlT = 
+    | EventList of EventExpressionT List
+    | Star
 
 type EventExpressionT = 
-    | Nothing of ExpressionT
     | Posedge of ExpressionT
     | Negedge of ExpressionT
 
 
 // ######### A.6.6 Conditional Statements #########
 
-type ConditionalStatementT =
-    | IfElseIf of IfElseIfStatementT
-    | IfElse of {| Condition: ExpressionT; Body: StatementOrNullT; ElseBody: StatementOrNullT Option |}
-
-type IfElseIfStatementT = {
+type ConditionalStatementT = {
     Condition: ExpressionT
+    Body: StatementOrNullT
     ElseIf: {| Condition: ExpressionT; Body: StatementOrNullT |} List
     ElseBody: StatementOrNullT Option
 }
@@ -201,7 +199,7 @@ type NetLValueT =
 
 type VariableLValueT =
     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
-    | Concat of VariableLValueT
+    | Concat of VariableLValueT list
 
 
 // ######### A.8.6 Operators #########

@@ -11,6 +11,7 @@ module Token =
         let pAssign: Parser<unit, unit> = skipStrWs "assign"
         let pBegin: Parser<unit, unit> = skipStrWs "begin"
         let pCase: Parser<unit, unit> = skipStrWs "case"
+        let pDefault: Parser<unit, unit> = skipStrWs "dfault"
         let pElse: Parser<unit, unit> = skipStrWs "else"
         let pEnd: Parser<unit, unit> = skipStrWs "end"
         let pEndCase: Parser<unit, unit> = skipStrWs "endcase"
@@ -28,7 +29,7 @@ module Token =
         let pSigned: Parser<unit, unit> = skipStrWs "signed"
         let pWire: Parser<unit, unit> = skipStrWs "wire"
 
-    module Symbols =
+    module Symbol =
         let pSemiColon: Parser<unit, unit> = skipCharWs ';'
         let pColon: Parser<unit, unit> = skipCharWs ':'
         let pComma: Parser<unit, unit> = skipCharWs ','

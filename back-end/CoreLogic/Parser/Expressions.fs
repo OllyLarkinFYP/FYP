@@ -11,10 +11,10 @@ module ConstantExpression =
     let pConstantExpression: Parser<ConstantExpressionT, unit> = opp.ExpressionParser
 
     let pConstantConcatenation: Parser<ConstantConcatenationT, unit> =
-        Symbols.pOpenCBrac >>. sepBy1 pConstantExpression Symbols.pComma .>> Symbols.pCloseCBrac
+        Symbol.pOpenCBrac >>. sepBy1 pConstantExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
     let pConstantRangeExpression: Parser<ConstantRangeExpressionT, unit> =
-        pConstantExpression .>>. opt (Symbols.pColon >>. pConstantExpression)
+        pConstantExpression .>>. opt (Symbol.pColon >>. pConstantExpression)
         |>> function
         | (a, Some b) -> ConstantRangeExpressionT.Range {| LHS = a; RHS = b |}
         | (a, None) -> ConstantRangeExpressionT.Expr a
@@ -22,7 +22,7 @@ module ConstantExpression =
     // Constant Primary parsing
     opp.TermParser <- choice [
         pNumber |>> ConstantPrimaryT.Number
-        Symbols.pOpenRBrac >>. pConstantExpression .>> Symbols.pCloseRBrac |>> ConstantPrimaryT.Brackets
+        Symbol.pOpenRBrac >>. pConstantExpression .>> Symbol.pCloseRBrac |>> ConstantPrimaryT.Brackets
         pConstantConcatenation |>> ConstantPrimaryT.Concat
     ] |>> ConstantExpressionT.Primary
 
@@ -82,10 +82,10 @@ module Expression =
     let pExpression: Parser<ExpressionT, unit> = opp.ExpressionParser
 
     let pConcatenation: Parser<ConcatenationT, unit> =
-        Symbols.pOpenCBrac >>. sepBy1 pExpression Symbols.pComma .>> Symbols.pCloseCBrac
+        Symbol.pOpenCBrac >>. sepBy1 pExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
     let pRangeExpression: Parser<RangeExpressionT, unit> =
-        pExpression .>>. opt (Symbols.pColon >>. pExpression)
+        pExpression .>>. opt (Symbol.pColon >>. pExpression)
         |>> function
         | (a, Some b) -> Range {| LHS = a; RHS = b |}
         | (a, None) -> Expr a
@@ -93,9 +93,9 @@ module Expression =
     // Constant Primary parsing
     opp.TermParser <- choice [
         pNumber |>> Number
-        Symbols.pOpenRBrac >>. pExpression .>> Symbols.pCloseRBrac |>> Brackets
+        Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac |>> Brackets
         pConcatenation |>> PrimaryT.Concat
-        pIdentifier .>> Symbols.pOpenSBrac .>>. pRangeExpression .>> Symbols.pCloseSBrac |>> fun (iden, range) ->
+        pIdentifier .>> Symbol.pOpenSBrac .>>. pRangeExpression .>> Symbol.pCloseSBrac |>> fun (iden, range) ->
             PrimaryT.Ranged {| Name = iden; Range = range |}
     ] |>> Primary
 
