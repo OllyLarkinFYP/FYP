@@ -180,7 +180,7 @@ module LangConstructs =
                 Keyword.pReg >>% pOutputDeclarationIntermediate.Reg
                 opt Keyword.pWire >>% pOutputDeclarationIntermediate.Wire
             ]
-        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
         | ((pOutputDeclarationIntermediate.Logic, signed), range), iden -> 
             OutputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
