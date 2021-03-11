@@ -245,7 +245,7 @@ module LangConstructs =
     let pModuleDeclaration =
         // first keyword, identifier must be backtracable to catch second option
         let modDec1 = 
-            Keyword.pModule >>? pIdentifier .>>.? pListOfPorts .>> Symbol.pSemiColon .>>. many pModuleItem .>> Keyword.pEndModule
+            Keyword.pModule >>? pIdentifier .>>.? attempt pListOfPorts .>> Symbol.pSemiColon .>>. many pModuleItem .>> Keyword.pEndModule
             |>> function
             | ((iden, ports), moduleItems) -> ModDec1 {| Name = iden; Ports = ports; Body = moduleItems |}
         let modDec2 =
