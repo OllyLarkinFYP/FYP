@@ -3,6 +3,9 @@ namespace rec Netlist
 open System
 open AST
 
+/// Different modules listed with their names as the key
+type NetlistCollection = Map<string,Netlist>
+
 type Netlist = 
     { name: string
       inputs: string array
