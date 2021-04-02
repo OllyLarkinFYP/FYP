@@ -9,6 +9,7 @@
     <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Parser/Expressions.fs" />
     <Compile Include="Parser/LangConstructs.fs" />
+    <Compile Include="Compiler/Types/Netlist.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

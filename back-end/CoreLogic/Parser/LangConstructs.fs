@@ -108,7 +108,7 @@ module LangConstructs =
         Keyword.pBegin >>. many pStatement .>> Keyword.pEnd
 
     let pAlwaysConstruct: Parser<AlwaysConstructT,unit> = 
-        Keyword.pAlways >>. pStatement
+        Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
         Keyword.pInitial >>. pStatement

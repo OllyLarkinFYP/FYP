@@ -88,7 +88,7 @@ type NetAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
 type InitialConstructT = StatementT
 
-type AlwaysConstructT = StatementT
+type AlwaysConstructT = ProceduralTimingControlStatementT
 
 type BlockingAssignmentT = { LHS: VariableLValueT; RHS: ExpressionT }
 
