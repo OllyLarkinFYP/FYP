@@ -2,6 +2,7 @@ namespace rec Netlist
 
 open System
 open AST
+open CommonTypes
 
 /// Different modules listed with their names as the key
 type NetlistCollection = Map<string,Netlist>
@@ -35,7 +36,7 @@ type Output =
 
 type Range = 
     | Single
-    | Ranged of uint * uint
+    | Ranged of SizeT * SizeT
 
 type Connection = 
     { myRange: Range

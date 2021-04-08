@@ -3,12 +3,13 @@ namespace Compiler
 open System
 open AST
 open Netlist
+open CommonTypes
 
 module Helpers =
 
     module rec EvalConstExpr =
 
-        type Value = { value: uint; size: uint }
+        type Value = { value: NumT; size: SizeT }
 
         let evalConstExpr (expr: ConstantExpressionT) : Value =
             // match expr with
@@ -50,7 +51,7 @@ module Helpers =
                             | Some r ->
                                 let msb = EvalConstExpr.evalConstExpr r.MSB
                                 let lsb = EvalConstExpr.evalConstExpr r.MSB
-                                Ranged (msb.value, lsb.value)
+                                Ranged (msb.value |> SizeT.CastUInt64, lsb.value |> SizeT.CastUInt64)
                         (name, range)
                     match i with
                     | InputDeclarationT.WireDec d -> getInfo d
@@ -78,7 +79,7 @@ module Helpers =
                             | Some r ->
                                 let msb = EvalConstExpr.evalConstExpr r.MSB
                                 let lsb = EvalConstExpr.evalConstExpr r.MSB
-                                Ranged (msb.value, lsb.value)
+                                Ranged (msb.value |> SizeT.CastUInt64, lsb.value |> SizeT.CastUInt64)
                         (name, range)
                     match i with
                     | OutputDeclarationT.WireDec d -> getInfo d
