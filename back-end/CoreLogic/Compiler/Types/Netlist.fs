@@ -8,8 +8,8 @@ type NetlistCollection = Map<string,Netlist>
 
 type Netlist = 
     { name: string
-      inputs: string array
-      outputs: string array
+      inputs: (string * Range) array
+      outputs: (string * Range) array
       /// Map from instance name to node
       nodes: Map<string,Node> }
 

@@ -4,12 +4,16 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CommonTypes.fs" />
     <Compile Include="Parser/Types/AST.fs" />
+    <Compile Include="Compiler/Types/Netlist.fs" />
+    <Compile Include="Helpers/OverflowSafeOps.fs" />
     <Compile Include="Parser/Utils.fs" />
     <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Parser/Expressions.fs" />
     <Compile Include="Parser/LangConstructs.fs" />
-    <Compile Include="Compiler/Types/Netlist.fs" />
+    <Compile Include="Compiler/Helpers.fs" />
+    <Compile Include="Compiler/Compiler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
