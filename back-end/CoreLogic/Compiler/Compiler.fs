@@ -15,10 +15,11 @@ module rec Compiler =
             |> function
             | Error e -> Error e
             | Ok nodes -> 
+                let inputs, outputs = getPorts m.ModDec
                 { Netlist.name = getModName m.ModDec
-                  inputs = getModInputs m.ModDec
-                  outputs = getModOutputs m.ModDec
+                  inputs = inputs
+                  outputs = outputs
                   nodes = nodes } |> Ok
 
     let compileModDecBody (modDec: ModuleDeclarationT) : Result<Map<string,Node>,string> = 
-        raise <| NotImplementedException()
+        raise <| NotImplementedException() // TODO: implement

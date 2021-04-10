@@ -36,7 +36,7 @@ type Output =
 
 type Range = 
     | Single
-    | Ranged of SizeT * SizeT
+    | Ranged of uint32 * uint32
 
 type Connection = 
     { myRange: Range
