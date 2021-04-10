@@ -120,14 +120,17 @@ module UART_TX(
 endmodule
 "
 
-let testStr = """0 ? 2 : 3"""
+let testStr = """& 3'd7 + 86 / 3 * 2"""
 
 [<EntryPoint>]
 let main argv =
     // let parser = pSourceText false
     // let result = run parser program
     let parser = pConstantExpression
+    let time = Diagnostics.Stopwatch.StartNew()
     let ast = run parser testStr
+    time.Stop()
+    printfn "Time taken: %i" time.ElapsedMilliseconds
     match ast with
     | Success (res,_,_) -> 
       let value = ConstExprEval.eval res

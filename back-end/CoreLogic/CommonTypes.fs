@@ -38,14 +38,14 @@ type VNum(value: uint64, size: uint32) =
     static member get_One () = VNum 1
     
     member this.reduce (operator: VNum -> VNum -> VNum) =
-        let rec reduceRec (o: VNum -> VNum -> VNum) (i: VNum) (size: int) =
+        let rec reduceRec (o: VNum -> VNum -> VNum) (i: VNum) (size: uint32) =
             match size with
-            | 1 -> i
+            | 1u -> VNum(i.value, 1u)
             | _ -> 
-                let bit = i &&& VNum(1UL,1u)
-                reduceRec o (i >>> 1) (size - 1)
+                let bit = VNum((i &&& VNum(1UL,1u)).value, 1u)
+                reduceRec o (i >>> 1) (size - 1u)
                 |> o bit
-        reduceRec operator this width 
+        reduceRec operator this this.size 
 
     static member concat (nums: VNum list) =
         let out = 
