@@ -13,6 +13,7 @@ type VNum(value: uint64, size: uint32) =
     new(v: int, s: int) = VNum(uint64 v, uint32 s)
     new(c: char) = VNum(uint64 c, 4u)
     new(i: int) = VNum(uint64 i, 32u)
+    new(b: bool) = if b then VNum(1UL,1u) else VNum(0UL,1u)
 
     member this.trim () = 
         let mask = 
@@ -20,11 +21,20 @@ type VNum(value: uint64, size: uint32) =
             ||> FSharp.Core.Operators.(-)
         VNum(this.value &&& mask, this.size)
 
+    member this.toBool () =
+        if this.value = 0UL
+        then false
+        else true
+
+    member this.toInt () = int this.value
+
     override this.ToString() =
-        "{ val: " + this.value.ToString() + ", size: " + this.size.ToString() + " }"
+        // "{ val: " + this.value.ToString() + ", size: " + this.size.ToString() + " }"
+        this.size.ToString() + "'d" + this.value.ToString()
 
     static member defaultSize = 32u
 
+    // Allows use in the 'pown' function
     static member get_One () = VNum 1
     
     member this.reduce (operator: VNum -> VNum -> VNum) =
@@ -36,6 +46,15 @@ type VNum(value: uint64, size: uint32) =
                 reduceRec o (i >>> 1) (size - 1)
                 |> o bit
         reduceRec operator this width 
+
+    static member concat (nums: VNum list) =
+        let out = 
+            nums
+            |> List.reduce (fun a b -> 
+                let newSize = a.size + b.size
+                let newVal = (a.value <<< int b.size) ||| b.trim().value
+                VNum(newVal, newSize))
+        out.trim()
 
     override this.Equals other =
         match other with
@@ -80,7 +99,7 @@ type VNum(value: uint64, size: uint32) =
     static member (-) (num1: VNum, num2: VNum) =
         let newVal =
             (num1.value, num2.value)
-            ||> FSharp.Core.Operators.(+)
+            ||> FSharp.Core.Operators.(-)
         let newSize = max num1.size num2.size
         VNum(newVal, newSize)
 
@@ -121,12 +140,3 @@ type VNum(value: uint64, size: uint32) =
 
     static member (|||) (num1: VNum, num2: VNum) =
         VNum(num1.value ||| num2.value, max num1.size num2.size)
-
-    static member concat (nums: VNum list) =
-        let out = 
-            nums
-            |> List.reduce (fun a b -> 
-                let newSize = a.size + b.size
-                let newVal = (a.value <<< int b.size) ||| b.trim().value
-                VNum(newVal, newSize))
-        out.trim()
