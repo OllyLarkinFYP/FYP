@@ -37,6 +37,25 @@ type VNum(value: uint64, size: uint32) =
                 |> o bit
         reduceRec operator this width 
 
+    override this.Equals other =
+        match other with
+        | :? VNum as num -> (this :> IEquatable<_>).Equals num
+        | _ -> false
+
+    override this.GetHashCode() = this.value.GetHashCode()
+
+    interface IEquatable<VNum> with
+        member this.Equals other = other.value.Equals this.value
+
+    interface IComparable with
+        member this.CompareTo other =
+            match other with
+            | :? VNum as num -> (this :> IComparable<_>).CompareTo num
+            | _ -> -1
+
+    interface IComparable<VNum> with
+        member this.CompareTo other = other.value.CompareTo this.value
+
     // *********** UNARY OPS ***********
     static member (~-) (num: VNum) = 
         ~~~num + VNum(1UL,32u)
