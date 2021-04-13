@@ -66,10 +66,7 @@ module rec ConstExprEval =
         | ArithmaticLeftShift -> lhs <<< rhs.toInt()    // TODO: same as above
 
     let evalConstCond (cond: ConstantExpressionT) (trueExpr: ConstantExpressionT) (falseExpr: ConstantExpressionT) = 
-        let cond = eval cond
-        let trueNum = eval trueExpr
-        let falseNum = eval falseExpr
-        if (cond.toBool())
-        then trueNum
-        else falseNum
+        if ((eval cond).toBool())
+        then eval trueExpr
+        else eval falseExpr
   
