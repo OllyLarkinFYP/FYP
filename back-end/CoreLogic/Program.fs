@@ -133,7 +133,7 @@ let main argv =
     printfn "Time taken: %i" time.ElapsedMilliseconds
     match ast with
     | Success (res,_,_) -> 
-      let value = ConstExprEval.eval res
+      let value = ConstExprEval.evalConstExpr res
       printfn "%A" value
     | _ -> printfn "Parsing failed"
     0 // return an integer exit code

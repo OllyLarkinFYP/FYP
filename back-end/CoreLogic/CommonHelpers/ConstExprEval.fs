@@ -5,40 +5,41 @@ open CommonTypes
 open AST
 
 module rec ConstExprEval =
-    let eval (expr: ConstantExpressionT) : VNum =
+    let evalConstExpr (expr: ConstantExpressionT) : VNum =
         match expr with
         | ConstantExpressionT.Primary ex -> evalConstPrimary ex
         | ConstantExpressionT.UniExpression ex -> evalConstUni ex.Operator ex.Expression
         | ConstantExpressionT.BinaryExpression ex -> evalConstBin ex.BinOperator ex.LHS ex.RHS
         | ConstantExpressionT.CondExpression ex -> evalConstCond ex.Condition ex.TrueVal ex.FalseVal
 
-    let evalConstPrimary (expr: ConstantPrimaryT) : VNum =
+    let private evalConstPrimary (expr: ConstantPrimaryT) : VNum =
         match expr with
         | ConstantPrimaryT.Number n -> VNum(n.Value, Option.defaultValue VNum.defaultSize n.Size)
-        | ConstantPrimaryT.Brackets ex -> eval ex
+        | ConstantPrimaryT.Brackets ex -> evalConstExpr ex
         | ConstantPrimaryT.Concat c -> 
             // TODO: add checks for size of concat (dont want size to overflow)
             c
-            |> List.map eval
+            |> List.map evalConstExpr
             |> VNum.concat
 
-    let evalConstUni (op: UnaryOperatorT) (expr: ConstantExpressionT) = 
-        let num = eval expr
+    let private evalConstUni (op: UnaryOperatorT) (expr: ConstantExpressionT) = 
+        let num = evalConstExpr expr
+        let negate a = if a = VNum(0, 1) then VNum(1, 1) else VNum(0, 1)
         match op with
         | UnaryOperatorT.Plus -> num
         | UnaryOperatorT.Minus -> - num
         | UnaryOperatorT.LogicalNegation -> if num = VNum(0, 1) then VNum(1, 1) else VNum(0, 1)
         | UnaryOperatorT.BitwiseNegation -> ~~~ num
         | UnaryOperatorT.ReductionAnd -> num.reduce (&&&) 
-        | UnaryOperatorT.ReductionNand -> (num.reduce (&&&)) |> (fun a -> if a = VNum(0, 1) then VNum(1, 1) else VNum(0, 1))
+        | UnaryOperatorT.ReductionNand -> (num.reduce (&&&)) |> negate
         | UnaryOperatorT.ReductionOr -> num.reduce (|||)
-        | UnaryOperatorT.ReductionNor -> (num.reduce (|||)) |> (fun a -> if a = VNum(0, 1) then VNum(1, 1) else VNum(0, 1))
+        | UnaryOperatorT.ReductionNor -> (num.reduce (|||)) |> negate
         | UnaryOperatorT.ReductionXor -> num.reduce (^^^)
-        | UnaryOperatorT.ReductionXnor -> (num.reduce (^^^)) |> (fun a -> if a = VNum(0, 1) then VNum(1, 1) else VNum(0, 1))
+        | UnaryOperatorT.ReductionXnor -> (num.reduce (^^^)) |> negate
 
-    let evalConstBin (op: BinaryOperatorT) (expr1: ConstantExpressionT) (expr2: ConstantExpressionT) = 
-        let lhs = eval expr1
-        let rhs = eval expr2
+    let private evalConstBin (op: BinaryOperatorT) (expr1: ConstantExpressionT) (expr2: ConstantExpressionT) = 
+        let lhs = evalConstExpr expr1
+        let rhs = evalConstExpr expr2
         match op with
         | Plus -> lhs + rhs
         | Minus -> lhs - rhs
@@ -62,11 +63,11 @@ module rec ConstExprEval =
         | BitwiseXnor -> ~~~ (lhs ^^^ rhs)
         | LogicalRightShift -> lhs >>> rhs.toInt()
         | LogicalLeftShift -> lhs <<< rhs.toInt()
-        | ArithmaticRightShift -> lhs >>> rhs.toInt()   // TODO: make arithmatic - check its actually needed
-        | ArithmaticLeftShift -> lhs <<< rhs.toInt()    // TODO: same as above
+        | ArithmeticRightShift -> lhs >>> rhs.toInt()   // TODO: make arithmatic - check its actually needed
+        | ArithmeticLeftShift -> lhs <<< rhs.toInt()    // TODO: same as above
 
-    let evalConstCond (cond: ConstantExpressionT) (trueExpr: ConstantExpressionT) (falseExpr: ConstantExpressionT) = 
-        if ((eval cond).toBool())
-        then eval trueExpr
-        else eval falseExpr
+    let private evalConstCond (cond: ConstantExpressionT) (trueExpr: ConstantExpressionT) (falseExpr: ConstantExpressionT) = 
+        if ((evalConstExpr cond).toBool())
+        then evalConstExpr trueExpr
+        else evalConstExpr falseExpr
   

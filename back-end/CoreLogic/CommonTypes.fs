@@ -22,11 +22,11 @@ type VNum(value: uint64, size: uint32) =
         VNum(this.value &&& mask, this.size)
 
     member this.toBool () =
-        if this.value = 0UL
+        if this.trim().value = 0UL
         then false
         else true
 
-    member this.toInt () = int this.value
+    member this.toInt () = this.trim().value |> int
 
     override this.ToString() =
         // "{ val: " + this.value.ToString() + ", size: " + this.size.ToString() + " }"
@@ -58,26 +58,20 @@ type VNum(value: uint64, size: uint32) =
 
     override this.Equals other =
         match other with
-        | :? VNum as num -> (this :> IEquatable<_>).Equals num
+        | :? VNum as num -> (this.trim().value :> IEquatable<_>).Equals (num.trim().value)
         | _ -> false
 
-    override this.GetHashCode() = this.value.GetHashCode()
-
-    interface IEquatable<VNum> with
-        member this.Equals other = other.value.Equals this.value
+    override this.GetHashCode() = this.trim().value.GetHashCode()
 
     interface IComparable with
         member this.CompareTo other =
             match other with
-            | :? VNum as num -> (this :> IComparable<_>).CompareTo num
+            | :? VNum as num -> (this.trim().value :> IComparable<_>).CompareTo (num.trim().value)
             | _ -> -1
-
-    interface IComparable<VNum> with
-        member this.CompareTo other = other.value.CompareTo this.value
 
     // *********** UNARY OPS ***********
     static member (~-) (num: VNum) = 
-        ~~~num + VNum(1UL,32u)
+        ~~~num + VNum(1UL,num.size)
 
     static member (~~~) (num: VNum) = 
         VNum(FSharp.Core.Operators.(~~~) num.value, num.size)

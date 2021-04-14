@@ -241,8 +241,8 @@ type BinaryOperatorT =
     | BitwiseXnor
     | LogicalRightShift
     | LogicalLeftShift
-    | ArithmaticRightShift
-    | ArithmaticLeftShift
+    | ArithmeticRightShift
+    | ArithmeticLeftShift
 
 
 // ######### A.8.7 Numbers #########

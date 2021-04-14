@@ -32,8 +32,8 @@ module Helpers =
                     match p.Range with
                     | None -> Single
                     | Some r ->
-                        let msb = ConstExprEval.eval r.MSB
-                        let lsb = ConstExprEval.eval r.MSB
+                        let msb = ConstExprEval.evalConstExpr r.MSB
+                        let lsb = ConstExprEval.evalConstExpr r.MSB
                         Ranged (uint32 msb.value, uint32 lsb.value)
                 (name, range) 
             match modDec with

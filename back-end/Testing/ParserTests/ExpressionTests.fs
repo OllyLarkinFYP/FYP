@@ -455,7 +455,7 @@ type ConstantExpressionTests () =
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticLeftShift |}
+            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticLeftShift |}
         contentsTest ConstantExpression.pConstantExpression expected input
 
     [<Test>]
@@ -474,7 +474,7 @@ type ConstantExpressionTests () =
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticRightShift |}
+            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticRightShift |}
         contentsTest ConstantExpression.pConstantExpression expected input
 
     [<Test>]
@@ -1186,7 +1186,7 @@ type ExpressionTests () =
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticLeftShift |}
+            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticLeftShift |}
         contentsTest Expression.pExpression expected input
 
     [<Test>]
@@ -1205,7 +1205,7 @@ type ExpressionTests () =
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticRightShift |}
+            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticRightShift |}
         contentsTest Expression.pExpression expected input
 
     [<Test>]
