@@ -5,10 +5,6 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CoreLogic", "CoreLogic\CoreLogic.fsproj", "{4E4C897C-A85B-4B73-86EB-4A806735A309}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{61BD33F1-B0A5-4B59-ADE1-F29B067C4DFA}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ParserTests", "Testing\ParserTests\ParserTests.fsproj", "{C5AA8C8D-1188-4929-BC2E-253F3845356C}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Testing", "Testing\Testing.fsproj", "{F7203E68-A96A-48B4-A74C-090AA159C934}"
 EndProject
 Global
@@ -36,18 +32,6 @@ Global
 		{4E4C897C-A85B-4B73-86EB-4A806735A309}.Release|x64.Build.0 = Release|Any CPU
 		{4E4C897C-A85B-4B73-86EB-4A806735A309}.Release|x86.ActiveCfg = Release|Any CPU
 		{4E4C897C-A85B-4B73-86EB-4A806735A309}.Release|x86.Build.0 = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|x64.Build.0 = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Debug|x86.Build.0 = Debug|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|x64.ActiveCfg = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|x64.Build.0 = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|x86.ActiveCfg = Release|Any CPU
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C}.Release|x86.Build.0 = Release|Any CPU
 		{F7203E68-A96A-48B4-A74C-090AA159C934}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F7203E68-A96A-48B4-A74C-090AA159C934}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7203E68-A96A-48B4-A74C-090AA159C934}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -62,6 +46,5 @@ Global
 		{F7203E68-A96A-48B4-A74C-090AA159C934}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{C5AA8C8D-1188-4929-BC2E-253F3845356C} = {61BD33F1-B0A5-4B59-ADE1-F29B067C4DFA}
 	EndGlobalSection
 EndGlobal

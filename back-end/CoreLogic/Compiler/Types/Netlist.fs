@@ -7,10 +7,15 @@ open CommonTypes
 /// Different modules listed with their names as the key
 type NetlistCollection = Map<string,Netlist>
 
+type PortType =
+    | Wire
+    | Logic
+    | Reg
+
 type Netlist = 
     { name: string
-      inputs: (string * Range) array
-      outputs: (string * Range) array
+      inputs: (string * Range * PortType) array
+      outputs: (string * Range * PortType) array
       /// Map from instance name to node
       nodes: Map<string,Node> }
 

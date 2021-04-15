@@ -5,22 +5,41 @@ open CommonTypes
 
 // ######### A.1.2 Verilog Source Text #########
 
-type ASTT =
-    | Empty
-    | ModuleDeclaration of {| ModDec: ModuleDeclarationT; IsSystemVerilog: bool |}
+type ASTT = 
+    { modDec: ModuleDeclarationT 
+      isSystemVerilog: bool }
+
+type ModuleDeclarationInfo =
+    | ModDec1 of {| ports: PortT List; body: ModuleItemT List |}
+    | ModDec2 of {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}
 
 type ModuleDeclarationT =
-    | ModDec1 of {| Name: IdentifierT; Ports: PortT List; Body: ModuleItemT List |}
-    | ModDec2 of {| Name: IdentifierT; Ports: PortDeclarationT List; Body: NonPortModuleItemT List |}
+    { name: IdentifierT
+      info: ModuleDeclarationInfo }
 
 
 // ######### A.1.3 Module Parameters And Ports #########
 
-type PortT = { Name: IdentifierT; Range: ConstantRangeExpressionT Option }
+type PortT = { name: IdentifierT; range: ConstantRangeExpressionT Option }
+
+type InputPortDecType =
+    | Wire
+    | Logic
+
+type OutputPortDecType =
+    | Wire
+    | Logic
+    | Reg
+
+type PortDecDirType =   
+    | Input of InputPortDecType
+    | Output of OutputPortDecType
 
 type PortDeclarationT = 
-    | Input of InputDeclarationT
-    | Output of OutputDeclarationT
+    { name: IdentifierT
+      range: RangeT option
+      signed: bool
+      dir: PortDecDirType }
 
 
 // ######### A.1.4 Module Items #########
@@ -36,31 +55,16 @@ type NonPortModuleItemT =
     | InitialConstruct of InitialConstructT
     | AlwaysConstruct of AlwaysConstructT
 
+type ModuleOrGenItemDecType =
+    | NetDeclaration
+    | RegDeclaration
+    | LogicDeclaration
+
 type ModuleOrGenerateItemDeclarationT =
-    | NetDeclaration of NetDeclarationT
-    | RegDeclaration of RegDeclarationT
-    | LogicDeclaration of LogicDeclarationT
-
-
-// ######### A.2.1.2 Port Declarations #########
-
-type InputDeclarationT = 
-    | WireDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
-    | LogicDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
-
-type OutputDeclarationT =
-    | WireDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
-    | RegDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
-    | LogicDec of {| Range: RangeT option; Signed: bool; Name: IdentifierT |}
-
-
-// ######### A.2.1.3 Type Declaration #########
-
-type NetDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
-
-type RegDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
-
-type LogicDeclarationT = { Range: RangeT option; Signed: bool; Names: IdentifierT List }
+    { names: IdentifierT list
+      range: RangeT option
+      signed: bool
+      decType: ModuleOrGenItemDecType }
 
 
 // ######### A.2.5 Declaration Ranges #########
