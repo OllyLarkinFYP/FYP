@@ -8,18 +8,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Expecto" Version="9.0.2" />
     <PackageReference Include="NUnit" Version="3.12.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="UnitTest1.fs" />
+    <Compile Include="Helper.fs" />
+    <Compile Include="ConstExprEval.Test.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\CoreLogic\CoreLogic.fsproj" />
+    <ProjectReference Include="..\CoreLogic\CoreLogic.fsproj" />
   </ItemGroup>
 
 </Project>
