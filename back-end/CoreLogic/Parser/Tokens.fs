@@ -4,6 +4,7 @@ open System
 open FParsec
 open AST
 open Utils
+open CommonTypes
 
 module Token =
     module Keyword =
@@ -11,6 +12,7 @@ module Token =
         let pAssign: Parser<unit, unit> = skipStrWs "assign"
         let pBegin: Parser<unit, unit> = skipStrWs "begin"
         let pCase: Parser<unit, unit> = skipStrWs "case"
+        let pDefault: Parser<unit, unit> = skipStrWs "dfault"
         let pElse: Parser<unit, unit> = skipStrWs "else"
         let pEnd: Parser<unit, unit> = skipStrWs "end"
         let pEndCase: Parser<unit, unit> = skipStrWs "endcase"
@@ -28,7 +30,7 @@ module Token =
         let pSigned: Parser<unit, unit> = skipStrWs "signed"
         let pWire: Parser<unit, unit> = skipStrWs "wire"
 
-    module Symbols =
+    module Symbol =
         let pSemiColon: Parser<unit, unit> = skipCharWs ';'
         let pColon: Parser<unit, unit> = skipCharWs ':'
         let pComma: Parser<unit, unit> = skipCharWs ','
@@ -45,45 +47,6 @@ module Token =
         let pOpenCBrac: Parser<unit, unit> = skipCharWs '{'
         let pCloseCBrac: Parser<unit, unit> = skipCharWs '}'
 
-    module Operator =
-        module Unary =
-            let pPlus: Parser<UnaryOperatorT, unit> = charReturnWs '+' UnaryOperatorT.Plus
-            let pMinus: Parser<UnaryOperatorT, unit> = charReturnWs '-' UnaryOperatorT.Minus
-            let pLogicalNegation: Parser<UnaryOperatorT, unit> = charReturnWs '!' LogicalNegation
-            let pBitwiseNegation: Parser<UnaryOperatorT, unit> = charReturnWs '~' BitwiseNegation
-            let pReductionAnd: Parser<UnaryOperatorT, unit> = charReturnWs '&' ReductionAnd
-            let pReductionNand: Parser<UnaryOperatorT, unit> = stringReturnWs "~&" ReductionNand
-            let pReductionOr: Parser<UnaryOperatorT, unit> = charReturnWs '|' ReductionOr
-            let pReductionNor: Parser<UnaryOperatorT, unit> = stringReturnWs "~|" ReductionNor
-            let pReductionXor: Parser<UnaryOperatorT, unit> = charReturnWs '^' ReductionXor
-            let pReductionXnor: Parser<UnaryOperatorT, unit> = stringReturnChoiceWs ["~^"; "^~"] ReductionXnor
-
-        module Binary =
-            let pPlus: Parser<BinaryOperatorT, unit> = charReturnWs '+' Plus
-            let pMinus: Parser<BinaryOperatorT, unit> = charReturnWs '-' Minus
-            let pMultiply: Parser<BinaryOperatorT, unit> = charReturnWs '*' Multiply
-            let pDivide: Parser<BinaryOperatorT, unit> = charReturnWs '/' Divide
-            let pModulus: Parser<BinaryOperatorT, unit> = charReturnWs '%' Modulus
-            let pLogicalEquality: Parser<BinaryOperatorT, unit> = stringReturnWs "==" LogicalEquality
-            let pLogicalInequality: Parser<BinaryOperatorT, unit> = stringReturnWs "!=" LogicalInequality
-            let pCaseEquality: Parser<BinaryOperatorT, unit> = stringReturnWs "===" CaseEquality
-            let pCaseInequality: Parser<BinaryOperatorT, unit> = stringReturnWs "!==" CaseInequality
-            let pLogicalAnd: Parser<BinaryOperatorT, unit> = stringReturnWs "&&" LogicalAnd
-            let pLogicalOr: Parser<BinaryOperatorT, unit> = stringReturnWs "||" LogicalOr
-            let pPower: Parser<BinaryOperatorT, unit> = stringReturnWs "**" Power
-            let pLessThan: Parser<BinaryOperatorT, unit> = charReturnWs '<' LessThan
-            let pLessThanOrEqual: Parser<BinaryOperatorT, unit> = stringReturnWs "<=" LessThanOrEqual
-            let pGreaterThan: Parser<BinaryOperatorT, unit> = charReturnWs '>' GreaterThan
-            let pGreaterThanOrEqual: Parser<BinaryOperatorT, unit> = stringReturnWs ">=" GreaterThanOrEqual
-            let pBitwiseAnd: Parser<BinaryOperatorT, unit> = charReturnWs '&' BitwiseAnd
-            let pBitwiseOr: Parser<BinaryOperatorT, unit> = charReturnWs '|' BitwiseOr
-            let pBitwiseXor: Parser<BinaryOperatorT, unit> = charReturnWs '^' BitwiseXor
-            let pBitwiseXnor: Parser<BinaryOperatorT, unit> = stringReturnChoiceWs ["~^"; "^~"] BitwiseXnor
-            let pLogicalRightShift: Parser<BinaryOperatorT, unit> = stringReturnWs ">>" LogicalRightShift
-            let pLogicalLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<" LogicalLeftShift
-            let pArithmaticRightShift: Parser<BinaryOperatorT, unit> = stringReturnWs ">>>" ArithmaticRightShift
-            let pArithmaticLeftShift: Parser<BinaryOperatorT, unit> = stringReturnWs "<<<" ArithmaticLeftShift
-
     let pIdentifier: Parser<string, unit> =
         let isAsciiIdStart c =
             isAsciiLetter c || c = '_'
@@ -98,21 +61,21 @@ module Token =
             if isLower c
             then [c; Char.ToUpper c]
             else [Char.ToLower c; c] 
-        let charToInt c =
+        let charToNumT c =
             match isDigit c, isLower c with
-            | true, _ -> int c - int '0'
-            | _, true -> int c - int 'a' + 10
-            | _, false -> int c - int 'A' + 10
+            | true, _ -> uint64 c - uint64 '0'
+            | _, true -> uint64 c - uint64 'a' + 10UL   // plus 10 so hex value
+            | _, false -> uint64 c - uint64 'A' + 10UL  // plus 10 so hex value
         let listToNum dBase lst =
             lst
             |> List.rev
             |> List.indexed
-            |> List.map (fun (i, x) -> (float <| charToInt x) * ((float dBase) ** (float i)) |> uint)
+            |> List.map (fun (i, x) -> (charToNumT x) * (pown dBase i))
             |> List.reduce (+)
-        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2) .>>? notFollowedBy (hex <|> pchar '_')
-        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8) .>>? notFollowedBy (hex <|> pchar '_')
-        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10) .>>? notFollowedBy (hex <|> pchar '_')
-        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16) .>>? notFollowedBy (hex <|> pchar '_')
+        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16UL) .>>? notFollowedBy (hex <|> pchar '_')
         let numBase b = 
             skipChar '\'' >>? opt (anyOf ['s';'S']) .>>? skipAnyOf (upperAndLower b) 
             |>> function
@@ -127,7 +90,7 @@ module Token =
                 numBase 'h' .>>.? hexValue
             ] 
             |>> function
-            | (size, (signed, value)) -> { NumberT.Size = size; Value = value; UnknownBits = []; Signed = signed }
+            | (size, (signed, value)) -> { NumberT.Size = Option.map uint size; Value = value; UnknownBits = []; Signed = signed }
         let numberWithoutBase =
             decimalValue
             |>> fun x -> { NumberT.Size = None; Value = x; UnknownBits = []; Signed = false }

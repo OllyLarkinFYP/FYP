@@ -11,10 +11,10 @@ module ConstantExpression =
     let pConstantExpression: Parser<ConstantExpressionT, unit> = opp.ExpressionParser
 
     let pConstantConcatenation: Parser<ConstantConcatenationT, unit> =
-        Symbols.pOpenCBrac >>. sepBy1 pConstantExpression Symbols.pComma .>> Symbols.pCloseCBrac
+        Symbol.pOpenCBrac >>. sepBy1 pConstantExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
     let pConstantRangeExpression: Parser<ConstantRangeExpressionT, unit> =
-        pConstantExpression .>>. opt (Symbols.pColon >>. pConstantExpression)
+        pConstantExpression .>>. opt (Symbol.pColon >>. pConstantExpression)
         |>> function
         | (a, Some b) -> ConstantRangeExpressionT.Range {| LHS = a; RHS = b |}
         | (a, None) -> ConstantRangeExpressionT.Expr a
@@ -22,7 +22,7 @@ module ConstantExpression =
     // Constant Primary parsing
     opp.TermParser <- choice [
         pNumber |>> ConstantPrimaryT.Number
-        Symbols.pOpenRBrac >>. pConstantExpression .>> Symbols.pCloseRBrac |>> ConstantPrimaryT.Brackets
+        Symbol.pOpenRBrac >>. pConstantExpression .>> Symbol.pCloseRBrac |>> ConstantPrimaryT.Brackets
         pConstantConcatenation |>> ConstantPrimaryT.Concat
     ] |>> ConstantExpressionT.Primary
 
@@ -52,8 +52,8 @@ module ConstantExpression =
     opp.AddOperator(InfixOperator(">=", spaces, 8, Associativity.Left, binExpr GreaterThanOrEqual))
     opp.AddOperator(InfixOperator("<<", spaces, 9, Associativity.Left, binExpr LogicalLeftShift))
     opp.AddOperator(InfixOperator(">>", spaces, 9, Associativity.Left, binExpr LogicalRightShift))
-    opp.AddOperator(InfixOperator("<<<", spaces, 9, Associativity.Left, binExpr ArithmaticLeftShift))
-    opp.AddOperator(InfixOperator(">>>", spaces, 9, Associativity.Left, binExpr ArithmaticRightShift))
+    opp.AddOperator(InfixOperator("<<<", spaces, 9, Associativity.Left, binExpr ArithmeticLeftShift))
+    opp.AddOperator(InfixOperator(">>>", spaces, 9, Associativity.Left, binExpr ArithmeticRightShift))
     opp.AddOperator(InfixOperator("+", spaces, 10, Associativity.Left, binExpr Plus))
     opp.AddOperator(InfixOperator("-", spaces, 10, Associativity.Left, binExpr Minus))
     opp.AddOperator(InfixOperator("*", spaces, 11, Associativity.Left, binExpr Multiply))
@@ -82,10 +82,10 @@ module Expression =
     let pExpression: Parser<ExpressionT, unit> = opp.ExpressionParser
 
     let pConcatenation: Parser<ConcatenationT, unit> =
-        Symbols.pOpenCBrac >>. sepBy1 pExpression Symbols.pComma .>> Symbols.pCloseCBrac
+        Symbol.pOpenCBrac >>. sepBy1 pExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
     let pRangeExpression: Parser<RangeExpressionT, unit> =
-        pExpression .>>. opt (Symbols.pColon >>. pExpression)
+        pExpression .>>. opt (Symbol.pColon >>. pExpression)
         |>> function
         | (a, Some b) -> Range {| LHS = a; RHS = b |}
         | (a, None) -> Expr a
@@ -93,9 +93,9 @@ module Expression =
     // Constant Primary parsing
     opp.TermParser <- choice [
         pNumber |>> Number
-        Symbols.pOpenRBrac >>. pExpression .>> Symbols.pCloseRBrac |>> Brackets
+        Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac |>> Brackets
         pConcatenation |>> PrimaryT.Concat
-        pIdentifier .>> Symbols.pOpenSBrac .>>. pRangeExpression .>> Symbols.pCloseSBrac |>> fun (iden, range) ->
+        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
             PrimaryT.Ranged {| Name = iden; Range = range |}
     ] |>> Primary
 
@@ -125,8 +125,8 @@ module Expression =
     opp.AddOperator(InfixOperator(">=", spaces, 8, Associativity.Left, binExpr GreaterThanOrEqual))
     opp.AddOperator(InfixOperator("<<", spaces, 9, Associativity.Left, binExpr LogicalLeftShift))
     opp.AddOperator(InfixOperator(">>", spaces, 9, Associativity.Left, binExpr LogicalRightShift))
-    opp.AddOperator(InfixOperator("<<<", spaces, 9, Associativity.Left, binExpr ArithmaticLeftShift))
-    opp.AddOperator(InfixOperator(">>>", spaces, 9, Associativity.Left, binExpr ArithmaticRightShift))
+    opp.AddOperator(InfixOperator("<<<", spaces, 9, Associativity.Left, binExpr ArithmeticLeftShift))
+    opp.AddOperator(InfixOperator(">>>", spaces, 9, Associativity.Left, binExpr ArithmeticRightShift))
     opp.AddOperator(InfixOperator("+", spaces, 10, Associativity.Left, binExpr Plus))
     opp.AddOperator(InfixOperator("-", spaces, 10, Associativity.Left, binExpr Minus))
     opp.AddOperator(InfixOperator("*", spaces, 11, Associativity.Left, binExpr Multiply))
