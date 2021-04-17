@@ -108,7 +108,7 @@ module LangConstructs =
         Keyword.pBegin >>. many pStatement .>> Keyword.pEnd
 
     let pAlwaysConstruct: Parser<AlwaysConstructT,unit> = 
-        Keyword.pAlways >>. pStatement
+        Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
         Keyword.pInitial >>. pStatement
@@ -132,73 +132,91 @@ module LangConstructs =
     let pNetDeclaration =
         Keyword.pWire >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> { NetDeclarationT.Range = range; Signed = Option.isSome signed; Names = idens }
+        | (signed, range), idens -> 
+            { names = idens
+              range = range
+              signed = Option.isSome signed
+              decType = NetDeclaration }
 
     let pRegDeclaration = 
         Keyword.pReg >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> { RegDeclarationT.Range = range; Signed = Option.isSome signed; Names = idens }
+        | (signed, range), idens -> 
+            { names = idens
+              range = range
+              signed = Option.isSome signed
+              decType = RegDeclaration }
 
     let pLogicDeclaration = 
         Keyword.pLogic >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> { LogicDeclarationT.Range = range; Signed = Option.isSome signed; Names = idens }
+        | (signed, range), idens -> 
+            { names = idens
+              range = range
+              signed = Option.isSome signed
+              decType = LogicDeclaration }
 
     let pModuleOrGenerateItemDeclaration =
         choice [
-            pNetDeclaration |>> ModuleOrGenerateItemDeclarationT.NetDeclaration
-            pRegDeclaration |>> ModuleOrGenerateItemDeclarationT.RegDeclaration
-            pLogicDeclaration |>> ModuleOrGenerateItemDeclarationT.LogicDeclaration
+            pNetDeclaration
+            pRegDeclaration
+            pLogicDeclaration
         ]
-       
-    type private pInputDeclarationIntermediate =
-        | Logic
-        | Wire
 
     let pInputDeclaration =
         let logicOrWire =
             choice [
-                Keyword.pLogic >>% pInputDeclarationIntermediate.Logic
-                opt Keyword.pWire >>% pInputDeclarationIntermediate.Wire
+                Keyword.pLogic >>% InputPortDecType.Logic
+                opt Keyword.pWire >>% InputPortDecType.Wire
             ]
         Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((pInputDeclarationIntermediate.Logic, signed), range), iden -> 
-            InputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
-        | ((pInputDeclarationIntermediate.Wire, signed), range), iden -> 
-            InputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
-       
-    type private pOutputDeclarationIntermediate =
-        | Logic
-        | Reg
-        | Wire
+        | ((InputPortDecType.Logic, signed), range), iden -> 
+            { name = iden
+              range = range
+              signed = Option.isSome signed
+              dir = Input InputPortDecType.Logic }
+        | ((InputPortDecType.Wire, signed), range), iden -> 
+            { name = iden
+              range = range
+              signed = Option.isSome signed
+              dir = Input InputPortDecType.Logic }
 
     let pOutputDeclaration = 
         let logicOrWire =
             choice [
-                Keyword.pLogic >>% pOutputDeclarationIntermediate.Logic
-                Keyword.pReg >>% pOutputDeclarationIntermediate.Reg
-                opt Keyword.pWire >>% pOutputDeclarationIntermediate.Wire
+                Keyword.pLogic >>% OutputPortDecType.Logic
+                Keyword.pReg >>% OutputPortDecType.Reg
+                opt Keyword.pWire >>% OutputPortDecType.Wire
             ]
         Keyword.pOutput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((pOutputDeclarationIntermediate.Logic, signed), range), iden -> 
-            OutputDeclarationT.LogicDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
-        | ((pOutputDeclarationIntermediate.Reg, signed), range), iden -> 
-            OutputDeclarationT.RegDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
-        | ((pOutputDeclarationIntermediate.Wire, signed), range), iden -> 
-            OutputDeclarationT.WireDec {| Range = range; Signed = Option.isSome signed; Name = iden |}
+        | ((OutputPortDecType.Logic, signed), range), iden -> 
+            { name = iden
+              range = range
+              signed = Option.isSome signed
+              dir = Output OutputPortDecType.Logic }
+        | ((OutputPortDecType.Reg, signed), range), iden -> 
+            { name = iden
+              range = range
+              signed = Option.isSome signed
+              dir = Output OutputPortDecType.Reg }
+        | ((OutputPortDecType.Wire, signed), range), iden -> 
+            { name = iden
+              range = range
+              signed = Option.isSome signed
+              dir = Output OutputPortDecType.Wire }
 
     let pPortDeclaration =
         choice [
-            pInputDeclaration |>> PortDeclarationT.Input
-            pOutputDeclaration |>> PortDeclarationT.Output
+            pInputDeclaration
+            pOutputDeclaration
         ]
 
     let pPort =
         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac)
         |>> function
-        | (iden, opRange) -> { PortT.Name = iden; Range = opRange }
+        | (iden, opRange) -> { PortT.name = iden; range = opRange }
 
     let pListOfPortConnections =
         let named =
@@ -247,18 +265,21 @@ module LangConstructs =
         let modDec1 = 
             Keyword.pModule >>? pIdentifier .>>.? attempt pListOfPorts .>> Symbol.pSemiColon .>>. many pModuleItem .>> Keyword.pEndModule
             |>> function
-            | ((iden, ports), moduleItems) -> ModDec1 {| Name = iden; Ports = ports; Body = moduleItems |}
+            | ((iden, ports), moduleItems) -> 
+                { name = iden
+                  info = ModDec1 {| ports = ports; body = moduleItems |}}
         let modDec2 =
             Keyword.pModule >>. pIdentifier .>>. pListOfPortDeclarations .>> Symbol.pSemiColon .>>. many pNonPortModuleItem .>> Keyword.pEndModule
             |>> function
-            | ((iden, ports), moduleItems) -> ModDec2 {| Name = iden; Ports = ports; Body = moduleItems |}
+            | ((iden, ports), moduleItems) -> 
+                { name = iden
+                  info = ModDec2 {| ports = ports; body = moduleItems |}}
         modDec1 <|> modDec2
 
     let pSourceText isSystemVerilog = 
-        spaces >>. opt pModuleDeclaration .>> eof
-        |>> function
-        | Some m -> ModuleDeclaration {| ModDec = m; IsSystemVerilog = isSystemVerilog |}
-        | None -> Empty
+        spaces >>. pModuleDeclaration .>> eof |>> fun m -> 
+            { modDec = m 
+              isSystemVerilog = isSystemVerilog }
 
     do pStatementImpl := 
         choice [

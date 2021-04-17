@@ -102,64 +102,64 @@ type NumberTests () =
     [<Test>]
     member this.``Normal number should return value``() =
         "123"
-        |> contentsTest Token.pNumber { Size = None; Value = 123u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 123UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Decimal base parses correctly``() =
         "'d123"
-        |> contentsTest Token.pNumber { Size = None; Value = 123u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 123UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Binary base parses correctly``() =
         "'b101"
-        |> contentsTest Token.pNumber { Size = None; Value = 5u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 5UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Octal base parses correctly``() =
         "'o123"
-        |> contentsTest Token.pNumber { Size = None; Value = 83u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 83UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Hex base lowercase number parses correctly``() =
         "'hab3"
-        |> contentsTest Token.pNumber { Size = None; Value = 2739u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 2739UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Hex base uppercase number parses correctly``() =
         "'hAB3"
-        |> contentsTest Token.pNumber { Size = None; Value = 2739u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 2739UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Decimal uppercase base parses correctly``() =
         "'D123"
-        |> contentsTest Token.pNumber { Size = None; Value = 123u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 123UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Binary uppercase base parses correctly``() =
         "'B101"
-        |> contentsTest Token.pNumber { Size = None; Value = 5u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 5UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Octal uppercase base parses correctly``() =
         "'O123"
-        |> contentsTest Token.pNumber { Size = None; Value = 83u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 83UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Hex uppercase base lowercase number parses correctly``() =
         "'Hab3"
-        |> contentsTest Token.pNumber { Size = None; Value = 2739u; UnknownBits = []; Signed = false }
+        |> contentsTest Token.pNumber { Size = None; Value = 2739UL; UnknownBits = []; Signed = false }
 
     [<Test>]
     member this.``Signed lowercase parses correctly``() =
         "'sd123"
-        |> contentsTest Token.pNumber { Size = None; Value = 123u; UnknownBits = []; Signed = true }
+        |> contentsTest Token.pNumber { Size = None; Value = 123UL; UnknownBits = []; Signed = true }
 
     [<Test>]
     member this.``Signed uppercase parses correctly``() =
         "'Sd123"
-        |> contentsTest Token.pNumber { Size = None; Value = 123u; UnknownBits = []; Signed = true }
+        |> contentsTest Token.pNumber { Size = None; Value = 123UL; UnknownBits = []; Signed = true }
 
     [<Test>]
     member this.``Size parsed correctly``() =
         "20'sd123"
-        |> contentsTest Token.pNumber { Size = Some 20u; Value = 123u; UnknownBits = []; Signed = true }
+        |> contentsTest Token.pNumber { Size = Some 20u; Value = 123UL; UnknownBits = []; Signed = true }
