@@ -23,3 +23,11 @@ module Utils =
         |> List.map skipCharWs
         |> choice
         >>% r 
+
+    let notImplementedParser (chrStream: CharStream<'a>) : Reply<'b> =
+        raise <| System.NotImplementedException()
+
+    let printParser str (chrStream: CharStream<'a>) : Reply<unit> =
+        printfn str
+        preturn () chrStream
+        
