@@ -4,6 +4,7 @@ open System
 open FParsec
 open AST
 open Utils
+open CommonTypes
 
 module Token =
     module Keyword =
@@ -60,21 +61,21 @@ module Token =
             if isLower c
             then [c; Char.ToUpper c]
             else [Char.ToLower c; c] 
-        let charToInt c =
+        let charToNumT c =
             match isDigit c, isLower c with
-            | true, _ -> int c - int '0'
-            | _, true -> int c - int 'a' + 10
-            | _, false -> int c - int 'A' + 10
+            | true, _ -> uint64 c - uint64 '0'
+            | _, true -> uint64 c - uint64 'a' + 10UL   // plus 10 so hex value
+            | _, false -> uint64 c - uint64 'A' + 10UL  // plus 10 so hex value
         let listToNum dBase lst =
             lst
             |> List.rev
             |> List.indexed
-            |> List.map (fun (i, x) -> (float <| charToInt x) * ((float dBase) ** (float i)) |> uint)
+            |> List.map (fun (i, x) -> (charToNumT x) * (pown dBase i))
             |> List.reduce (+)
-        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2) .>>? notFollowedBy (hex <|> pchar '_')
-        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8) .>>? notFollowedBy (hex <|> pchar '_')
-        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10) .>>? notFollowedBy (hex <|> pchar '_')
-        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16) .>>? notFollowedBy (hex <|> pchar '_')
+        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16UL) .>>? notFollowedBy (hex <|> pchar '_')
         let numBase b = 
             skipChar '\'' >>? opt (anyOf ['s';'S']) .>>? skipAnyOf (upperAndLower b) 
             |>> function
@@ -89,7 +90,7 @@ module Token =
                 numBase 'h' .>>.? hexValue
             ] 
             |>> function
-            | (size, (signed, value)) -> { NumberT.Size = size; Value = value; UnknownBits = []; Signed = signed }
+            | (size, (signed, value)) -> { NumberT.Size = Option.map uint size; Value = value; UnknownBits = []; Signed = signed }
         let numberWithoutBase =
             decimalValue
             |>> fun x -> { NumberT.Size = None; Value = x; UnknownBits = []; Signed = false }

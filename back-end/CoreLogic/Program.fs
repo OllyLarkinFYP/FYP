@@ -1,10 +1,7 @@
 open System
-open Parser
 open Parser.ConstantExpression
-open Parser.Expression
-open Parser.LangConstructs
-open Parser.Token
-open Parser.Utils
+open CommonTypes
+open CommonHelpers
 open FParsec
 
 let program = @"
@@ -123,38 +120,20 @@ module UART_TX(
 endmodule
 "
 
-let testStr = @"
-    
-    case({w_en,rd})
-      2'b01:
-        if(~empty_reg)
-          begin
-            r_ptr_next = r_ptr_succ;
-            full_next = 1'b0;
-            if (r_ptr_succ == w_ptr_reg)
-              empty_next = 1'b1;
-          end
-      2'b10:
-        if(~full_reg)
-          begin
-            w_ptr_next = w_ptr_succ;
-            empty_next = 1'b0;
-            if (w_ptr_succ == r_ptr_reg)
-              full_next = 1'b1;
-          end
-      2'b11:
-        begin
-          w_ptr_next = w_ptr_succ;
-          r_ptr_next = r_ptr_succ;
-        end
-    endcase
-"
+let testStr = """& 3'd7 + 86 / 3 * 2"""
 
 [<EntryPoint>]
 let main argv =
-    let parser = pSourceText false
-    let result = run parser program
-    // let parser = spaces >>. Keyword.pCase >>. Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac .>>. many1 (pCaseItem) .>> Keyword.pEndCase
-    // let result = run parser testStr
-    printfn "%A" result
+    // let parser = pSourceText false
+    // let result = run parser program
+    let parser = pConstantExpression
+    let time = Diagnostics.Stopwatch.StartNew()
+    let ast = run parser testStr
+    time.Stop()
+    printfn "Time taken: %i" time.ElapsedMilliseconds
+    match ast with
+    | Success (res,_,_) -> 
+      let value = ConstExprEval.evalConstExpr res
+      printfn "%A" value
+    | _ -> printfn "Parsing failed"
     0 // return an integer exit code

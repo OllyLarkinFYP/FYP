@@ -15,7 +15,7 @@ type ConstantExpressionTests () =
             ConstantExpressionT.Primary (
                 ConstantPrimaryT.Number { 
                     Size = None
-                    Value = 123u
+                    Value = 123UL
                     UnknownBits = []
                     Signed = false })
         contentsTest ConstantExpression.pConstantExpression expected input
@@ -29,7 +29,7 @@ type ConstantExpressionTests () =
                     ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 123u
+                            Value = 123UL
                             UnknownBits = []
                             Signed = false })))
         contentsTest ConstantExpression.pConstantExpression expected input
@@ -43,13 +43,13 @@ type ConstantExpressionTests () =
                     ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false }); 
                     ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 2u
+                            Value = 2UL
                             UnknownBits = []
                             Signed = false })])
         contentsTest ConstantExpression.pConstantExpression expected input
@@ -61,13 +61,13 @@ type ConstantExpressionTests () =
             ConstantExpressionT.Primary (
                 ConstantPrimaryT.Number { 
                     Size = None
-                    Value = 1u
+                    Value = 1UL
                     UnknownBits = []
                     Signed = false }); 
             ConstantExpressionT.Primary (
                 ConstantPrimaryT.Number { 
                     Size = None
-                    Value = 2u
+                    Value = 2UL
                     UnknownBits = []
                     Signed = false })]
         contentsTest ConstantExpression.pConstantConcatenation expected input
@@ -78,13 +78,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -97,19 +97,19 @@ type ConstantExpressionTests () =
         let condition = ConstantExpressionT.Primary (
                             ConstantPrimaryT.Number { 
                                 Size = None
-                                Value = 1u
+                                Value = 1UL
                                 UnknownBits = []
                                 Signed = false })
         let trueVal = ConstantExpressionT.Primary (
                             ConstantPrimaryT.Number { 
                                 Size = None
-                                Value = 2u
+                                Value = 2UL
                                 UnknownBits = []
                                 Signed = false })
         let falseVal = ConstantExpressionT.Primary (
                             ConstantPrimaryT.Number { 
                                 Size = None
-                                Value = 3u
+                                Value = 3UL
                                 UnknownBits = []
                                 Signed = false })
         let expected = 
@@ -122,13 +122,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -141,13 +141,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -160,13 +160,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -179,13 +179,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -198,13 +198,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -217,13 +217,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -236,13 +236,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -255,13 +255,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -274,13 +274,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -293,13 +293,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -312,13 +312,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -331,13 +331,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -350,13 +350,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -369,13 +369,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -388,13 +388,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -407,13 +407,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -426,13 +426,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -445,17 +445,17 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticLeftShift |}
+            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticLeftShift |}
         contentsTest ConstantExpression.pConstantExpression expected input
 
     [<Test>]
@@ -464,17 +464,17 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticRightShift |}
+            ConstantExpressionT.BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticRightShift |}
         contentsTest ConstantExpression.pConstantExpression expected input
 
     [<Test>]
@@ -483,13 +483,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -502,13 +502,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -521,13 +521,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -540,13 +540,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -559,13 +559,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -578,13 +578,13 @@ type ConstantExpressionTests () =
         let LHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = ConstantExpressionT.Primary (
                     ConstantPrimaryT.Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -597,7 +597,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -610,7 +610,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -623,7 +623,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -636,7 +636,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -649,7 +649,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -662,7 +662,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -675,7 +675,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -688,7 +688,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -701,7 +701,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -714,7 +714,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -727,7 +727,7 @@ type ConstantExpressionTests () =
         let value = ConstantExpressionT.Primary (
                         ConstantPrimaryT.Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -746,7 +746,7 @@ type ExpressionTests () =
             Primary (
                 Number { 
                     Size = None
-                    Value = 123u
+                    Value = 123UL
                     UnknownBits = []
                     Signed = false })
         contentsTest Expression.pExpression expected input
@@ -760,7 +760,7 @@ type ExpressionTests () =
                     Primary (
                         Number { 
                             Size = None
-                            Value = 123u
+                            Value = 123UL
                             UnknownBits = []
                             Signed = false })))
         contentsTest Expression.pExpression expected input
@@ -774,13 +774,13 @@ type ExpressionTests () =
                     Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false }); 
                     Primary (
                         Number { 
                             Size = None
-                            Value = 2u
+                            Value = 2UL
                             UnknownBits = []
                             Signed = false })])
         contentsTest Expression.pExpression expected input
@@ -792,13 +792,13 @@ type ExpressionTests () =
             Primary (
                 Number { 
                     Size = None
-                    Value = 1u
+                    Value = 1UL
                     UnknownBits = []
                     Signed = false }); 
             Primary (
                 Number { 
                     Size = None
-                    Value = 2u
+                    Value = 2UL
                     UnknownBits = []
                     Signed = false })]
         contentsTest Expression.pConcatenation expected input
@@ -809,13 +809,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -828,19 +828,19 @@ type ExpressionTests () =
         let condition = Primary (
                             Number { 
                                 Size = None
-                                Value = 1u
+                                Value = 1UL
                                 UnknownBits = []
                                 Signed = false })
         let trueVal = Primary (
                             Number { 
                                 Size = None
-                                Value = 2u
+                                Value = 2UL
                                 UnknownBits = []
                                 Signed = false })
         let falseVal = Primary (
                             Number { 
                                 Size = None
-                                Value = 3u
+                                Value = 3UL
                                 UnknownBits = []
                                 Signed = false })
         let expected = 
@@ -853,13 +853,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -872,13 +872,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -891,13 +891,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -910,13 +910,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -929,13 +929,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -948,13 +948,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -967,13 +967,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -986,13 +986,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1005,13 +1005,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1024,13 +1024,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1043,13 +1043,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1062,13 +1062,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1081,13 +1081,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1100,13 +1100,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1119,13 +1119,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1138,13 +1138,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1157,13 +1157,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1176,17 +1176,17 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticLeftShift |}
+            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticLeftShift |}
         contentsTest Expression.pExpression expected input
 
     [<Test>]
@@ -1195,17 +1195,17 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
-            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmaticRightShift |}
+            BinaryExpression {| LHS = LHS; RHS = RHS; BinOperator = ArithmeticRightShift |}
         contentsTest Expression.pExpression expected input
 
     [<Test>]
@@ -1214,13 +1214,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1233,13 +1233,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1252,13 +1252,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1271,13 +1271,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1290,13 +1290,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1309,13 +1309,13 @@ type ExpressionTests () =
         let LHS = Primary (
                     Number { 
                         Size = None
-                        Value = 1u
+                        Value = 1UL
                         UnknownBits = []
                         Signed = false })
         let RHS = Primary (
                     Number { 
                         Size = None
-                        Value = 2u
+                        Value = 2UL
                         UnknownBits = []
                         Signed = false })
         let expected = 
@@ -1328,7 +1328,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1341,7 +1341,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1354,7 +1354,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1367,7 +1367,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1380,7 +1380,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1393,7 +1393,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1406,7 +1406,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1419,7 +1419,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1432,7 +1432,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1445,7 +1445,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
@@ -1458,7 +1458,7 @@ type ExpressionTests () =
         let value = Primary (
                         Number { 
                             Size = None
-                            Value = 1u
+                            Value = 1UL
                             UnknownBits = []
                             Signed = false })
         let expected = 
