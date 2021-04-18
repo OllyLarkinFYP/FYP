@@ -56,45 +56,45 @@ module Token =
         |> identifier
         .>> spaces
 
-    let pNumber : Parser<NumberT, unit> =
+    let pNumber : Parser<VNum, unit> =
         let upperAndLower c =
             if isLower c
             then [c; Char.ToUpper c]
             else [Char.ToLower c; c] 
-        let charToNumT c =
+        let charToNum c =
             match isDigit c, isLower c with
             | true, _ -> uint64 c - uint64 '0'
             | _, true -> uint64 c - uint64 'a' + 10UL   // plus 10 so hex value
             | _, false -> uint64 c - uint64 'A' + 10UL  // plus 10 so hex value
-        let listToNum dBase lst =
-            lst
-            |> List.rev
-            |> List.indexed
-            |> List.map (fun (i, x) -> (charToNumT x) * (pown dBase i))
-            |> List.reduce (+)
-        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1']) (skipChar '_') |>> (List.collect id >> listToNum 2UL) .>>? notFollowedBy (hex <|> pchar '_')
-        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7']) (skipChar '_') |>> (List.collect id >> listToNum 8UL) .>>? notFollowedBy (hex <|> pchar '_')
-        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> listToNum 10UL) .>>? notFollowedBy (hex <|> pchar '_')
-        let hexValue = sepBy1 (many1 hex) (skipChar '_') |>> (List.collect id >> listToNum 16UL) .>>? notFollowedBy (hex <|> pchar '_')
+        let concatChars (cLst: char list) =
+            new string [| for c in cLst -> c |]
+        let endOfNumber =
+            notFollowedBy (hex <|> pchar '_' <|> anyOf ['x';'X'])
+        let binaryValue = sepBy1 (many1 <| anyOf ['0';'1';'x';'X']) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
+        let octalValue = sepBy1 (many1 <| anyOf ['0';'1';'2';'3';'4';'5';'6';'7';'x';'X']) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
+        let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
+        let hexValue = sepBy1 (many1 (hex <|> anyOf ['x';'X'])) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
         let numBase b = 
             skipChar '\'' >>? opt (anyOf ['s';'S']) .>>? skipAnyOf (upperAndLower b) 
             |>> function
             | Some _ -> true
             | None -> false
+        // TODO: use signed
         let numberWithBase =
             opt decimalValue 
             .>>.? choice [
-                numBase 'b' .>>.? binaryValue
-                numBase 'o' .>>.? octalValue
-                numBase 'd' .>>.? decimalValue
-                numBase 'h' .>>.? hexValue
-            ] 
+                numBase 'b' .>>.? binaryValue |>> fun (signed, str) -> VNum.bin str
+                numBase 'o' .>>.? octalValue |>> fun (signed, str) -> VNum.oct str
+                numBase 'd' .>>.? decimalValue |>> fun (signed, str) -> VNum (uint64 str, 64u)
+                numBase 'd' .>>? skipAnyOf ['x';'X'] .>>? endOfNumber |>> fun signed -> VNum.unknown 64u  // can't predict the size here
+                numBase 'h' .>>.? hexValue |>> fun (signed, str) -> VNum.hex str
+            ]
             |>> function
-            | (size, (signed, value)) -> { NumberT.Size = Option.map uint size; Value = value; UnknownBits = []; Signed = signed }
+            | Some (sizeStr), num -> VNum(num.value, uint sizeStr, num.unknownBits)
+            | None, num -> VNum(num.value, VNum.defaultSize, num.unknownBits)
         let numberWithoutBase =
-            decimalValue
-            |>> fun x -> { NumberT.Size = None; Value = x; UnknownBits = []; Signed = false }
-        (numberWithBase <|> numberWithoutBase) .>> spaces
+            decimalValue |>> fun str -> VNum (uint64 str, VNum.defaultSize)
+        (numberWithBase <|> numberWithoutBase) .>> spaces |>> fun num -> num.trim()
 
     let pComment: Parser<unit, unit> =
         let singleLine = skipString "//" .>> skipRestOfLine true

@@ -186,12 +186,12 @@ type ExpressionT =
 // ######### A.8.4 Primaries #########
 
 type ConstantPrimaryT =
-    | Number of NumberT
+    | Number of VNum
     | Concat of ConstantConcatenationT
     | Brackets of ConstantExpressionT
 
 type PrimaryT =
-    | Number of NumberT
+    | Number of VNum
     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT option |}
     | Concat of ConcatenationT
     | Brackets of ExpressionT
@@ -247,11 +247,6 @@ type BinaryOperatorT =
     | LogicalLeftShift
     | ArithmeticRightShift
     | ArithmeticLeftShift
-
-
-// ######### A.8.7 Numbers #########
-
-type NumberT = { Size: uint option; Value: uint64; UnknownBits: uint List; Signed: bool }
 
 
 // ######### A.9.3 Identifiers ######
