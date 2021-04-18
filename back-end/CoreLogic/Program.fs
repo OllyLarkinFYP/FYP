@@ -1,5 +1,5 @@
 open System
-open Parser.ConstantExpression
+open Parser
 open CommonTypes
 open CommonHelpers
 open FParsec
@@ -120,20 +120,13 @@ module UART_TX(
 endmodule
 "
 
-let testStr = """& 3'd7 + 86 / 3 * 2"""
+let testStr = "12'o12x"
 
 [<EntryPoint>]
 let main argv =
     // let parser = pSourceText false
     // let result = run parser program
-    let parser = pConstantExpression
-    let time = Diagnostics.Stopwatch.StartNew()
+    let parser = Token.pNumber
     let ast = run parser testStr
-    time.Stop()
-    printfn "Time taken: %i" time.ElapsedMilliseconds
-    match ast with
-    | Success (res,_,_) -> 
-      let value = ConstExprEval.evalConstExpr res
-      printfn "%A" value
-    | _ -> printfn "Parsing failed"
+    printfn "%A" ast
     0 // return an integer exit code

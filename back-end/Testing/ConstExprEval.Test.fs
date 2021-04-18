@@ -17,10 +17,10 @@ module ConstExprTests =
         |> List.map (fun (n, e, a) -> n, e, evalConstExpr a)
         |> equalityTests name
 
-    let private num value size = 
+    let private num (value: int) (size: int) = 
         ce.Primary 
             (cp.Number 
-                { Size = Some (uint size); Value = uint64 value; UnknownBits = List.empty; Signed = false })
+                (VNum(value,size)))
 
     let private bin (str: string) =
         let rec getNum (chars: char list) =

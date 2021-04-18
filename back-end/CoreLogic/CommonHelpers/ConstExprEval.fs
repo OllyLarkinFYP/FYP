@@ -14,7 +14,7 @@ module rec ConstExprEval =
 
     let private evalConstPrimary (expr: ConstantPrimaryT) : VNum =
         match expr with
-        | ConstantPrimaryT.Number n -> VNum(n.Value, Option.defaultValue VNum.defaultSize n.Size)
+        | ConstantPrimaryT.Number n -> n
         | ConstantPrimaryT.Brackets ex -> evalConstExpr ex
         | ConstantPrimaryT.Concat c -> 
             // TODO: add checks for size of concat (dont want size to overflow)
