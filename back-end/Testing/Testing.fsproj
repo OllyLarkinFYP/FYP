@@ -17,6 +17,7 @@
   <ItemGroup>
     <Compile Include="Helper.fs" />
     <Compile Include="ConstExprEval.Test.fs" />
+    <Compile Include="VNum.Test.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -2,10 +2,32 @@ namespace CommonTypes
 
 open System
 
+type MaskDir =
+    | Up
+    | Down
+
+module private Helpers =
+    let intersect a b =
+        let setA = Set.ofList a
+        let setB = Set.ofList b
+        Set.intersect setA setB
+        |> Set.toList
+
+    let digToDec b c  =
+        let value = 
+            match c with
+                | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> int c - int '0'
+                | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' -> int c - int 'a' + 10
+                | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' -> int c - int 'A' + 10
+                | _ -> raise <| ArgumentException()
+        if value < b
+        then value
+        else raise <| ArgumentException()
+
 /// A class used to simulate the behaviour of bit arrays in Verilog
 /// Unchecked operators are explicitly used were required to get the desired overflow behaviour
 type VNum(value: uint64, size: uint, unknownBits: uint list) =
-    let width = 64
+    let width = 64u
 
     member this.value = value
     member this.size = size
@@ -18,30 +40,70 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
     new(i: int) = VNum(uint64 i, 32u, [])
     new(b: bool) = if b then VNum(1UL,1u,[]) else VNum(0UL,1u,[])
 
+    /// Constructs a VNum from binary string 
+    /// e.g.
+    /// "10010x1" -> VNum(73UL, 7u, [1u]) or VNum(75UL, 7u, [1u])
+    static member bin = VNum.fromBase 2
+
+    static member oct = VNum.fromBase 8
+
+    static member hex = VNum.fromBase 16
+
+    static member fromBase b str =
+        let shiftAmt =
+            match b with
+            | 2 -> 1
+            | 8 -> 3
+            | 16 -> 4
+            | _ -> raise <| ArgumentException()
+        let size = String.length str * shiftAmt |> uint
+        (VNum(0UL,size), str)
+        ||> Seq.fold (fun currNum dig ->
+            let digVal =
+                match dig with
+                | 'x' | 'X' -> 0UL
+                | _ -> Helpers.digToDec b dig |> uint64
+            let unknown = dig = 'x' || dig = 'x'
+            let newNumBase : VNum = VNum.(<<<) (currNum, VNum shiftAmt)
+            if unknown
+            then VNum(newNumBase.value + digVal, size, newNumBase.unknownBits @ [0u .. uint (shiftAmt-1)])
+            else VNum(newNumBase.value + digVal, size, newNumBase.unknownBits))
+
     static member unknown size =
         let bits = [ 0u..size-1u ]
         VNum(0UL, size, bits)
 
-    member this.mask unknownBits =
+    member this.isUnknown =
+        this.unknownBits
+        |> List.filter (fun i -> i < width) // Number can extend past their bounds
+        |> List.isEmpty
+        |> not
+
+    member this.mask (down, unknownBits) =
         let m = 
             (0UL, unknownBits)
             ||> List.fold (fun state elem ->
                 let v = 1UL <<< (int elem)
-                state + v) 
-            |> (~~~)
-        VNum(this.value &&& m, this.size, this.unknownBits)
+                state ||| v) 
+        match down with
+        | Down -> VNum(this.value &&& (~~~ m), this.size, this.unknownBits)
+        | Up   -> VNum(this.value ||| m, this.size, this.unknownBits)
 
     member this.mask () =
-        this.mask this.unknownBits
+        this.mask (Down, this.unknownBits)
 
-    member this.isUnknown = not <| List.isEmpty this.unknownBits
+    member this.maskUp () = 
+        this.mask (Up, this.unknownBits)
 
     /// Masks out anything above the size of the number as well as unknown bits
     member this.trim () = 
         let m = 
             ((1UL <<< (int this.size)), 1UL)
             ||> FSharp.Core.Operators.(-)
-        VNum(this.value &&& m, this.size, this.unknownBits).mask()
+        let ub =
+            this.unknownBits
+            |> List.filter (fun i -> i < this.size)
+        VNum(this.value &&& m, this.size, ub).mask()
 
     member this.toBool () =
         if this.trim().value = 0UL || this.isUnknown
@@ -54,7 +116,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         else this.trim().value |> int
 
     override this.ToString() =
-        this.size.ToString() + "'d" + this.value.ToString() + (sprintf " with unknown bits: %A" this.unknownBits)
+        this.size.ToString() + "'d" + this.trim().value.ToString() + (sprintf " with unknown bits: %A" this.unknownBits)
 
     static member defaultSize = 32u
 
@@ -74,22 +136,32 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         else reduceRec operator this this.size 
 
     static member concat (nums: VNum list) =
-        let out = 
-            nums
-            |> List.reduce (fun a b -> 
-                let newSize = a.size + b.size
-                let newVal = (a.trim().value <<< int b.size) ||| b.trim().value
-                let newUnknownBits =
-                    a.unknownBits
-                    |> List.map ((+) b.size)
-                    |> (@) b.unknownBits
-                VNum(newVal, newSize, newUnknownBits))
-        out.trim()
+        nums
+        |> List.reduce (fun a b -> 
+            let newSize = a.size + b.size
+            let newVal = (a.trim().value <<< int b.size) ||| b.trim().value
+            let newUnknownBits =
+                a.unknownBits
+                |> List.map ((+) b.size)
+                |> (@) b.unknownBits
+            VNum(newVal, newSize, newUnknownBits))
+
+    member this.getBits bit =
+        let rec toBinLst size i =
+            match size with
+            | 0u -> []
+            | _ -> [i%2UL] @ (toBinLst (size-1u) (i >>> 1))
+        (([],0u), toBinLst this.size this.value)
+        ||> List.fold (fun (retLst, i) dig ->
+            if (uint64 bit) = dig
+            then (retLst @ [i], i+1u)
+            else (retLst, i+1u))
+        |> fst
 
     override this.Equals other =
         match other with
         | :? VNum as num -> 
-            (this.trim().mask(num.unknownBits).value :> IEquatable<_>).Equals (num.trim().mask(this.unknownBits).value)
+            (this.trim().mask(Down,num.unknownBits).value :> IEquatable<_>).Equals (num.trim().mask(Down,this.unknownBits).value)
         | _ -> false
 
     override this.GetHashCode() = this.trim().value.GetHashCode()
@@ -98,7 +170,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         member this.CompareTo other =
             match other with
             | :? VNum as num -> 
-                (this.trim().mask(num.unknownBits).value :> IComparable<_>).CompareTo (num.trim().mask(this.unknownBits).value)
+                (this.trim().mask(Down,num.unknownBits).value :> IComparable<_>).CompareTo (num.trim().mask(Down,this.unknownBits).value)
             | _ -> -1
 
     // *********** UNARY OPS ***********
@@ -167,12 +239,6 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         then VNum.unknown newSize
         else VNum(num1.value % num2.value, newSize)
 
-    static member (&&&) (num1: VNum, num2: VNum) =
-        let newSize = max num1.size num2.size
-        if num1.isUnknown || num2.isUnknown
-        then VNum.unknown newSize
-        else VNum(num1.value &&& num2.value, newSize)
-
     static member (<<<) (num: VNum, amount: VNum) =
         if amount.isUnknown
         then VNum.unknown num.size
@@ -191,22 +257,32 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
             let newUnknownBits =
                 num.unknownBits
                 |> List.choose (fun bit ->
-                    if bit > (uint <| amount.toInt())
+                    if bit >= (uint <| amount.toInt())
                     then Some <| bit - (uint <| amount.toInt())
                     else None)
             VNum(num.value >>> amount.toInt(), num.size, newUnknownBits)
 
     static member (^^^) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        if num1.isUnknown || num2.isUnknown
-        then VNum.unknown newSize
-        else VNum(num1.value ^^^ num2.value, newSize)
+        VNum(num1.value ^^^ num2.value, newSize, num1.unknownBits @ num2.unknownBits)
+
+    static member (&&&) (num1: VNum, num2: VNum) =
+        let newSize = max num1.size num2.size
+        let aVal = num1.maskUp().value
+        let bVal = num2.maskUp().value
+        let newVal = aVal &&& bVal
+        let ones = VNum(newVal, newSize).getBits 1
+        let unknowns = num1.unknownBits @ num2.unknownBits
+        VNum(newVal, newSize, Helpers.intersect ones unknowns)
 
     static member (|||) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        if num1.isUnknown || num2.isUnknown
-        then VNum.unknown newSize
-        else VNum(num1.value ||| num2.value, newSize)
+        let aVal = num1.mask().value
+        let bVal = num2.mask().value
+        let newVal = aVal ||| bVal
+        let ones = VNum(newVal, newSize).getBits 0
+        let unknowns = num1.unknownBits @ num2.unknownBits
+        VNum(newVal, newSize, Helpers.intersect ones unknowns)
 
     static member (^^) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
