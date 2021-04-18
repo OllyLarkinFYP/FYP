@@ -52,7 +52,7 @@ module rec ConstExprEval =
         | CaseInequality -> lhs <> rhs |> VNum  // TODO: same as above
         | LogicalAnd -> (lhs.toBool() && rhs.toBool()) |> VNum
         | LogicalOr -> (lhs.toBool() || rhs.toBool()) |> VNum
-        | Power -> pown lhs (rhs.toInt())
+        | Power -> lhs ^^ rhs
         | LessThan -> lhs < rhs |> VNum
         | LessThanOrEqual -> lhs <= rhs |> VNum
         | GreaterThan -> lhs > rhs |> VNum
@@ -61,10 +61,10 @@ module rec ConstExprEval =
         | BitwiseOr -> lhs ||| rhs
         | BitwiseXor -> lhs ^^^ rhs
         | BitwiseXnor -> ~~~ (lhs ^^^ rhs)
-        | LogicalRightShift -> lhs >>> rhs.toInt()
-        | LogicalLeftShift -> lhs <<< rhs.toInt()
-        | ArithmeticRightShift -> lhs >>> rhs.toInt()   // TODO: make arithmatic - check its actually needed
-        | ArithmeticLeftShift -> lhs <<< rhs.toInt()    // TODO: same as above
+        | LogicalRightShift -> VNum.(>>>) (lhs, rhs)
+        | LogicalLeftShift -> VNum.(<<<) (lhs, rhs)
+        | ArithmeticRightShift -> VNum.(>>>) (lhs, rhs)  // TODO: make arithmatic - check its actually needed
+        | ArithmeticLeftShift -> VNum.(<<<) (lhs, rhs)    // TODO: same as above
 
     let private evalConstCond (cond: ConstantExpressionT) (trueExpr: ConstantExpressionT) (falseExpr: ConstantExpressionT) = 
         if ((evalConstExpr cond).toBool())

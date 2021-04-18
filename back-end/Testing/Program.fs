@@ -5,10 +5,8 @@ open Tests
 
 let tests = 
     testList "All Tests" [ 
-        constExprEvalPrimaryTests
-        constExprEvalUniTests 
-        constExprEvalBinaryTests
-        constExprEvalTernaryTests
+        ConstExprTests.allTests
+        VNumTests.allTests
     ] 
 
 [<EntryPoint>] 
