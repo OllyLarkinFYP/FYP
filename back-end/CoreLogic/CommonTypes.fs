@@ -289,3 +289,11 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         if num1.isUnknown || num2.isUnknown
         then VNum.unknown newSize
         else VNum(pown (num1.trim().value) (int <| num2.trim().value), newSize)
+
+type PortType =
+    | Wire
+    | Reg
+
+type PortDirAndType =
+    | Input
+    | Output of PortType

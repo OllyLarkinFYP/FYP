@@ -75,19 +75,15 @@ module Token =
         let decimalValue = sepBy1 (many1 digit) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
         let hexValue = sepBy1 (many1 (hex <|> anyOf ['x';'X'])) (skipChar '_') |>> (List.collect id >> concatChars) .>>? endOfNumber
         let numBase b = 
-            skipChar '\'' >>? opt (anyOf ['s';'S']) .>>? skipAnyOf (upperAndLower b) 
-            |>> function
-            | Some _ -> true
-            | None -> false
-        // TODO: use signed
+            skipChar '\'' >>? skipAnyOf (upperAndLower b)
         let numberWithBase =
             opt decimalValue 
             .>>.? choice [
-                numBase 'b' .>>.? binaryValue |>> fun (signed, str) -> VNum.bin str
-                numBase 'o' .>>.? octalValue |>> fun (signed, str) -> VNum.oct str
-                numBase 'd' .>>.? decimalValue |>> fun (signed, str) -> VNum (uint64 str, 64u)
-                numBase 'd' .>>? skipAnyOf ['x';'X'] .>>? endOfNumber |>> fun signed -> VNum.unknown 64u  // can't predict the size here
-                numBase 'h' .>>.? hexValue |>> fun (signed, str) -> VNum.hex str
+                numBase 'b' >>? binaryValue |>> VNum.bin
+                numBase 'o' >>? octalValue |>> VNum.oct
+                numBase 'd' >>? decimalValue |>> fun str -> VNum (uint64 str, 64u)
+                numBase 'd' >>? skipAnyOf ['x';'X'] >>? endOfNumber >>% VNum.unknown 64u  // can't predict the size here
+                numBase 'h' >>? hexValue |>> VNum.hex
             ]
             |>> function
             | Some (sizeStr), num -> VNum(num.value, uint sizeStr, num.unknownBits)

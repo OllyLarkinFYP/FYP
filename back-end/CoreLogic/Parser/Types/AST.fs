@@ -18,19 +18,10 @@ type ASTT =
 
 type PortT = { name: IdentifierT; range: ConstantRangeExpressionT Option }
 
-type OutputPortDecType =
-    | Wire
-    | Reg
-
-type PortDecDirType =   
-    | Input
-    | Output of OutputPortDecType
-
 type PortDeclarationT = 
     { name: IdentifierT
       range: RangeT option
-      signed: bool
-      dir: PortDecDirType }
+      dir: PortDirAndType }
 
 
 // ######### A.1.4 Module Items #########
@@ -54,7 +45,6 @@ type ModuleOrGenItemDecType =
 type ModuleOrGenerateItemDeclarationT =
     { names: IdentifierT list
       range: RangeT option
-      signed: bool
       decType: ModuleOrGenItemDecType }
 
 

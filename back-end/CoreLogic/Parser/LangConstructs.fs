@@ -6,6 +6,7 @@ open AST
 open Token
 open Expression
 open ConstantExpression
+open CommonTypes
 
 module LangConstructs =
 
@@ -130,30 +131,27 @@ module LangConstructs =
         sepBy1 pIdentifier Symbol.pComma
 
     let pNetDeclaration =
-        Keyword.pWire >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
+        Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> 
+        | range, idens -> 
             { names = idens
               range = range
-              signed = Option.isSome signed
               decType = NetDeclaration }
 
     let pRegDeclaration = 
-        Keyword.pReg >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
+        Keyword.pReg >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> 
+        | range, idens -> 
             { names = idens
               range = range
-              signed = Option.isSome signed
               decType = RegDeclaration }
 
     let pLogicDeclaration = 
-        Keyword.pLogic >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
+        Keyword.pLogic >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> 
+        | range, idens -> 
             { names = idens
               range = range
-              signed = Option.isSome signed
               decType = LogicDeclaration }
 
     let pModuleOrGenerateItemDeclaration =
@@ -164,32 +162,25 @@ module LangConstructs =
         ]
 
     let pInputDeclaration =
-        Keyword.pInput >>. opt Keyword.pWire >>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pIdentifier
         |>> function
-        | (signed, range), iden -> 
+        | range, iden -> 
             { name = iden
               range = range
-              signed = Option.isSome signed
               dir = Input }
 
     let pOutputDeclaration = 
         let regOrWire =
             choice [
-                Keyword.pReg >>% OutputPortDecType.Reg
-                opt Keyword.pWire >>% OutputPortDecType.Wire
+                Keyword.pReg >>% Reg
+                opt Keyword.pWire >>% Wire
             ]
-        Keyword.pOutput >>. regOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((OutputPortDecType.Reg, signed), range), iden -> 
+        | (portType, range), iden -> 
             { name = iden
               range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Reg }
-        | ((OutputPortDecType.Wire, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Wire }
+              dir = Output portType }
 
     let pPortDeclaration =
         choice [

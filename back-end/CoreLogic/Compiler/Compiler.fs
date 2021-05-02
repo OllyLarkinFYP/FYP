@@ -82,3 +82,6 @@ open Result
 //                 | NonPortModuleItem i -> Some i )
 
 //     raise <| NotImplementedException()
+
+let gatherDecs (asts: ASTT list) : ModuleDeclaration list =
+    raise <| NotImplementedException ()

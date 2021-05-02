@@ -7,18 +7,9 @@ open CommonTypes
 /// Different modules listed with their names as the key
 type NetlistCollection = Map<IdentifierT,Netlist>
 
-type PortType =
-    | Wire
-    | Logic
-    | Reg
-
-type Direction =
-    | Input
-    | Output
-
 type ModuleDeclaration =
     { name: IdentifierT
-      ports: (IdentifierT * Direction * Range) array }
+      ports: (IdentifierT * PortDirAndType * Range) array }
 
 type Netlist = 
     { modDec: ModuleDeclaration
