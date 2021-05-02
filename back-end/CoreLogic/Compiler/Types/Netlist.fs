@@ -5,30 +5,33 @@ open AST
 open CommonTypes
 
 /// Different modules listed with their names as the key
-type NetlistCollection = Map<string,Netlist>
+type NetlistCollection = Map<IdentifierT,Netlist>
 
 type PortType =
     | Wire
     | Logic
     | Reg
 
-type Netlist = 
+type Direction =
+    | Input
+    | Output
+
+type ModuleDeclaration =
     { name: IdentifierT
-      inputs: (string * PortType * Port) array
-      outputs: (string * PortType * Port) array
-      /// Map from instance name to node
-      nodes: Map<string,Node> }
+      ports: (IdentifierT * Direction) array }
+
+type Netlist = 
+    { modDec: ModuleDeclaration
+      nodes: Map<IdentifierT,Node> }
 
 type Node = 
     { comp: Component
-      inputs: Port array
-      outputs: Port array }
+      inputs: Port array }
 
 type Component =
+    | InputNode of IdentifierT
+    | OutputNode of IdentifierT
     | ModuleInst of IdentifierT
-    // | UnaryOp of UnaryOperatorT
-    // | BinaryOp of BinaryOperatorT
-    // | TernaryOp
     | Expression of ExpressionT
     | Always of AlwaysConstructT
     | Declaration of {| range: Range; portType: PortType; initVal: VNum |}
@@ -44,7 +47,7 @@ type Range =
         member this.size () =
             match this with
             | Single -> 1u
-            | Ranged (msb, lsb) -> msb - lsb
+            | Ranged (msb, lsb) -> msb - lsb + 1u
 
 type Connection = 
     { myRange: Range

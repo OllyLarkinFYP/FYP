@@ -12,7 +12,6 @@
     <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Parser/Expressions.fs" />
     <Compile Include="Parser/LangConstructs.fs" />
-    <Compile Include="Compiler/Helpers.fs" />
     <Compile Include="Compiler/Compiler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
