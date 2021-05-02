@@ -164,38 +164,22 @@ module LangConstructs =
         ]
 
     let pInputDeclaration =
-        let logicOrWire =
-            choice [
-                Keyword.pLogic >>% InputPortDecType.Logic
-                opt Keyword.pWire >>% InputPortDecType.Wire
-            ]
-        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pInput >>. opt Keyword.pWire >>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((InputPortDecType.Logic, signed), range), iden -> 
+        | (signed, range), iden -> 
             { name = iden
               range = range
               signed = Option.isSome signed
-              dir = Input InputPortDecType.Logic }
-        | ((InputPortDecType.Wire, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Input InputPortDecType.Logic }
+              dir = Input }
 
     let pOutputDeclaration = 
-        let logicOrWire =
+        let regOrWire =
             choice [
-                Keyword.pLogic >>% OutputPortDecType.Logic
                 Keyword.pReg >>% OutputPortDecType.Reg
                 opt Keyword.pWire >>% OutputPortDecType.Wire
             ]
-        Keyword.pOutput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. regOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((OutputPortDecType.Logic, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Logic }
         | ((OutputPortDecType.Reg, signed), range), iden -> 
             { name = iden
               range = range
@@ -277,9 +261,7 @@ module LangConstructs =
         modDec1 <|> modDec2
 
     let pSourceText isSystemVerilog = 
-        spaces >>. pModuleDeclaration .>> eof |>> fun m -> 
-            { modDec = m 
-              isSystemVerilog = isSystemVerilog }
+        spaces >>. pModuleDeclaration .>> eof
 
     do pStatementImpl := 
         choice [

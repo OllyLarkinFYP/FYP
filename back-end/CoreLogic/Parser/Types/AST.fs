@@ -5,15 +5,11 @@ open CommonTypes
 
 // ######### A.1.2 Verilog Source Text #########
 
-type ASTT = 
-    { modDec: ModuleDeclarationT 
-      isSystemVerilog: bool }
-
 type ModuleDeclarationInfo =
     | ModDec1 of {| ports: PortT List; body: ModuleItemT List |}
     | ModDec2 of {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}
 
-type ModuleDeclarationT =
+type ASTT =
     { name: IdentifierT
       info: ModuleDeclarationInfo }
 
@@ -22,17 +18,12 @@ type ModuleDeclarationT =
 
 type PortT = { name: IdentifierT; range: ConstantRangeExpressionT Option }
 
-type InputPortDecType =
-    | Wire
-    | Logic
-
 type OutputPortDecType =
     | Wire
-    | Logic
     | Reg
 
 type PortDecDirType =   
-    | Input of InputPortDecType
+    | Input
     | Output of OutputPortDecType
 
 type PortDeclarationT = 

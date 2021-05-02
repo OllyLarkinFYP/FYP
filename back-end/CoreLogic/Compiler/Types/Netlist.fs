@@ -18,7 +18,7 @@ type Direction =
 
 type ModuleDeclaration =
     { name: IdentifierT
-      ports: (IdentifierT * Direction) array }
+      ports: (IdentifierT * Direction * Range) array }
 
 type Netlist = 
     { modDec: ModuleDeclaration
