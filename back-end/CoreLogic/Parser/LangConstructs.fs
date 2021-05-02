@@ -188,11 +188,6 @@ module LangConstructs =
             pOutputDeclaration
         ]
 
-    let pPort =
-        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac)
-        |>> function
-        | (iden, opRange) -> { PortT.name = iden; range = opRange }
-
     let pListOfPortConnections =
         let named =
             Symbol.pPeriod >>. pIdentifier .>>. opt (Symbol.pOpenRBrac >>. opt pExpression .>> Symbol.pCloseRBrac)
@@ -230,7 +225,7 @@ module LangConstructs =
         op1 <|> op2
 
     let pListOfPorts = 
-        Symbol.pOpenRBrac >>. sepBy1 pPort Symbol.pComma .>> Symbol.pCloseRBrac
+        Symbol.pOpenRBrac >>. sepBy1 pIdentifier Symbol.pComma .>> Symbol.pCloseRBrac
 
     let pListOfPortDeclarations =
         Symbol.pOpenRBrac >>. sepBy pPortDeclaration Symbol.pComma .>> Symbol.pCloseRBrac
@@ -251,7 +246,7 @@ module LangConstructs =
                   info = ModDec2 {| ports = ports; body = moduleItems |}}
         modDec1 <|> modDec2
 
-    let pSourceText isSystemVerilog = 
+    let pSourceText = 
         spaces >>. pModuleDeclaration .>> eof
 
     do pStatementImpl := 

@@ -6,7 +6,7 @@ open CommonTypes
 // ######### A.1.2 Verilog Source Text #########
 
 type ModuleDeclarationInfo =
-    | ModDec1 of {| ports: PortT List; body: ModuleItemT List |}
+    | ModDec1 of {| ports: IdentifierT List; body: ModuleItemT List |}
     | ModDec2 of {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}
 
 type ASTT =
@@ -15,8 +15,6 @@ type ASTT =
 
 
 // ######### A.1.3 Module Parameters And Ports #########
-
-type PortT = { name: IdentifierT; range: ConstantRangeExpressionT Option }
 
 type PortDeclarationT = 
     { name: IdentifierT

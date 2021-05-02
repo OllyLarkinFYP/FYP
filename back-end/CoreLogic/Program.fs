@@ -124,9 +124,12 @@ let testStr = "12'o12x"
 
 [<EntryPoint>]
 let main argv =
-    // let parser = pSourceText false
-    // let result = run parser program
-    let parser = Token.pNumber
-    let ast = run parser testStr
-    printfn "%A" ast
+    let parser = LangConstructs.pSourceText
+    let result = 
+        program
+        |> run parser
+        |> function
+        | Success (ast,_,_) -> Compiler.collectDecs [ast]
+        | Failure (msg,_,_) -> failwith msg
+    printfn "%A" result
     0 // return an integer exit code
