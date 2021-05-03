@@ -1,35 +1,7 @@
-namespace rec Netlist
+namespace Netlist
 
-open System
 open AST
 open CommonTypes
-
-/// Different modules listed with their names as the key
-type NetlistCollection = Map<IdentifierT,Netlist>
-
-type ModuleDeclaration =
-    { name: IdentifierT
-      ports: (IdentifierT * PortDirAndType * Range) array }
-
-type Netlist = 
-    { modDec: ModuleDeclaration
-      nodes: Map<IdentifierT,Node> }
-
-type Node = 
-    { comp: Component
-      inputs: Port array }
-
-type Component =
-    | InputNode of IdentifierT
-    | OutputNode of IdentifierT
-    | ModuleInst of IdentifierT
-    | Expression of ExpressionT
-    | Always of AlwaysConstructT
-    | Declaration of {| range: Range; portType: PortType; initVal: VNum |}
-
-type Port = 
-    { range: Range
-      connections: Connection array }
 
 type Range = 
     | Single
@@ -40,8 +12,37 @@ type Range =
             | Single -> 1u
             | Ranged (msb, lsb) -> msb - lsb + 1u
 
+type Component =
+    | InputComp of Range
+    | OutputReg of Range
+    | OutputWire of Range
+    | ModuleInst of IdentifierT
+    | Expression of ExpressionT
+    | Always of AlwaysConstructT
+    | RegComp of {| range: Range; initVal: VNum |}
+    | WireComp of {| range: Range; initVal: VNum |}
+
 type Connection = 
     { myRange: Range
       theirName: string
       theirPinNum: uint
       theirRange: Range }
+
+type Port = 
+    { range: Range
+      connections: Connection array }
+
+type ModuleDeclaration =
+    { name: IdentifierT
+      ports: (IdentifierT * PortDirAndType * Range) array }
+
+type Node = 
+    { comp: Component
+      inputs: Port array }
+
+type Netlist = 
+    { modDec: ModuleDeclaration
+      nodes: Map<IdentifierT,Node> }
+
+/// Different modules listed with their names as the key
+type NetlistCollection = Map<IdentifierT,Netlist>

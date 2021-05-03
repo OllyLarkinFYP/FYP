@@ -4,6 +4,7 @@ open System
 open AST
 open Netlist
 open CommonHelpers
+open CommonTypes
 
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =
@@ -24,8 +25,8 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
             (portDec.name, portDec.dir, Ranged (msb,lsb))
     let processModDec1 (dec: {| ports: IdentifierT List; body: ModuleItemT List |}) =
         dec.body
-        |> List.choose (fun item ->
-            match item with
+        |> List.choose 
+            (function
             | PortDeclaration pd -> Some <| processPortDec pd
             | _ -> None)
         |> orderList dec.ports
@@ -41,3 +42,36 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
             | ModDec2 dec -> processModDec2 dec
         { name = ast.name; ports = ports}
     List.map getDec asts
+
+let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,string> =
+    let thisModDecRes =
+        modDecs
+        |> List.tryFind (fun dec -> dec.name = ast.name)
+        |> function
+        | Some d -> Ok d
+        | None -> Error <| sprintf "The module declaration for the module %A was not provided to the compiler." ast.name
+    let items = 
+        ast.info
+        |> function
+        | ModDec1 elems -> 
+            elems.body
+            |> List.choose
+                (function
+                | PortDeclaration _ -> None
+                | NonPortModuleItem elem -> Some elem)
+        | ModDec2 elems -> elems.body
+
+    match thisModDecRes with
+    | Error e -> Error e
+    | Ok thisModDec ->
+        let nodeMap : Map<IdentifierT,Node> =
+            thisModDec.ports
+            |> Array.map (fun (portName, portDir, portRange) ->
+                match portDir with
+                | Input -> (portName, { comp = InputComp portRange; inputs = [||] })
+                | Output t ->
+                    match t with
+                    | Wire -> (portName, { comp = OutputWire portRange; inputs = [||] })
+                    | Reg -> (portName, { comp = OutputReg portRange; inputs = [||] }))
+            |> Map.ofArray
+        Ok { modDec = thisModDec; nodes = nodeMap }

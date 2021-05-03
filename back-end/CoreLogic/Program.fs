@@ -253,7 +253,9 @@ let main argv =
         program
         |> run parser
         |> function
-        | Success (ast,_,_) -> Compiler.collectDecs [ast]
+        | Success (ast,_,_) -> 
+            let decs = Compiler.collectDecs [ast]
+            Compiler.compileAST decs ast
         | Failure (msg,_,_) -> failwith msg
     printfn "%A" result
     0 // return an integer exit code
