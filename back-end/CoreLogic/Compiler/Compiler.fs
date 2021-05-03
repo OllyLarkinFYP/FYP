@@ -68,10 +68,11 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
             thisModDec.ports
             |> Array.map (fun (portName, portDir, portRange) ->
                 match portDir with
-                | Input -> (portName, { comp = InputComp portRange; inputs = [||] })
+                | Input -> (portName, Node.initInputComp portRange)
                 | Output t ->
                     match t with
-                    | Wire -> (portName, { comp = OutputWire portRange; inputs = [||] })
-                    | Reg -> (portName, { comp = OutputReg portRange; inputs = [||] }))
+                    | Wire -> (portName, Node.initOutputReg portRange)
+                    | Reg -> (portName, Node.initOutputWire portRange))
             |> Map.ofArray
+
         Ok { modDec = thisModDec; nodes = nodeMap }

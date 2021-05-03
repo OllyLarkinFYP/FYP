@@ -14,13 +14,13 @@ type Range =
 
 type Component =
     | InputComp of Range
-    | OutputReg of Range
-    | OutputWire of Range
+    | OutputReg
+    | OutputWire
     | ModuleInst of IdentifierT
     | Expression of ExpressionT
     | Always of AlwaysConstructT
     | RegComp of {| range: Range; initVal: VNum |}
-    | WireComp of {| range: Range; initVal: VNum |}
+    | WireComp of {| range: Range; initVal: VNum |} 
 
 type Connection = 
     { myRange: Range
@@ -39,6 +39,10 @@ type ModuleDeclaration =
 type Node = 
     { comp: Component
       inputs: Port array }
+    with
+        static member initInputComp range = { comp = InputComp range; inputs = [||] }
+        static member initOutputReg range = { comp = OutputReg; inputs = [|{ range = range; connections = [||] }|] }
+        static member initOutputWire range = { comp = OutputWire; inputs = [|{ range = range; connections = [||] }|] }
 
 type Netlist = 
     { modDec: ModuleDeclaration
