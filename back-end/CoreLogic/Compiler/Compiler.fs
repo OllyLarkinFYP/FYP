@@ -1,4 +1,4 @@
-module rec Compiler
+module Compiler
 
 open System
 open AST

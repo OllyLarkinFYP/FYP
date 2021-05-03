@@ -48,7 +48,7 @@ type Node =
       inputs: Port array }
     with
         static member initInputComp range = { comp = InputComp range; inputs = [||] }
-        static member initOutputReg range = { comp = OutputReg; inputs = [|{ range = range; connections = [||] }|] }
+        static member initOutputReg (range: Range) = { comp = OutputReg { initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
         static member initOutputWire range = { comp = OutputWire; inputs = [|{ range = range; connections = [||] }|] }
 
 type Netlist = 
