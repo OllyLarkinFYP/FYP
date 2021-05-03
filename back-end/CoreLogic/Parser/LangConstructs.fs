@@ -136,7 +136,7 @@ module LangConstructs =
         | range, idens -> 
             { names = idens
               range = range
-              decType = NetDeclaration }
+              decType = Wire }
 
     let pRegDeclaration = 
         Keyword.pReg >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
@@ -144,21 +144,12 @@ module LangConstructs =
         | range, idens -> 
             { names = idens
               range = range
-              decType = RegDeclaration }
-
-    let pLogicDeclaration = 
-        Keyword.pLogic >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
-        |>> function
-        | range, idens -> 
-            { names = idens
-              range = range
-              decType = LogicDeclaration }
+              decType = Reg }
 
     let pModuleOrGenerateItemDeclaration =
         choice [
             pNetDeclaration
             pRegDeclaration
-            pLogicDeclaration
         ]
 
     let pInputDeclaration =

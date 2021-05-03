@@ -12,15 +12,22 @@ type Range =
             | Single -> 1u
             | Ranged (msb, lsb) -> msb - lsb + 1u
 
+type OutputRegContent =
+    { mutable initVal: VNum }
+
+type RegCompContent =
+    { range: Range
+      mutable initVal: VNum }
+
 type Component =
     | InputComp of Range
-    | OutputReg
+    | OutputReg of OutputRegContent
     | OutputWire
     | ModuleInst of IdentifierT
     | Expression of ExpressionT
     | Always of AlwaysConstructT
-    | RegComp of {| range: Range; initVal: VNum |}
-    | WireComp of {| range: Range; initVal: VNum |} 
+    | RegComp of RegCompContent
+    | WireComp of Range
 
 type Connection = 
     { myRange: Range
@@ -30,7 +37,7 @@ type Connection =
 
 type Port = 
     { range: Range
-      connections: Connection array }
+      mutable connections: Connection array }
 
 type ModuleDeclaration =
     { name: IdentifierT

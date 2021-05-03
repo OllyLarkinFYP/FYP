@@ -67,12 +67,26 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
         let nodeMap : Map<IdentifierT,Node> =
             thisModDec.ports
             |> Array.map (fun (portName, portDir, portRange) ->
-                match portDir with
-                | Input -> (portName, Node.initInputComp portRange)
-                | Output t ->
-                    match t with
-                    | Wire -> (portName, Node.initOutputReg portRange)
-                    | Reg -> (portName, Node.initOutputWire portRange))
+                let initFunc = 
+                    match portDir with
+                    | Input -> Node.initInputComp
+                    | Output t ->
+                        match t with
+                        | Wire -> Node.initOutputReg
+                        | Reg -> Node.initOutputWire
+                (portName, initFunc portRange))
             |> Map.ofArray
 
+        let itemMap =
+            function
+            | ModuleItemDeclaration modItemDec -> raise <| NotImplementedException()
+            | ContinuousAssign contAssign -> raise <| NotImplementedException()
+            | ModuleInstantiation modInst -> raise <| NotImplementedException()
+            | InitialConstruct initConst -> raise <| NotImplementedException()
+            | AlwaysConstruct alwaysConst -> raise <| NotImplementedException()
+
+        items
+        |> List.map itemMap
+        |> ignore
+        
         Ok { modDec = thisModDec; nodes = nodeMap }

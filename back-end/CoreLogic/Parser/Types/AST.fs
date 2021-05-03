@@ -35,15 +35,10 @@ type NonPortModuleItemT =
     | InitialConstruct of InitialConstructT
     | AlwaysConstruct of AlwaysConstructT
 
-type ModuleOrGenItemDecType =
-    | NetDeclaration
-    | RegDeclaration
-    | LogicDeclaration
-
 type ModuleOrGenerateItemDeclarationT =
     { names: IdentifierT list
       range: RangeT option
-      decType: ModuleOrGenItemDecType }
+      decType: PortType }
 
 
 // ######### A.2.5 Declaration Ranges #########
