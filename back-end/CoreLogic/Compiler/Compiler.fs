@@ -20,9 +20,8 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
         match portDec.range with
         | None -> (portDec.name, portDec.dir, Single)
         | Some r -> 
-            let lsb = (ConstExprEval.evalConstExpr r.LSB).toInt() |> uint
-            let msb = (ConstExprEval.evalConstExpr r.MSB).toInt() |> uint
-            (portDec.name, portDec.dir, Ranged (msb,lsb))
+            let range = Util.rangeTToRange r
+            (portDec.name, portDec.dir, range)
     let processModDec1 (dec: {| ports: IdentifierT List; body: ModuleItemT List |}) =
         dec.body
         |> List.choose 
@@ -64,7 +63,7 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
     match thisModDecRes with
     | Error e -> Error e
     | Ok thisModDec ->
-        let nodeMap : Map<IdentifierT,Node> =
+        let mutable nodeMap : Map<IdentifierT,Node> =
             thisModDec.ports
             |> Array.map (fun (portName, portDir, portRange) ->
                 let initFunc = 
@@ -80,32 +79,45 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
         let processModuleItemDeclaration =
             function
             | ModuleItemDeclaration a ->
-                raise <| NotImplementedException()
-            | _ -> Ok ()
+                a.names
+                |> Util.resListMap (fun name ->
+                    if Map.containsKey name nodeMap
+                    // TODO: improve error
+                    then Error <| sprintf "The identifier %A is used multiple times for an input/output or non port reg/wire." name
+                    else 
+                        nodeMap <- 
+                            let range = Util.optRangeTToRange a.range
+                            let node = 
+                                match a.decType with
+                                | Wire -> Node.initWireComp range
+                                | Reg -> Node.initRegComp range
+                            nodeMap.Add (name, node)
+                        Ok ())
+            | _ -> Ok []
 
         let processContinuousAssign =
             function
             | ContinuousAssign a ->
                 raise <| NotImplementedException()
-            | _ -> Ok ()
+            | _ -> Ok []
 
         let processModuleInstantiation =
             function
             | ModuleInstantiation a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok ()
+            | _ -> Ok []
 
         let processInitialConstruct =
             function
             | InitialConstruct a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok ()
+            | _ -> Ok []
 
         let processAlwaysConstruct =
             function
             | AlwaysConstruct a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok ()
+            | _ -> Ok []
 
         let processItems items funcs =
             funcs
@@ -113,10 +125,10 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
 
         let result = processItems items [
             processModuleItemDeclaration
-            processContinuousAssign
-            processModuleInstantiation
-            processInitialConstruct
-            processAlwaysConstruct
+            // processContinuousAssign
+            // processModuleInstantiation
+            // processInitialConstruct
+            // processAlwaysConstruct
         ]
 
         match result with

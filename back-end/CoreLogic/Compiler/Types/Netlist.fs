@@ -12,21 +12,18 @@ type Range =
             | Single -> 1u
             | Ranged (msb, lsb) -> msb - lsb + 1u
 
-type OutputRegContent =
-    { mutable initVal: VNum }
-
-type RegCompContent =
+type RegContent =
     { range: Range
       mutable initVal: VNum }
 
 type Component =
     | InputComp of Range
-    | OutputReg of OutputRegContent
+    | OutputReg of RegContent
     | OutputWire
     | ModuleInst of IdentifierT
     | Expression of ExpressionT
     | Always of AlwaysConstructT
-    | RegComp of RegCompContent
+    | RegComp of RegContent
     | WireComp of Range
 
 type Connection = 
@@ -48,8 +45,10 @@ type Node =
       inputs: Port array }
     with
         static member initInputComp range = { comp = InputComp range; inputs = [||] }
-        static member initOutputReg (range: Range) = { comp = OutputReg { initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
+        static member initOutputReg (range: Range) = { comp = OutputReg { range = range; initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
         static member initOutputWire range = { comp = OutputWire; inputs = [|{ range = range; connections = [||] }|] }
+        static member initRegComp (range: Range) = { comp = RegComp { range = range; initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
+        static member initWireComp range = { comp = WireComp range; inputs = [|{ range = range; connections = [||] }|] }
 
 type Netlist = 
     { modDec: ModuleDeclaration

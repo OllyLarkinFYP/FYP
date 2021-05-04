@@ -70,15 +70,3 @@ module rec ConstExprEval =
         if ((evalConstExpr cond).toBool())
         then evalConstExpr trueExpr
         else evalConstExpr falseExpr
-
-module Util =
-    let rec resListMap f =
-        function
-        | [] -> Ok []
-        | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match resListMap f tl with
-                | Error e -> Error e
-                | Ok processedTl -> Ok (res :: processedTl)

@@ -8,6 +8,7 @@
     <Compile Include="Parser/Types/AST.fs" />
     <Compile Include="Compiler/Types/Netlist.fs" />
     <Compile Include="CommonHelpers/ConstExprEval.fs" />
+    <Compile Include="CommonHelpers/GeneralUtils.fs" />
     <Compile Include="Parser/Utils.fs" />
     <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Parser/Expressions.fs" />

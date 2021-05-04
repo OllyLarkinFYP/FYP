@@ -246,17 +246,27 @@ endmodule
 
 let testStr = "12'o12x"
 
+let print str = printfn "%A" str
+
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        program
+        program2
         |> run parser
         |> function
         | Success (ast,_,_) -> 
             let decs = Compiler.collectDecs [ast]
             Compiler.compileAST decs ast
         | Failure (msg,_,_) -> failwith msg
-    printfn "%A" result
+    match result with
+    | Result.Error e -> printfn "%s" e
+    | Result.Ok net -> 
+        printfn "Declaration: \n%A" net.modDec
+        printfn "*********************"
+        net.nodes
+        |> Map.toList
+        |> List.map (printfn "%A")
+        |> ignore
 
     0 // return an integer exit code
