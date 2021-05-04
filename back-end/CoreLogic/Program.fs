@@ -258,4 +258,5 @@ let main argv =
             Compiler.compileAST decs ast
         | Failure (msg,_,_) -> failwith msg
     printfn "%A" result
+
     0 // return an integer exit code

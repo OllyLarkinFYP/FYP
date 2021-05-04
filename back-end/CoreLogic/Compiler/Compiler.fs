@@ -77,16 +77,48 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 (portName, initFunc portRange))
             |> Map.ofArray
 
-        let itemMap =
+        let processModuleItemDeclaration =
             function
-            | ModuleItemDeclaration modItemDec -> raise <| NotImplementedException()
-            | ContinuousAssign contAssign -> raise <| NotImplementedException()
-            | ModuleInstantiation modInst -> raise <| NotImplementedException()
-            | InitialConstruct initConst -> raise <| NotImplementedException()
-            | AlwaysConstruct alwaysConst -> raise <| NotImplementedException()
+            | ModuleItemDeclaration a ->
+                raise <| NotImplementedException()
+            | _ -> Ok ()
 
-        items
-        |> List.map itemMap
-        |> ignore
-        
-        Ok { modDec = thisModDec; nodes = nodeMap }
+        let processContinuousAssign =
+            function
+            | ContinuousAssign a ->
+                raise <| NotImplementedException()
+            | _ -> Ok ()
+
+        let processModuleInstantiation =
+            function
+            | ModuleInstantiation a -> 
+                raise <| NotImplementedException()
+            | _ -> Ok ()
+
+        let processInitialConstruct =
+            function
+            | InitialConstruct a -> 
+                raise <| NotImplementedException()
+            | _ -> Ok ()
+
+        let processAlwaysConstruct =
+            function
+            | AlwaysConstruct a -> 
+                raise <| NotImplementedException()
+            | _ -> Ok ()
+
+        let processItems items funcs =
+            funcs
+            |> Util.resListMap (fun func -> Util.resListMap func items)
+
+        let result = processItems items [
+            processModuleItemDeclaration
+            processContinuousAssign
+            processModuleInstantiation
+            processInitialConstruct
+            processAlwaysConstruct
+        ]
+
+        match result with
+        | Error e -> Error e
+        | Ok _ -> Ok { modDec = thisModDec; nodes = nodeMap }
