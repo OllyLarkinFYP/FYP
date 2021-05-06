@@ -11,17 +11,12 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
         order
         |> List.map (fun name ->
             lst
-            |> List.tryFind (fun (pname, dir, range) -> name = pname)
+            |> List.tryFind (fun (pname, _, _) -> name = pname)
             |> function
             // TODO: None here implies that the port list and port declarations don't match up
             | None -> raise <| NotImplementedException() 
             | Some p -> p)
-    let processPortDec (portDec: PortDeclarationT) =
-        match portDec.range with
-        | None -> (portDec.name, portDec.dir, Single)
-        | Some r -> 
-            let range = Util.rangeTToRange r
-            (portDec.name, portDec.dir, range)
+    let processPortDec (pd: PortDeclarationT) = (pd.name, pd.dir, Util.optRangeTToRange pd.range)
     let processModDec1 (dec: {| ports: IdentifierT List; body: ModuleItemT List |}) =
         dec.body
         |> List.choose 
@@ -100,7 +95,12 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
         let processContinuousAssign =
             function
             | ContinuousAssign a ->
-                raise <| NotImplementedException()
+                a
+                |> List.map (fun netAssign ->
+                    let exp = Expression netAssign.RHS
+                    ())
+                |> ignore
+                Ok()
             | _ -> Ok ()
 
         let processModuleInstantiation =

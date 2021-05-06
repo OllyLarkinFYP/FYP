@@ -4,12 +4,12 @@ open AST
 open CommonTypes
 
 type Range = 
-    | Single
+    | Single of uint32
     | Ranged of uint32 * uint32
     with
         member this.size () =
             match this with
-            | Single -> 1u
+            | Single _ -> 1u
             | Ranged (msb, lsb) -> msb - lsb + 1u
 
 type RegContent =

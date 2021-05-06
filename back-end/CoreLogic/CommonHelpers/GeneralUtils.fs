@@ -20,10 +20,10 @@ module Util =
         let lsb = (ConstExprEval.evalConstExpr r.LSB).toInt() |> uint
         let msb = (ConstExprEval.evalConstExpr r.MSB).toInt() |> uint
         if lsb = msb
-        then Single
+        then Single lsb
         else Ranged (msb,lsb)
 
     let optRangeTToRange (r: RangeT option) : Range =
         match r with
         | Some range -> rangeTToRange range
-        | None -> Single
+        | None -> Single 0u
