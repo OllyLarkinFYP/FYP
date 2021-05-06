@@ -257,6 +257,9 @@ let main argv =
         |> function
         | Success (ast,_,_) -> 
             let decs = Compiler.collectDecs [ast]
+            printfn "****************"
+            printfn "AST: \n%A" ast
+            printfn "****************"
             Compiler.compileAST decs ast
         | Failure (msg,_,_) -> failwith msg
     match result with

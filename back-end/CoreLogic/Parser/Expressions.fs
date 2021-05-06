@@ -16,7 +16,7 @@ module ConstantExpression =
     let pConstantRangeExpression: Parser<ConstantRangeExpressionT, unit> =
         pConstantExpression .>>. opt (Symbol.pColon >>. pConstantExpression)
         |>> function
-        | (a, Some b) -> ConstantRangeExpressionT.Range {| LHS = a; RHS = b |}
+        | (a, Some b) -> ConstantRangeExpressionT.Range { MSB = a; LSB = b }
         | (a, None) -> ConstantRangeExpressionT.Expr a
 
     // Constant Primary parsing

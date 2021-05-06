@@ -93,31 +93,33 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                                 | Reg -> Node.initRegComp range
                             nodeMap.Add (name, node)
                         Ok ())
-            | _ -> Ok []
+                |> ignore
+                Ok()
+            | _ -> Ok ()
 
         let processContinuousAssign =
             function
             | ContinuousAssign a ->
                 raise <| NotImplementedException()
-            | _ -> Ok []
+            | _ -> Ok ()
 
         let processModuleInstantiation =
             function
             | ModuleInstantiation a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok []
+            | _ -> Ok ()
 
         let processInitialConstruct =
             function
             | InitialConstruct a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok []
+            | _ -> Ok ()
 
         let processAlwaysConstruct =
             function
             | AlwaysConstruct a -> 
                 raise <| NotImplementedException()
-            | _ -> Ok []
+            | _ -> Ok ()
 
         let processItems items funcs =
             funcs
