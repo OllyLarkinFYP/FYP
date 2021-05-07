@@ -175,14 +175,17 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 a
                 |> Util.resListMap (fun netAssign ->
                     let expName = integrateExpression netAssign.RHS
-                    getRangedList netAssign.LHS
+                    netAssign.LHS
+                    |> getRangedList
                     |> Util.resListMap (fun (myName, myRange, theirRange) -> 
-                        nodeMap.[myName].inputs.[0].addConnection
-                            myName
-                            myRange
-                            expName
-                            0u
-                            theirRange))
+                        if nodeMap.ContainsKey myName 
+                        then nodeMap.[myName].inputs.[0].addConnection
+                                myName
+                                myRange
+                                expName
+                                0u
+                                theirRange
+                        else Error <| sprintf "%A is not a registered input/output/wire/reg." myName))
                 |> function
                 | Ok _ -> Ok()
                 | Error e -> Error e
