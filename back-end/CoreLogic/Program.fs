@@ -1,7 +1,5 @@
 open System
 open Parser
-open CommonTypes
-open CommonHelpers
 open FParsec
 
 let program = @"
@@ -115,10 +113,6 @@ module UART_TX(
     endcase
   end
   
-  assign tx = tx_reg;
-  assign tx = tx_reg;
-  assign tx = tx_reg;
-  assign tx = tx_reg;
   assign tx = tx_reg;
   
 endmodule
@@ -248,7 +242,18 @@ module UART_TX(
 endmodule
 "
 
-let testStr = "12'o12x"
+let testStr = @"
+module test(a,b,c,d);
+
+  output a;
+  output b;
+  output c;
+  input [2:0] d;
+
+  assign {a,b,c} = d;
+
+endmodule
+"
 
 let print str = printfn "%A" str
 
@@ -256,7 +261,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        program2
+        testStr
         |> run parser
         |> function
         | Success (ast,_,_) -> 

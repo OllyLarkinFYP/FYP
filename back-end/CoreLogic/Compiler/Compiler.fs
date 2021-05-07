@@ -162,14 +162,15 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                             match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
                             | Ok range -> range
                             | Error e -> raise <| NotImplementedException()
-                        [ (r.Name, range, range.offset offset) ], offset + range.size()
+                        [ (r.Name, range, range.offset offset) ], (offset + range.size())
                     | NetLValueT.Concat c ->
                         (c, ([], offset))
                         ||> List.foldBack (fun netLVal (lst, off) ->
                             let curr, currOff = getRangedListRec off netLVal
-                            (curr @ lst, off + currOff))
+                            (curr @ lst, currOff))
                 getRangedListRec 0u
                 >> fst
+                >> fun a -> printfn "*******************\n Ranged List: \n%A" a; a
             function
             | ContinuousAssign a ->
                 a
