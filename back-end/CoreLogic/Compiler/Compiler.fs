@@ -170,7 +170,6 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                             (curr @ lst, currOff))
                 getRangedListRec 0u
                 >> fst
-                >> fun a -> printfn "*******************\n Ranged List: \n%A" a; a
             function
             | ContinuousAssign a ->
                 a
@@ -220,5 +219,5 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
         ]
 
         match result with
-        | Error e -> Error e
         | Ok _ -> Ok { modDec = thisModDec; nodes = nodeMap }
+        | Error e -> Error e
