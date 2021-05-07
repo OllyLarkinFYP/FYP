@@ -27,3 +27,23 @@ module Util =
         match r with
         | Some range -> rangeTToRange range
         | None -> Single 0u
+
+    let optRangeTToRangeWithNodes (nodes: Map<IdentifierT,Node>) (name: string) (r: RangeT option) =
+        match r with
+        | Some range -> Ok <| rangeTToRange range
+        | None -> 
+            match Map.tryFind name nodes with
+            | None -> Error <| sprintf "Could not find range of %A. Cannot be found in node map." name
+            | Some node -> 
+                match node.comp with
+                | InputComp r -> Ok r
+                | OutputReg c -> Ok c.range
+                | OutputWire r -> Ok r
+                | RegComp c -> Ok c.range
+                | WireComp r -> Ok r
+                | _ -> Error <| sprintf "Cannot find range of non-input/output/reg/wire. Unable to get range for %A" name
+
+    let optRangeTToRangeDefault (defaultVal: Range) (r: RangeT option) =
+        match r with
+        | Some range -> rangeTToRange range
+        | None -> defaultVal

@@ -136,10 +136,6 @@ type ConstantConcatenationT = ConstantExpressionT List
 
 // ######### A.8.3 Expressions #########
 
-type ConstantRangeExpressionT =
-    | Expr of ConstantExpressionT
-    | Range of RangeT
-
 type ConstantExpressionT =
     | Primary of ConstantPrimaryT
     | UniExpression of {| Operator: UnaryOperatorT; Expression: ConstantExpressionT |}
@@ -166,7 +162,7 @@ type ConstantPrimaryT =
 
 type PrimaryT =
     | Number of VNum
-    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT option |}
+    | Ranged of {| Name: IdentifierT; Range: RangeT option |}
     | Concat of ConcatenationT
     | Brackets of ExpressionT
 
@@ -174,7 +170,7 @@ type PrimaryT =
 // ######### A.8.5 Expression Left-Side Values #########
 
 type NetLValueT =
-    | Ranged of {| Name: IdentifierT; Range: ConstantRangeExpressionT Option |}
+    | Ranged of {| Name: IdentifierT; Range: RangeT Option |}
     | Concat of NetLValueT List
 
 type VariableLValueT =

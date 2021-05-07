@@ -6,6 +6,33 @@ open Netlist
 open CommonHelpers
 open CommonTypes
 
+module private Internal =
+    let getExprInputs (exp: ExpressionT) =
+        let rec getExprInputsRec exp =
+            match exp with
+            | Primary p ->
+                match p with
+                | Number _ -> []
+                | PrimaryT.Ranged r -> [ r.Name, r.Range ]
+                | PrimaryT.Concat c -> List.collect getExprInputsRec c
+                | Brackets b -> getExprInputsRec b
+            | UniExpression u -> getExprInputsRec u.Expression
+            | BinaryExpression b -> (getExprInputsRec b.LHS) @ (getExprInputsRec b.RHS)
+            | CondExpression c -> (getExprInputsRec c.Condition) @ (getExprInputsRec c.TrueVal) @ (getExprInputsRec c.FalseVal)
+        let connections = 
+            exp
+            |> getExprInputsRec 
+        let names = 
+            connections
+            |> List.map fst
+            |> List.distinct
+        let map = 
+            names
+            |> List.indexed
+            |> List.map (fun (a,b) -> (b, uint a))
+            |> Map.ofList
+        (map, names, connections)
+
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =
         order
@@ -71,6 +98,39 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 (portName, initFunc portRange))
             |> Map.ofArray
 
+        let integrateExpression =
+            let getName =
+                // TODO: Make "__EXP__<number>" not available as wire/reg name
+                let nameBase = "__EXP__"
+                let mutable nameNum = 0
+                fun () ->
+                    nameNum <- nameNum + 1
+                    nameBase + string nameNum
+            fun exp ->
+                let (inputMap, inputs, connections) = Internal.getExprInputs exp
+                let comp = Expression (exp, inputMap)
+                let getConnections name =
+                    connections
+                    |> List.choose (fun (n, r) ->
+                        if n = name
+                        then 
+                            let range =
+                                match Util.optRangeTToRangeWithNodes nodeMap name r with
+                                | Ok r -> r
+                                // TODO: handle this
+                                | Error e -> raise <| Exception e
+                            Some 
+                                { myRange = Range.max()
+                                  theirName = name
+                                  theirPinNum = 0u    // as coming from input/output/wire/reg -> single output
+                                  theirRange = range }
+                        else None)
+                    |> List.toArray
+                let ports = [| for name in inputs -> { range = Range.max(); connections = getConnections name } |]
+                let name = getName()
+                nodeMap <- nodeMap.Add (name, { comp = comp; inputs = ports })
+                name
+
         let processModuleItemDeclaration =
             function
             | ModuleItemDeclaration a ->
@@ -88,19 +148,44 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                                 | Reg -> Node.initRegComp range
                             nodeMap.Add (name, node)
                         Ok ())
-                |> ignore
-                Ok()
+                |> function
+                | Ok _ -> Ok ()
+                | Error e -> Error e
             | _ -> Ok ()
 
         let processContinuousAssign =
+            let getRangedList = // [ (myName, myRange, theirRange) ]
+                let rec getRangedListRec offset =
+                    function
+                    | NetLValueT.Ranged r ->
+                        let range =
+                            match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
+                            | Ok range -> range
+                            | Error e -> raise <| NotImplementedException()
+                        [ (r.Name, range, range.offset offset) ], offset + range.size()
+                    | NetLValueT.Concat c ->
+                        (c, ([], offset))
+                        ||> List.foldBack (fun netLVal (lst, off) ->
+                            let curr, currOff = getRangedListRec off netLVal
+                            (curr @ lst, off + currOff))
+                getRangedListRec 0u
+                >> fst
             function
             | ContinuousAssign a ->
                 a
-                |> List.map (fun netAssign ->
-                    let exp = Expression netAssign.RHS
-                    ())
-                |> ignore
-                Ok()
+                |> Util.resListMap (fun netAssign ->
+                    let expName = integrateExpression netAssign.RHS
+                    getRangedList netAssign.LHS
+                    |> Util.resListMap (fun (myName, myRange, theirRange) -> 
+                        nodeMap.[myName].inputs.[0].addConnection
+                            myName
+                            myRange
+                            expName
+                            0u
+                            theirRange))
+                |> function
+                | Ok _ -> Ok()
+                | Error e -> Error e
             | _ -> Ok ()
 
         let processModuleInstantiation =
@@ -127,7 +212,7 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
 
         let result = processItems items [
             processModuleItemDeclaration
-            // processContinuousAssign
+            processContinuousAssign
             // processModuleInstantiation
             // processInitialConstruct
             // processAlwaysConstruct

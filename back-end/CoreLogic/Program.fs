@@ -116,6 +116,10 @@ module UART_TX(
   end
   
   assign tx = tx_reg;
+  assign tx = tx_reg;
+  assign tx = tx_reg;
+  assign tx = tx_reg;
+  assign tx = tx_reg;
   
 endmodule
 "
