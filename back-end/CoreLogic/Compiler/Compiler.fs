@@ -158,18 +158,23 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 let rec getRangedListRec offset =
                     function
                     | NetLValueT.Ranged r ->
-                        let range =
-                            match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
-                            | Ok range -> range
-                            | Error e -> raise <| NotImplementedException()
-                        [ (r.Name, range, range.offset offset) ], (offset + range.size())
+                        match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
+                        | Ok range ->
+                            Ok ([ (r.Name, range, range.offset offset) ], (offset + range.size()))
+                        | Error e -> Error e
                     | NetLValueT.Concat c ->
-                        (c, ([], offset))
-                        ||> List.foldBack (fun netLVal (lst, off) ->
-                            let curr, currOff = getRangedListRec off netLVal
-                            (curr @ lst, currOff))
+                        (c, Ok ([], offset))
+                        ||> List.foldBack (fun netLVal state ->
+                            match state with
+                            | Ok (lst, off) -> 
+                                match getRangedListRec off netLVal with
+                                | Ok (curr, currOff) -> Ok (curr @ lst, currOff)
+                                | Error e -> Error e
+                            | Error e -> Error e)
                 getRangedListRec 0u
-                >> fst
+                >> function
+                | Ok (lst, _) -> Ok lst
+                | Error e -> Error e
             function
             | ContinuousAssign a ->
                 a
@@ -177,29 +182,33 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                     let expName = integrateExpression netAssign.RHS
                     netAssign.LHS
                     |> getRangedList
-                    |> Util.resListMap (fun (myName, myRange, theirRange) -> 
-                        if nodeMap.ContainsKey myName 
-                        then nodeMap.[myName].inputs.[0].addConnection
-                                myName
-                                myRange
-                                expName
-                                0u
-                                theirRange
-                        else Error <| sprintf "%A is not a registered input/output/wire/reg." myName))
+                    |> function
+                    | Ok lst -> 
+                        lst
+                        |> Util.resListMap (fun (myName, myRange, theirRange) -> 
+                            if nodeMap.ContainsKey myName 
+                            then nodeMap.[myName].inputs.[0].addConnection
+                                    myName
+                                    myRange
+                                    expName
+                                    0u
+                                    theirRange
+                            else Error <| sprintf "%A is not a registered input/output/wire/reg." myName)
+                    | Error e -> Error e)
                 |> function
                 | Ok _ -> Ok()
                 | Error e -> Error e
             | _ -> Ok ()
 
-        let processModuleInstantiation =
-            function
-            | ModuleInstantiation a -> 
-                raise <| NotImplementedException()
-            | _ -> Ok ()
-
         let processInitialConstruct =
             function
             | InitialConstruct a -> 
+                raise <| NotImplementedException()
+            | _ -> Ok ()
+
+        let processModuleInstantiation =
+            function
+            | ModuleInstantiation a -> 
                 raise <| NotImplementedException()
             | _ -> Ok ()
 
