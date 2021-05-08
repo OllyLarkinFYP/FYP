@@ -2,6 +2,39 @@ namespace CommonTypes
 
 open System
 
+type Range = 
+    | Single of uint32
+    | Ranged of uint32 * uint32
+    with
+        static member max () = Ranged (63u,0u)
+        static member defaultRange () = Ranged (31u,0u)
+        static member overlap r1 r2 =
+            match r1, r2 with
+            | Single a, Single b -> a = b
+            | Single a, Ranged (b,c) 
+            | Ranged (b,c), Single a -> a <= b && a >= c
+            | Ranged (a,b), Ranged (c,d) -> (a <= c && a >= d) || (b <= c && b >= d)
+        member this.size =
+            match this with
+            | Single _ -> 1u
+            | Ranged (msb, lsb) -> msb - lsb + 1u
+        member this.offset diff =
+            match this with
+            | Single a -> Single <| a + diff
+            | Ranged (a,b) -> Ranged (a+diff, b+diff)
+        member this.ground () =
+            match this with
+            | Single _ -> Single 0u
+            | Ranged (a,b) -> Ranged (a-b,0u)
+        member this.toMask () =
+            match this with
+            | Single a -> [a]
+            | Ranged (a,b) -> [b..a]
+        member this.lower =
+            match this with
+            | Single a -> a
+            | Ranged (_,b) -> b
+
 type MaskDir =
     | Up
     | Down
@@ -38,6 +71,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
     new(v: int, s: int) = VNum(uint64 v, uint s, [])
     new(c: char) = VNum(uint64 c, 4u, [])
     new(i: int) = VNum(uint64 i, 32u, [])
+    new(v: uint) = VNum(uint64 v, 32u, [])
     new(b: bool) = if b then VNum(1UL,1u,[]) else VNum(0UL,1u,[])
 
     /// Constructs a VNum from binary string 
@@ -89,7 +123,17 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         | Down -> VNum(this.value &&& (~~~ m), this.size, this.unknownBits)
         | Up   -> VNum(this.value ||| m, this.size, this.unknownBits)
 
-    member this.mask () =
+    member this.maskUnknown maskLst =
+        let newUnknown = 
+            this.unknownBits
+            |> List.filter (fun a -> List.contains a maskLst |> not)
+        VNum(this.value, this.size, newUnknown)
+
+    member this.selectRange (range: Range) =
+        let shifted : VNum = VNum.(>>>) (this, VNum range.lower)
+        VNum(shifted.value, range.size, shifted.unknownBits).trim()
+        
+    member this.maskDown () =
         this.mask (Down, this.unknownBits)
 
     member this.maskUp () = 
@@ -103,7 +147,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         let ub =
             this.unknownBits
             |> List.filter (fun i -> i < this.size)
-        VNum(this.value &&& m, this.size, ub).mask()
+        VNum(this.value &&& m, this.size, ub).maskDown()
 
     member this.toBool () =
         if this.trim().value = 0UL || this.isUnknown
@@ -277,8 +321,8 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
 
     static member (|||) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        let aVal = num1.mask().value
-        let bVal = num2.mask().value
+        let aVal = num1.maskDown().value
+        let bVal = num2.maskDown().value
         let newVal = aVal ||| bVal
         let ones = VNum(newVal, newSize).getBits 0
         let unknowns = num1.unknownBits @ num2.unknownBits

@@ -3,19 +3,43 @@ namespace CommonHelpers
 open System
 open AST
 open Netlist
+open CommonTypes
 
-module Util =
-    let rec resListMap f =
+module Operators =
+    let (|->) r f = Result.bind f r
+
+module ResList =
+    let rec map f =
         function
         | [] -> Ok []
         | hd::tl ->
             match f hd with
             | Error e -> Error e
             | Ok res ->
-                match resListMap f tl with
+                match map f tl with
                 | Error e -> Error e
                 | Ok processedTl -> Ok (res :: processedTl)
 
+    let rec choose f =
+        function
+        | [] -> Ok []
+        | hd::tl ->
+            match f hd with
+            | Error e -> Error e
+            | Ok res ->
+                match choose f tl with
+                | Error e -> Error e
+                | Ok processedTl ->
+                    match res with
+                    | Some a -> Ok (a::processedTl)
+                    | None -> Ok processedTl
+
+    let toResArray =
+        function
+        | Ok lst -> Ok <| List.toArray lst
+        | Error e -> Error e
+
+module Util =
     let rangeTToRange (r: RangeT) : Range =
         let lsb = (ConstExprEval.evalConstExpr r.LSB).toInt() |> uint
         let msb = (ConstExprEval.evalConstExpr r.MSB).toInt() |> uint

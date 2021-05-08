@@ -84,11 +84,11 @@ module Expression =
     let pConcatenation: Parser<ConcatenationT, unit> =
         Symbol.pOpenCBrac >>. sepBy1 pExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
-    let pRangeExpression: Parser<RangeExpressionT, unit> =
-        pExpression .>>. opt (Symbol.pColon >>. pExpression)
-        |>> function
-        | (a, Some b) -> Range {| LHS = a; RHS = b |}
-        | (a, None) -> Expr a
+    // let pRangeExpression: Parser<RangeExpressionT, unit> =
+    //     pExpression .>>. opt (Symbol.pColon >>. pExpression)
+    //     |>> function
+    //     | (a, Some b) -> Range {| LHS = a; RHS = b |}
+    //     | (a, None) -> Expr a
 
     // Constant Primary parsing
     opp.TermParser <- choice [

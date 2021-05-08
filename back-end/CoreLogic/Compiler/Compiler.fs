@@ -2,9 +2,10 @@ module Compiler
 
 open System
 open AST
+open CommonTypes
 open Netlist
 open CommonHelpers
-open CommonTypes
+open CommonHelpers.Operators
 
 module private Internal =
     let getExprInputs (exp: ExpressionT) =
@@ -56,12 +57,12 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
         dec.ports
         |> List.map processPortDec
         |> Array.ofList
-    let getDec ast =
+    let getDec ast : ModuleDeclaration =
         let ports = 
             match ast.info with
             | ModDec1 dec -> processModDec1 dec
             | ModDec2 dec -> processModDec2 dec
-        { name = ast.name; ports = ports}
+        { ModuleDeclaration.name = ast.name; ports = ports}
     List.map getDec asts
 
 let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,string> =
@@ -98,6 +99,28 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 (portName, initFunc portRange))
             |> Map.ofArray
 
+        let getRangedList = // [ (myName, myRange, theirRange) ]
+            let rec getRangedListRec offset =
+                function
+                | NetLValueT.Ranged r ->
+                    match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
+                    | Ok range ->
+                        Ok ([ (r.Name, range, range.ground().offset offset) ], (offset + range.size))
+                    | Error e -> Error e
+                | NetLValueT.Concat c ->
+                    (c, Ok ([], offset))
+                    ||> List.foldBack (fun netLVal state ->
+                        match state with
+                        | Ok (lst, off) -> 
+                            match getRangedListRec off netLVal with
+                            | Ok (curr, currOff) -> Ok (curr @ lst, currOff)
+                            | Error e -> Error e
+                        | Error e -> Error e)
+            getRangedListRec 0u
+            >> function
+            | Ok (lst, _) -> Ok lst
+            | Error e -> Error e
+
         let integrateExpression =
             let getName =
                 // TODO: Make "__EXP__<number>" not available as wire/reg name
@@ -111,31 +134,38 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 let comp = Expression (exp, inputMap)
                 let getConnections name =
                     connections
-                    |> List.choose (fun (n, r) ->
+                    |> ResList.choose (fun (n, r) ->
                         if n = name
                         then 
-                            let range =
-                                match Util.optRangeTToRangeWithNodes nodeMap name r with
-                                | Ok r -> r
-                                // TODO: handle this
-                                | Error e -> raise <| Exception e
-                            Some 
-                                { myRange = Range.max()
-                                  theirName = name
-                                  theirPinNum = 0u    // as coming from input/output/wire/reg -> single output
-                                  theirRange = range }
-                        else None)
-                    |> List.toArray
-                let ports = [| for name in inputs -> { range = Range.max(); connections = getConnections name } |]
-                let name = getName()
-                nodeMap <- nodeMap.Add (name, { comp = comp; inputs = ports })
-                name
+                            match Util.optRangeTToRangeWithNodes nodeMap name r with
+                            | Ok r ->
+                                Ok <| Some 
+                                        { myRange = Range.max()
+                                          theirName = name
+                                          theirPinNum = 0u    // as coming from input/output/wire/reg -> single output
+                                          theirRange = r }
+                            | Error e -> Error e
+                        else Ok None)
+                    |> function
+                    | Ok a -> Ok <| List.toArray a
+                    | Error e -> Error e
+                // [| for name in inputs -> { range = Range.max(); connections = getConnections name } |]
+                inputs
+                |> ResList.map (fun name ->
+                    match getConnections name with
+                    | Ok conns -> Ok { range = Range.max(); connections = conns }
+                    | Error e -> Error e)
+                |> ResList.toResArray
+                |-> fun ports -> 
+                    let name = getName()
+                    nodeMap <- nodeMap.Add (name, { comp = comp; inputs = ports })
+                    Ok name
 
         let processModuleItemDeclaration =
             function
             | ModuleItemDeclaration a ->
                 a.names
-                |> Util.resListMap (fun name ->
+                |> ResList.map (fun name ->
                     if Map.containsKey name nodeMap
                     // TODO: improve error
                     then Error <| sprintf "The identifier %A is used multiple times for an input/output or non port reg/wire." name
@@ -148,62 +178,68 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                                 | Reg -> Node.initRegComp range
                             nodeMap.Add (name, node)
                         Ok ())
-                |> function
-                | Ok _ -> Ok ()
-                | Error e -> Error e
+                |-> fun _ -> Ok()
             | _ -> Ok ()
 
         let processContinuousAssign =
-            let getRangedList = // [ (myName, myRange, theirRange) ]
-                let rec getRangedListRec offset =
-                    function
-                    | NetLValueT.Ranged r ->
-                        match Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range with
-                        | Ok range ->
-                            Ok ([ (r.Name, range, range.offset offset) ], (offset + range.size()))
-                        | Error e -> Error e
-                    | NetLValueT.Concat c ->
-                        (c, Ok ([], offset))
-                        ||> List.foldBack (fun netLVal state ->
-                            match state with
-                            | Ok (lst, off) -> 
-                                match getRangedListRec off netLVal with
-                                | Ok (curr, currOff) -> Ok (curr @ lst, currOff)
-                                | Error e -> Error e
-                            | Error e -> Error e)
-                getRangedListRec 0u
-                >> function
-                | Ok (lst, _) -> Ok lst
-                | Error e -> Error e
             function
             | ContinuousAssign a ->
                 a
-                |> Util.resListMap (fun netAssign ->
-                    let expName = integrateExpression netAssign.RHS
-                    netAssign.LHS
-                    |> getRangedList
-                    |> function
-                    | Ok lst -> 
-                        lst
-                        |> Util.resListMap (fun (myName, myRange, theirRange) -> 
-                            if nodeMap.ContainsKey myName 
-                            then nodeMap.[myName].inputs.[0].addConnection
-                                    myName
-                                    myRange
-                                    expName
-                                    0u
-                                    theirRange
-                            else Error <| sprintf "%A is not a registered input/output/wire/reg." myName)
-                    | Error e -> Error e)
-                |> function
-                | Ok _ -> Ok()
-                | Error e -> Error e
+                |> ResList.map (fun netAssign ->
+                    netAssign.RHS
+                    |> integrateExpression 
+                    |-> fun expName ->
+                        netAssign.LHS
+                        |> getRangedList
+                        |-> fun lst -> 
+                            lst
+                            |> ResList.map (fun (myName, myRange, theirRange) -> 
+                                if nodeMap.ContainsKey myName 
+                                then nodeMap.[myName].inputs.[0].addConnection
+                                        myName
+                                        myRange
+                                        expName
+                                        0u
+                                        theirRange
+                                else Error <| sprintf "%A is not a registered input/output/wire/reg." myName))
+                |-> fun _ -> Ok ()
             | _ -> Ok ()
 
         let processInitialConstruct =
             function
             | InitialConstruct a -> 
-                raise <| NotImplementedException()
+                a
+                |> ResList.map (fun blockingAssignment ->
+                    let value = ConstExprEval.evalConstExpr blockingAssignment.RHS
+                    blockingAssignment.LHS
+                    |> getRangedList
+                    |-> fun lst -> 
+                        lst
+                        |> ResList.map (fun (myName, myRange, theirRange) ->
+                            if nodeMap.ContainsKey myName
+                            then
+                                match nodeMap.[myName].comp with
+                                | RegComp rc
+                                | OutputReg rc ->
+                                    let maskedValue = VNum.(<<<) (value.selectRange theirRange, VNum myRange.lower)  
+                                    let maskedInit = rc.initVal.mask(Down, myRange.toMask()).maskUnknown(myRange.toMask())
+                                    printfn "************\n name: %A\n myInit: %A\n myRange: %A\n theirRange: %A\n value: %A\n maskedValue: %A\n maskedInit: %A\n added values: %A"
+                                        myName
+                                        rc.initVal
+                                        myRange
+                                        theirRange
+                                        value
+                                        maskedValue
+                                        maskedInit
+                                        (maskedValue ||| maskedInit)
+                                    rc.initVal <- maskedValue ||| maskedInit
+                                    Ok()
+                                | InputComp _
+                                | OutputWire _
+                                | WireComp _ -> Error <| sprintf "Cannot assign initial value to wire type %A. Only reg types can have initial values." myName
+                                | _ -> Error <| sprintf "Cannot assign initial value to %A, as it is not a reg type." myName
+                            else Error <| sprintf "Cannot assign initial value to %A, as it has not been declared as an input/output/wire/reg." myName))
+                |-> fun _ -> Ok ()
             | _ -> Ok ()
 
         let processModuleInstantiation =
@@ -220,16 +256,14 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
 
         let processItems items funcs =
             funcs
-            |> Util.resListMap (fun func -> Util.resListMap func items)
+            |> ResList.map (fun func -> ResList.map func items)
 
         let result = processItems items [
             processModuleItemDeclaration
             processContinuousAssign
+            processInitialConstruct
             // processModuleInstantiation
-            // processInitialConstruct
             // processAlwaysConstruct
         ]
 
-        match result with
-        | Ok _ -> Ok { modDec = thisModDec; nodes = nodeMap }
-        | Error e -> Error e
+        result |-> fun _ -> Ok { modDec = thisModDec; nodes = nodeMap }

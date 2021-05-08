@@ -23,6 +23,8 @@ module UART_TX(
   reg [8:0] data_next;
   reg tx_reg;              
   reg tx_next;
+
+  initial current_state[1] = 1;
   
   always @(posedge clk, negedge resetn)
   begin
@@ -250,7 +252,7 @@ module test(a,b,c,d);
   output c;
   input [2:0] d;
 
-  assign {a,b,c} = d;
+  assign {a,b,c} = d[2:0];
 
 endmodule
 "
@@ -261,7 +263,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        program
+        testStr
         |> run parser
         |> function
         | Success (ast,_,_) -> 

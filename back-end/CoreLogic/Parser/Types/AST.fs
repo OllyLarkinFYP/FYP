@@ -144,9 +144,9 @@ type ConstantExpressionT =
     | BinaryExpression of {| LHS: ConstantExpressionT; BinOperator: BinaryOperatorT; RHS: ConstantExpressionT |}
     | CondExpression of {| Condition: ConstantExpressionT; TrueVal: ConstantExpressionT; FalseVal: ConstantExpressionT |}
 
-type RangeExpressionT =
-    | Expr of ExpressionT
-    | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
+// type RangeExpressionT =
+//     | Expr of ExpressionT
+//     | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
 
 type ExpressionT =
     | Primary of PrimaryT
@@ -175,9 +175,9 @@ type NetLValueT =
     | Ranged of {| Name: IdentifierT; Range: RangeT Option |}
     | Concat of NetLValueT List
 
-type VariableLValueT =
-    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
-    | Concat of VariableLValueT list
+// type VariableLValueT =
+//     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
+//     | Concat of VariableLValueT list
 
 
 // ######### A.8.6 Operators #########

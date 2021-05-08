@@ -3,27 +3,6 @@ namespace Netlist
 open AST
 open CommonTypes
 
-type Range = 
-    | Single of uint32
-    | Ranged of uint32 * uint32
-    with
-        static member max () = Ranged (63u,0u)
-        static member defaultRange () = Ranged (31u,0u)
-        static member overlap r1 r2 =
-            match r1, r2 with
-            | Single a, Single b -> a = b
-            | Single a, Ranged (b,c) 
-            | Ranged (b,c), Single a -> a <= b && a >= c
-            | Ranged (a,b), Ranged (c,d) -> (a <= c && a >= d) || (b <= c && b >= d)
-        member this.size () =
-            match this with
-            | Single _ -> 1u
-            | Ranged (msb, lsb) -> msb - lsb + 1u
-        member this.offset diff =
-            match this with
-            | Single a -> Single <| a + diff
-            | Ranged (a,b) -> Ranged (a+diff, b+diff)
-
 type RegContent =
     { range: Range
       mutable initVal: VNum }
@@ -74,9 +53,9 @@ type Node =
       inputs: Port array }
     with
         static member initInputComp range = { comp = InputComp range; inputs = [||] }
-        static member initOutputReg (range: Range) = { comp = OutputReg { range = range; initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
+        static member initOutputReg (range: Range) = { comp = OutputReg { range = range; initVal = VNum.unknown <| range.size }; inputs = [|{ range = range; connections = [||] }|] }
         static member initOutputWire range = { comp = OutputWire range; inputs = [|{ range = range; connections = [||] }|] }
-        static member initRegComp (range: Range) = { comp = RegComp { range = range; initVal = VNum.unknown <| range.size() }; inputs = [|{ range = range; connections = [||] }|] }
+        static member initRegComp (range: Range) = { comp = RegComp { range = range; initVal = VNum.unknown <| range.size }; inputs = [|{ range = range; connections = [||] }|] }
         static member initWireComp range = { comp = WireComp range; inputs = [|{ range = range; connections = [||] }|] }
 
 type Netlist = 

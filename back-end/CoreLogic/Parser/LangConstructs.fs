@@ -73,16 +73,16 @@ module LangConstructs =
         |>> function
         | eControl, statement -> { ProceduralTimingControlStatementT.Control = eControl; Statement = statement }
 
-    // This parser is self recursive so needs a forward reference
-    // The implementation is defined underneath
-    let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
+    // // This parser is self recursive so needs a forward reference
+    // // The implementation is defined underneath
+    // let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
 
-    do pVariableLValueImpl := 
-        choice [
-            Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
-            pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-                VariableLValueT.Ranged {| Name = iden; Range = range |}
-        ]
+    // do pVariableLValueImpl := 
+    //     choice [
+    //         Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
+    //         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+    //             VariableLValueT.Ranged {| Name = iden; Range = range |}
+    //     ]
 
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
@@ -100,11 +100,6 @@ module LangConstructs =
         |>> function
         | lval, exp -> { BlockingAssignmentT.LHS = lval; RHS = exp }
 
-    let pConstantAssignment =
-        pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
-        |>> function
-        | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
-
     let pNonBlockingAssignment =
         pNetLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
         |>> function
@@ -117,10 +112,14 @@ module LangConstructs =
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
+        let pConstantAssignment =
+            pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
+            |>> function
+            | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
         let initialBody =
             choice [
-                pBlockingAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
-                Keyword.pBegin >>. many (pBlockingAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
+                pConstantAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
+                Keyword.pBegin >>. many (pConstantAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
             ]
         Keyword.pInitial >>. initialBody
 
