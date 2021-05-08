@@ -96,12 +96,17 @@ module LangConstructs =
         ]
 
     let pBlockingAssignment =
-        pVariableLValue .>>? Symbol.pAssign .>>. pExpression
+        pNetLValue .>>? Symbol.pAssign .>>. pExpression
         |>> function
         | lval, exp -> { BlockingAssignmentT.LHS = lval; RHS = exp }
 
+    let pConstantAssignment =
+        pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
+        |>> function
+        | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
+
     let pNonBlockingAssignment =
-        pVariableLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
+        pNetLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
         |>> function
         | lval, exp -> { NonblockingAssignmentT.LHS = lval; RHS = exp }
 
