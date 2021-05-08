@@ -66,7 +66,7 @@ type NetAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
 // ######### A.6.2 Procedural Blocks and Assignments #########
 
-type InitialConstructT = StatementT
+type InitialConstructT = BlockingAssignmentT list
 
 type AlwaysConstructT = ProceduralTimingControlStatementT
 

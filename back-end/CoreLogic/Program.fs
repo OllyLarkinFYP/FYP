@@ -261,7 +261,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        testStr
+        program
         |> run parser
         |> function
         | Success (ast,_,_) -> 

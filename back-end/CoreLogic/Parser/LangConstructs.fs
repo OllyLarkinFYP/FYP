@@ -112,7 +112,12 @@ module LangConstructs =
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
-        Keyword.pInitial >>. pStatement
+        let initialBody =
+            choice [
+                pBlockingAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
+                Keyword.pBegin >>. many (pBlockingAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
+            ]
+        Keyword.pInitial >>. initialBody
 
     let pNetAssignment =
         pNetLValue .>>? Symbol.pAssign .>>. pExpression
