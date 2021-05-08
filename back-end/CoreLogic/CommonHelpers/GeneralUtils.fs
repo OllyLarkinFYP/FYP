@@ -6,7 +6,7 @@ open Netlist
 open CommonTypes
 
 module Operators =
-    let (|->) r f = Result.bind f r
+    let (?>) r f = Result.bind f r
 
 module ResList =
     let rec map f =
