@@ -89,7 +89,6 @@ type StatementT =
     | Case of CaseStatementT
     | Conditional of ConditionalStatementT
     | NonblockingAssignment of NonblockingAssignmentT
-    | ProceduralTimingControl of ProceduralTimingControlStatementT
     | SeqBlock of SeqBlockT
 
 type StatementOrNullT = StatementT Option
@@ -107,6 +106,12 @@ type EventControlT =
 type EventExpressionT = 
     | Posedge of ExpressionT
     | Negedge of ExpressionT
+    with
+        member this.expr =
+            match this with
+            | Posedge e -> e
+            | Negedge e -> e
+        static member unwrap (eventE: EventExpressionT) = eventE.expr
 
 
 // ######### A.6.6 Conditional Statements #########
@@ -115,7 +120,7 @@ type ConditionalStatementT = {
     Condition: ExpressionT
     Body: StatementOrNullT
     ElseIf: {| Condition: ExpressionT; Body: StatementOrNullT |} List
-    ElseBody: StatementOrNullT Option
+    ElseBody: StatementOrNullT
 }
 
 
@@ -174,6 +179,11 @@ type PrimaryT =
 type NetLValueT =
     | Ranged of {| Name: IdentifierT; Range: RangeT Option |}
     | Concat of NetLValueT List
+    with
+        member this.getNames () =
+            match this with
+            | Ranged a -> [ a.Name ]
+            | Concat c -> List.collect (fun (a: NetLValueT) -> a.getNames()) c
 
 // type VariableLValueT =
 //     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}

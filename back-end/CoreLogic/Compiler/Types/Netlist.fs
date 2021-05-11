@@ -12,13 +12,19 @@ type ModuleContent =
       inputMap: Map<IdentifierT,uint>
       outputMap: Map<IdentifierT,uint> }
 
+type AlwaysContent =
+  { body: StatementOrNullT
+    inputMap: Map<IdentifierT,uint>
+    outputMap: Map<IdentifierT,uint> }
+
 type Component =
     | InputComp of Range
     | OutputReg of RegContent
     | OutputWire of Range
     | ModuleInst of ModuleContent
     | Expression of ExpressionT * Map<IdentifierT,uint>
-    | Always of AlwaysConstructT
+    | EventControl of EventControlT * Map<IdentifierT,uint>
+    | Always of AlwaysContent
     | RegComp of RegContent
     | WireComp of Range
 

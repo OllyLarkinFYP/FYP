@@ -37,8 +37,10 @@ module LangConstructs =
             Keyword.pElse
             >>. pStatementOrNull
         ) |>> function
-        | ((cond, ifBody), elseIfList), elseBody -> 
+        | ((cond, ifBody), elseIfList), (Some elseBody) -> 
             { ConditionalStatementT.Condition = cond; Body = ifBody; ElseIf = elseIfList; ElseBody = elseBody }
+        | ((cond, ifBody), elseIfList), None -> 
+            { ConditionalStatementT.Condition = cond; Body = ifBody; ElseIf = elseIfList; ElseBody = None }
 
     let pCaseItem: Parser<CaseItemT,unit> = 
         choice [
@@ -252,7 +254,6 @@ module LangConstructs =
     do pStatementImpl := 
         choice [
             pSeqBlock |>> StatementT.SeqBlock
-            pProceduralTimingControlStatement |>> StatementT.ProceduralTimingControl
             pConditionalStatement |>> StatementT.Conditional
             pCaseStatement |>> StatementT.Case
             pBlockingAssignment .>> Symbol.pSemiColon |>> StatementT.BlockingAssignment
