@@ -341,3 +341,12 @@ type PortType =
 type PortDirAndType =
     | Input
     | Output of PortType
+
+type MutMap<'TKey, 'TValue when 'TKey : comparison>(m) =
+    let mutable map : Map<'TKey,'TValue> = m
+
+    member _.Add keyValPair = map <- map.Add keyValPair
+    member _.ContainsKey = map.ContainsKey
+    member _.Item key = map.Item key
+    member _.TryFind key = Map.tryFind key map
+    member _.Map = map

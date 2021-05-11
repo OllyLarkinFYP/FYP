@@ -34,6 +34,148 @@ module private Internal =
             |> Map.ofList
         (map, names, connections)
 
+    let getRangedList nodeMap netLVal = // [ (myName, myRange, theirRange) ]
+        let rec getRangedListRec offset =
+            function
+            | NetLValueT.Ranged r ->
+                Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range
+                ?> fun range ->
+                    Ok ([ (r.Name, range, range.ground().offset offset) ], (offset + range.size))
+            | NetLValueT.Concat c ->
+                (c, Ok ([], offset))
+                ||> List.foldBack (fun netLVal state ->
+                    state
+                    ?> fun (lst, off) -> 
+                        getRangedListRec off netLVal
+                        ?> fun (curr, currOff) -> Ok (curr @ lst, currOff))
+        netLVal
+        |> getRangedListRec 0u
+        ?> fun (lst, _) -> Ok lst
+
+    let rec validateExpr (nodeMap: MutMap<IdentifierT,Node>) =
+        let validatePrimary out =
+            function
+            | PrimaryT.Ranged r -> 
+                let error = Error <| sprintf "%A is not a declared wire/reg/input and therefore cannot be used in an expression." r.Name
+                if nodeMap.ContainsKey r.Name 
+                then
+                    match nodeMap.[r.Name].comp with
+                    | InputComp _ | RegComp _ | WireComp _ -> Ok(out)
+                    | _ -> error
+                else error
+            | Brackets b -> validateExpr nodeMap b
+            | PrimaryT.Concat c -> ResList.map (validateExpr nodeMap) c ?> fun _ -> Ok(out)
+            | _ -> Ok(out)
+        function
+        | Primary p as out -> validatePrimary out p
+        | UniExpression u -> validateExpr nodeMap u.Expression
+        | BinaryExpression b as out ->
+            let exp1Val = validateExpr nodeMap b.LHS
+            let exp2Val = validateExpr nodeMap b.RHS
+            match exp1Val, exp2Val with
+            | Error e, _ | _, Error e -> Error e
+            | _ -> Ok (out)
+        | CondExpression c as out -> 
+            let exp1Val = validateExpr nodeMap c.Condition
+            let exp2Val = validateExpr nodeMap c.TrueVal
+            let exp3Val = validateExpr nodeMap c.FalseVal
+            match exp1Val, exp2Val, exp3Val with
+            | Error e, _, _ | _, Error e, _ | _, _, Error e -> Error e
+            | _ -> Ok (out)
+
+    let rec validateDriven (nodeMap: MutMap<IdentifierT,Node>) =
+        function
+        | Concat c as out -> ResList.map (validateDriven nodeMap) c ?> fun _ -> Ok(out)
+        | NetLValueT.Ranged r as out ->
+            let error = Error <| sprintf "%A cannot be driven as it is not an output/wire/reg. Only output/wire/reg can be driven." r.Name
+            r.Name
+            |> nodeMap.TryFind
+            |> function
+            | None -> error
+            | Some node ->
+                match node.comp with
+                | OutputReg _ | OutputWire _ | WireComp _ | RegComp _ -> Ok(out)
+                | _ -> error
+
+    let rec expToNetLVal nodeMap exp =
+        match exp with
+        | Primary (PrimaryT.Ranged a) -> Ok <| NetLValueT.Ranged a
+        | Primary (PrimaryT.Concat c) -> ResList.map (expToNetLVal nodeMap) c ?> (NetLValueT.Concat >> Ok)
+        | _ -> Error "Cannot convert to NetLValue."
+        ?> validateDriven nodeMap
+
+    let validateModuleConnections (nodeMap: MutMap<IdentifierT,Node>) (modDec: ModuleDeclaration) (conns: PortConnectionT) =
+        let rec checkOptExpIsPrim =
+            function
+            | None -> true
+            | Some a ->
+                match a with
+                | Primary (Number _) -> true
+                | Primary (PrimaryT.Ranged _)
+                | Primary (PrimaryT.Concat _) -> 
+                    expToNetLVal nodeMap a
+                    |> function
+                    | Ok _ -> true
+                    | Error _ -> false
+                | _ -> false
+        match conns with
+        | Unnamed expLst ->
+            // If unnamed, there should be the same number of ports in declaration and instance
+            if expLst.Length <> modDec.ports.Length
+            then Error <| sprintf "The module %A has %i ports, while the created instance is providing %i." modDec.name modDec.ports.Length expLst.Length
+            else 
+                (modDec.ports, expLst)
+                ||> List.zip
+                |> ResList.map (fun ((pName,pType,_), exp) ->
+                    match pType with
+                    | Output _ ->
+                        if checkOptExpIsPrim (Some exp)
+                        then Ok()
+                        else Error <| sprintf "Output ports can only drive output/reg/wires. An expression was assigned to port %A for module %A." pName modDec.name
+                    | _ -> Ok())
+                ?> fun _ -> Ok(conns)
+        | Named namedLst ->
+            namedLst
+            |> ResList.map (fun n ->
+                match List.tryFind (fun (name, _, _) -> name = n.Name) modDec.ports with
+                | None -> Error <| sprintf "There is no port in the module %A called %A." modDec.name n.Name
+                | Some (pName, pType, _) ->
+                    match pType with
+                    | Output _ ->
+                        if checkOptExpIsPrim n.Value
+                        then Ok()
+                        else Error <| sprintf "Output ports can only drive output/reg/wires. An expression was assigned to port %A for module %A." pName modDec.name
+                    | _ -> Ok())
+            ?> fun _ ->
+                // Check for duplicate name entries
+                namedLst
+                |> Util.duplicates (fun a b -> a.Name = b.Name)
+                |> function
+                | [] -> Ok(conns)
+                | lst -> Error <| sprintf "The ports %A were declared multiple times." lst
+
+    let getModulePortMaps (modDec: ModuleDeclaration) =
+        let inputs =
+            modDec.ports
+            |> List.filter (fun (_,pType,_) ->
+                match pType with
+                | Input -> true
+                | _ -> false)
+            |> List.indexed
+            |> List.map (fun (i, (name,_,_)) -> (name, uint i))
+            |> Map.ofList
+        let outputs =
+            modDec.ports
+            |> List.filter (fun (_,pType,_) ->
+                match pType with
+                | Output _ -> true
+                | _ -> false)
+            |> List.indexed
+            |> List.map (fun (i, (name,_,_)) -> (name, uint i))
+            |> Map.ofList
+        (inputs, outputs)
+
+
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =
         order
@@ -52,11 +194,9 @@ let collectDecs (asts: ASTT list) : ModuleDeclaration list =
             | PortDeclaration pd -> Some <| processPortDec pd
             | _ -> None)
         |> orderList dec.ports
-        |> Array.ofList
     let processModDec2 (dec: {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}) =
         dec.ports
         |> List.map processPortDec
-        |> Array.ofList
     let getDec ast : ModuleDeclaration =
         let ports = 
             match ast.info with
@@ -85,9 +225,9 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
 
     thisModDecRes 
     ?> fun thisModDec ->
-        let mutable nodeMap : Map<IdentifierT,Node> =
+        let mutable nodeMap : MutMap<IdentifierT,Node> =
             thisModDec.ports
-            |> Array.map (fun (portName, portDir, portRange) ->
+            |> List.map (fun (portName, portDir, portRange) ->
                 let initFunc = 
                     match portDir with
                     | Input -> Node.initInputComp
@@ -96,25 +236,8 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                         | Wire -> Node.initOutputReg
                         | Reg -> Node.initOutputWire
                 (portName, initFunc portRange))
-            |> Map.ofArray
-
-        let getRangedList netLVal = // [ (myName, myRange, theirRange) ]
-            let rec getRangedListRec offset =
-                function
-                | NetLValueT.Ranged r ->
-                    Util.optRangeTToRangeWithNodes nodeMap r.Name r.Range
-                    ?> fun range ->
-                        Ok ([ (r.Name, range, range.ground().offset offset) ], (offset + range.size))
-                | NetLValueT.Concat c ->
-                    (c, Ok ([], offset))
-                    ||> List.foldBack (fun netLVal state ->
-                        state
-                        ?> fun (lst, off) -> 
-                            getRangedListRec off netLVal
-                            ?> fun (curr, currOff) -> Ok (curr @ lst, currOff))
-            netLVal
-            |> getRangedListRec 0u
-            ?> fun (lst, _) -> Ok lst
+            |> Map.ofList
+            |> MutMap
 
         let integrateExpression =
             let getName =
@@ -125,50 +248,66 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                     nameNum <- nameNum + 1
                     nameBase + string nameNum
             fun exp ->
-                let (inputMap, inputs, connections) = Internal.getExprInputs exp
-                let comp = Expression (exp, inputMap)
-                let getConnections name =
-                    connections
-                    |> ResList.choose (fun (n, r) ->
-                        if n = name
-                        then 
-                            Util.optRangeTToRangeWithNodes nodeMap name r
-                            ?> fun r ->
-                                Ok (Some 
-                                        { myRange = Range.max()
-                                          theirName = name
-                                          theirPinNum = 0u    // as coming from input/output/wire/reg -> single output
-                                          theirRange = r })
-                        else Ok None)
-                    ?> fun a -> Ok <| List.toArray a
-                inputs
-                |> ResList.map (fun name ->
+                exp
+                |> Internal.validateExpr nodeMap
+                ?> fun _ -> 
+                    let (inputMap, inputs, connections) = Internal.getExprInputs exp
+                    let comp = Expression (exp, inputMap)
+                    let getConnections name =
+                        connections
+                        |> ResList.choose (fun (n, r) ->
+                            if n = name
+                            then 
+                                Util.optRangeTToRangeWithNodes nodeMap name r
+                                ?> fun r ->
+                                    Ok (Some 
+                                            { myRange = Range.max()
+                                              theirName = name
+                                              theirPinNum = 0u    // as coming from input/output/wire/reg -> single output
+                                              theirRange = r })
+                            else Ok None)
+                        ?> fun a -> Ok <| List.toArray a
+                    inputs
+                    |> ResList.map (fun name ->
+                        name
+                        |> getConnections
+                        ?> fun conns -> Ok { range = Range.max(); connections = conns })
+                    |> ResList.toResArray
+                    ?> fun ports -> 
+                        let name = getName()
+                        nodeMap.Add (name, { comp = comp; inputs = ports })
+                        Ok name
+
+        let addConnections pin netLVal name =
+            netLVal
+            |> Internal.validateDriven nodeMap
+            ?> Internal.getRangedList nodeMap
+            ?> ResList.map (fun (myName, myRange, theirRange) -> 
+                // No need to check if myName is in map as this is checked in validateDriven
+                nodeMap.[myName].inputs.[0].addConnection
+                    myName
+                    myRange
                     name
-                    |> getConnections
-                    ?> fun conns -> Ok { range = Range.max(); connections = conns })
-                |> ResList.toResArray
-                ?> fun ports -> 
-                    let name = getName()
-                    nodeMap <- nodeMap.Add (name, { comp = comp; inputs = ports })
-                    Ok name
+                    pin
+                    theirRange)
+            ?> ResList.ignore
 
         let processModuleItemDeclaration =
             function
             | ModuleItemDeclaration a ->
                 a.names
                 |> ResList.map (fun name ->
-                    if Map.containsKey name nodeMap
+                    if nodeMap.ContainsKey name
                     then Error <| sprintf "The identifier %A is used multiple times for an input/output or non port reg/wire." name
                     else 
-                        nodeMap <- 
-                            let range = Util.optRangeTToRange a.range
-                            let node = 
-                                match a.decType with
-                                | Wire -> Node.initWireComp range
-                                | Reg -> Node.initRegComp range
-                            nodeMap.Add (name, node)
+                        let range = Util.optRangeTToRange a.range
+                        let node = 
+                            match a.decType with
+                            | Wire -> Node.initWireComp range
+                            | Reg -> Node.initRegComp range
+                        nodeMap.Add (name, node)
                         Ok ())
-                ?> fun _ -> Ok()
+                ?> ResList.ignore
             | _ -> Ok ()
 
         let processContinuousAssign =
@@ -178,21 +317,8 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 |> ResList.map (fun netAssign ->
                     netAssign.RHS
                     |> integrateExpression 
-                    ?> fun expName ->
-                        netAssign.LHS
-                        |> getRangedList
-                        ?> fun lst -> 
-                            lst
-                            |> ResList.map (fun (myName, myRange, theirRange) -> 
-                                if nodeMap.ContainsKey myName 
-                                then nodeMap.[myName].inputs.[0].addConnection
-                                        myName
-                                        myRange
-                                        expName
-                                        0u
-                                        theirRange
-                                else Error <| sprintf "%A is not a registered input/output/wire/reg." myName))
-                ?> fun _ -> Ok ()
+                    ?> addConnections 0u netAssign.LHS)
+                ?> ResList.ignore
             | _ -> Ok ()
 
         let processInitialConstruct =
@@ -202,7 +328,7 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                 |> ResList.map (fun blockingAssignment ->
                     let value = ConstExprEval.evalConstExpr blockingAssignment.RHS
                     blockingAssignment.LHS
-                    |> getRangedList
+                    |> Internal.getRangedList nodeMap
                     ?> fun lst -> 
                         lst
                         |> ResList.map (fun (myName, myRange, theirRange) ->
@@ -220,13 +346,85 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
                                 | WireComp _ -> Error <| sprintf "Cannot assign initial value to wire type %A. Only reg types can have initial values." myName
                                 | _ -> Error <| sprintf "Cannot assign initial value to %A, as it is not a reg type." myName
                             else Error <| sprintf "Cannot assign initial value to %A, as it has not been declared as an input/output/wire/reg." myName))
-                ?> fun _ -> Ok ()
+                ?> ResList.ignore
             | _ -> Ok ()
 
         let processModuleInstantiation =
             function
             | ModuleInstantiation a -> 
-                raise <| NotImplementedException()
+                modDecs
+                |> List.tryFind (fun md -> md.name = a.Name)
+                |> function
+                | None -> Error <| sprintf "Could not find module declaration for %A." a.Name
+                | Some md ->
+                    let (inputMap, outputMap) = Internal.getModulePortMaps md
+                    a.Module.PortConnections
+                    |> Internal.validateModuleConnections nodeMap md
+                    ?> function
+                    | Unnamed exps -> 
+                        let indexedExps = List.indexed exps
+                        let getList f =
+                            indexedExps
+                            |> List.choose(fun (i,exp) -> 
+                                let (pName,pType,pRange) = md.ports.[i]
+                                f pName pType pRange exp)
+                        let inputs pName pType pRange exp =
+                            match pType with
+                            | Input _ -> Some (inputMap.[pName], pRange, exp)
+                            | _ -> None
+                        let outputs pName pType pRange exp =
+                            match pType with
+                            | Output _ -> Some (outputMap.[pName], pRange, exp)
+                            | _ -> None
+                        Ok (getList inputs, getList outputs)
+                    | Named nExps -> 
+                        let unknownConst = Primary (Number (VNum.unknown 1u))
+                        let allPorts = 
+                            nExps
+                            |> List.map (fun n ->
+                                match n.Value with
+                                | Some exp -> (n.Name, exp)
+                                | None -> (n.Name, unknownConst))
+                        (([], []), allPorts)
+                        ||> List.fold (fun (inputs, outputs) (pName, pExp) ->
+                            // this does not need to be a try find as it has already been verified
+                            let (_, modPType, modPRange) = 
+                                md.ports
+                                |> List.find (fun (modPName, _, _) -> modPName = pName)
+                            match modPType with
+                            | Input -> ((inputMap.[pName], modPRange, pExp)::inputs, outputs)
+                            | Output _ -> (inputs, (outputMap.[pName], modPRange, pExp)::outputs))
+                        |> Ok
+                    ?> fun (inputExprs, outputExprs) ->
+                        inputExprs
+                        |> ResList.map (fun (i, range, exp) ->
+                            exp
+                            |> integrateExpression
+                            ?>> fun expName ->
+                                let connection =
+                                    { myRange = range
+                                      theirName = expName
+                                      theirPinNum = i
+                                      theirRange = Range.max() }
+                                { range = range
+                                  connections = [| connection |] })
+                        ?>> Array.ofList
+                        ?>> fun ports ->
+                            let content =
+                                { moduleName = a.Name
+                                  inputMap = inputMap
+                                  outputMap = outputMap }
+                            let node =
+                                { comp = ModuleInst content
+                                  inputs = ports }
+                            nodeMap.Add(a.Module.Name, node)
+                        ?> fun _ ->
+                            outputExprs
+                            |> ResList.map (fun (i, range, exp) ->
+                                exp
+                                |> Internal.expToNetLVal nodeMap
+                                ?> fun netLVal -> addConnections i netLVal a.Module.Name)
+                            ?> ResList.ignore
             | _ -> Ok ()
 
         let processAlwaysConstruct =
@@ -239,12 +437,11 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) : Result<Netlist,st
             funcs
             |> ResList.map (fun func -> ResList.map func items)
 
-        let result = processItems items [
-            processModuleItemDeclaration
-            processContinuousAssign
-            processInitialConstruct
-            // processModuleInstantiation
-            // processAlwaysConstruct
-        ]
-
-        result ?> fun _ -> Ok { modDec = thisModDec; nodes = nodeMap }
+        processItems items 
+            [ processModuleItemDeclaration
+              processContinuousAssign
+              processInitialConstruct
+              // processModuleInstantiation
+              // processAlwaysConstruct]
+            ]
+        ?> fun _ -> Ok { modDec = thisModDec; nodes = nodeMap.Map }

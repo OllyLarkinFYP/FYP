@@ -7,19 +7,24 @@ type RegContent =
     { range: Range
       mutable initVal: VNum }
 
+type ModuleContent =
+    { moduleName: IdentifierT
+      inputMap: Map<IdentifierT,uint>
+      outputMap: Map<IdentifierT,uint> }
+
 type Component =
     | InputComp of Range
     | OutputReg of RegContent
     | OutputWire of Range
-    | ModuleInst of IdentifierT
-    | Expression of ExpressionT * Map<string,uint>
+    | ModuleInst of ModuleContent
+    | Expression of ExpressionT * Map<IdentifierT,uint>
     | Always of AlwaysConstructT
     | RegComp of RegContent
     | WireComp of Range
 
 type Connection = 
     { myRange: Range
-      theirName: string
+      theirName: IdentifierT
       theirPinNum: uint
       theirRange: Range }
 
@@ -27,7 +32,7 @@ type Port =
     { range: Range
       mutable connections: Connection array }
     with
-        member this.addConnection (myName: string) myRange theirName theirPinNum theirRange =
+        member this.addConnection (myName: IdentifierT) myRange theirName theirPinNum theirRange =
             (false, this.connections)
             ||> Array.fold (fun overlap connection -> 
                 if Range.overlap connection.myRange myRange
@@ -46,7 +51,7 @@ type Port =
 
 type ModuleDeclaration =
     { name: IdentifierT
-      ports: (IdentifierT * PortDirAndType * Range) array }
+      ports: (IdentifierT * PortDirAndType * Range) list }
 
 type Node = 
     { comp: Component

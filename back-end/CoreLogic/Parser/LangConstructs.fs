@@ -193,11 +193,11 @@ module LangConstructs =
             Symbol.pPeriod >>. pIdentifier .>>. opt (Symbol.pOpenRBrac >>. opt pExpression .>> Symbol.pCloseRBrac)
             |>> function
             | iden, None
-            | iden, Some (None) -> PortConnectionT.Named {| Name = iden; Value = None |}
-            | iden, Some (Some exp) -> PortConnectionT.Named {| Name = iden; Value = Some exp |}
+            | iden, Some (None) -> {| Name = iden; Value = None |}
+            | iden, Some (Some exp) -> {| Name = iden; Value = Some exp |}
         choice [
-            sepBy1 named Symbol.pComma
-            sepBy pExpression Symbol.pComma |>> List.map PortConnectionT.Unnamed
+            sepBy1 named Symbol.pComma |>> PortConnectionT.Named
+            sepBy pExpression Symbol.pComma |>> PortConnectionT.Unnamed
         ]
 
     let pModuleInstance =

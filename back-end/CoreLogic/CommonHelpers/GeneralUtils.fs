@@ -7,6 +7,10 @@ open CommonTypes
 
 module Operators =
     let (?>) r f = Result.bind f r
+    let (?>>) r f =
+        match r with
+        | Ok a -> Ok (f a)
+        | Error e -> Error e 
 
 module ResList =
     let rec map f =
@@ -33,11 +37,21 @@ module ResList =
                     match res with
                     | Some a -> Ok (a::processedTl)
                     | None -> Ok processedTl
+                    
+    let rec fold folder state =
+        function
+        | [] -> Ok state
+        | hd::tl ->
+            match folder state hd with
+            | Error e -> Error e
+            | Ok acc -> fold folder acc tl
 
     let toResArray =
         function
         | Ok lst -> Ok <| List.toArray lst
         | Error e -> Error e
+
+    let ignore a = Ok()
 
 module Util =
     let rangeTToRange (r: RangeT) : Range =
@@ -52,11 +66,11 @@ module Util =
         | Some range -> rangeTToRange range
         | None -> Single 0u
 
-    let optRangeTToRangeWithNodes (nodes: Map<IdentifierT,Node>) (name: string) (r: RangeT option) =
+    let optRangeTToRangeWithNodes (nodes: MutMap<IdentifierT,Node>) (name: string) (r: RangeT option) =
         match r with
         | Some range -> Ok <| rangeTToRange range
         | None -> 
-            match Map.tryFind name nodes with
+            match nodes.TryFind name with
             | None -> Error <| sprintf "Could not find range of %A. Cannot be found in node map." name
             | Some node -> 
                 match node.comp with
@@ -71,3 +85,11 @@ module Util =
         match r with
         | Some range -> rangeTToRange range
         | None -> defaultVal
+
+    let duplicates comp lst =
+        (lst,lst)
+        ||> List.allPairs
+        |> List.choose (fun (a,b) -> 
+            if comp a b
+            then Some a
+            else None)

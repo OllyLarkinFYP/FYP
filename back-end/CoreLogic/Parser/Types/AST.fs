@@ -50,11 +50,11 @@ type RangeT = { MSB: ConstantExpressionT; LSB: ConstantExpressionT }
 
 type ModuleInstantiationT = { Name: IdentifierT; Module: ModuleInstanceT }
 
-type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT List }
+type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT }
 
 type PortConnectionT =
-    | Unnamed of ExpressionT
-    | Named of {| Name: IdentifierT; Value: ExpressionT option |}
+    | Unnamed of ExpressionT list
+    | Named of {| Name: IdentifierT; Value: ExpressionT option |} list
 
 
 // ######### A.6.1 Continuous Assignment Statements #########
@@ -153,7 +153,7 @@ type ExpressionT =
     | UniExpression of {| Operator: UnaryOperatorT; Expression: ExpressionT |}
     | BinaryExpression of {| LHS: ExpressionT; BinOperator: BinaryOperatorT; RHS: ExpressionT |}
     | CondExpression of {| Condition: ExpressionT; TrueVal: ExpressionT; FalseVal: ExpressionT |}
-
+    
 
 // ######### A.8.4 Primaries #########
 

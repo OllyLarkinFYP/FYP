@@ -245,14 +245,15 @@ endmodule
 "
 
 let testStr = @"
-module test(a,b,c,d);
+module test(a,b,c,d,e);
 
   output a;
   output b;
   output c;
+  output e;
   input [2:0] d;
 
-  assign {a,b,c} = d[2:0];
+  assign {a,b,c,e} = d[2:0];
 
 endmodule
 "
@@ -263,7 +264,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        testStr
+        program
         |> run parser
         |> function
         | Success (ast,_,_) -> 
