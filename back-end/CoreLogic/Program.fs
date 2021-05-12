@@ -264,7 +264,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        program
+        program2
         |> run parser
         |> function
         | Success (ast,_,_) -> 
@@ -277,11 +277,5 @@ let main argv =
     match result with
     | Result.Error e -> printfn "%s" e
     | Result.Ok net -> 
-        printfn "Declaration: \n%A" net.modDec
-        printfn "*********************"
-        net.nodes
-        |> Map.toList
-        |> List.map (printfn "%A")
-        |> ignore
-
+        printfn "%s" (net.ToString()) 
     0 // return an integer exit code

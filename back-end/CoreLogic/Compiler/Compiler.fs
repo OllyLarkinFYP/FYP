@@ -8,6 +8,11 @@ open CommonHelpers
 open CommonHelpers.Operators
 
 module private Internal =
+    let safeMapAdd (map: Map<'a,'b>) (key: 'a, value: 'b) =
+        if map.ContainsKey key
+        then Error <| sprintf "%A is already a registered component. It cannot be declared again." key
+        else Ok <| map.Add(key,value)
+
     let processInputOutput md =
         md.ports
         |> List.map (fun (name, pType, range) ->
@@ -17,15 +22,30 @@ module private Internal =
             | Output Reg -> (name, RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }))
         |> Map.ofList
 
-    let processVariables netlist item = raise <| NotImplementedException()
+    let processVariables netlist item =
+        match item with
+        | ModuleItemDeclaration mid ->
+            let newEntries =
+                mid.names
+                |> List.map (fun name ->
+                    let range = Util.optRangeTToRange mid.range
+                    let node =
+                        match mid.decType with
+                        | Wire -> WireComp { range = range; drivers = [] }
+                        | Reg -> RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }
+                    (name, node))
+            (netlist.variables, newEntries)
+            ||> ResList.fold safeMapAdd
+            ?>> fun newVars -> { netlist with variables = newVars }
+        | _ -> Ok netlist
 
-    let processInitialBlock netlist item = raise <| NotImplementedException()
+    let processInitialBlock netlist item = Ok netlist
 
-    let processContinuousAssigns netlist item = raise <| NotImplementedException()
+    let processContinuousAssigns netlist item = Ok netlist
 
-    let processModuleInstances mds netlist item = raise <| NotImplementedException()
+    let processModuleInstances mds netlist item = Ok netlist
 
-    let processAlwaysBlocks netlist item = raise <| NotImplementedException()
+    let processAlwaysBlocks netlist item = Ok netlist
 
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =

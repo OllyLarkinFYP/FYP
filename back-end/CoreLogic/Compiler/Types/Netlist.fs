@@ -59,6 +59,22 @@ type Netlist =
       variables: Map<IdentifierT,VariableComp> // includes input/wire/reg
       moduleInstances: Map<IdentifierT,ModuleInstanceComp>
       alwaysBlocks: Map<uint,AlwaysComp> }
+    with
+        override this.ToString () =
+            let displayMap (m: Map<'a,'b>) =
+                m
+                |> Map.toList
+                |> List.map (fun elem -> "\t" + elem.ToString() + "\n")
+                |> function
+                | [] -> ""
+                | a -> List.reduce (+) a
+            let title = "Netlist:\n"
+            let modDec = sprintf "ModuleDeclaration: \n\t%A\n" this.moduleDeclaration
+            let variables = "Variables: \n" + displayMap this.variables
+            let moduleInstances = "Module Instances: \n" + displayMap this.moduleInstances
+            let alwaysBlocks = "Always Blocks: \n" + displayMap this.alwaysBlocks
+            title + modDec + variables + moduleInstances + alwaysBlocks
+            
 
 /// Different modules listed with their names as the key
 type NetlistCollection = Map<IdentifierT,Netlist>
