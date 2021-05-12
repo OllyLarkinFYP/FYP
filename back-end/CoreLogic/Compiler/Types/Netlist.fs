@@ -21,9 +21,9 @@ type RegDriverType =
 type RegDriver = Range * RegDriverType
 
 type RegContent =
-    { initVal: VNum
-      range: Range
-      mutable drivers: RegDriver }
+    { range: Range
+      mutable initVal: VNum
+      mutable drivers: RegDriver list }
 
 type WireDriverType =
     | WireExpressionOutput of ExpressionT * IdentifierT list
@@ -34,12 +34,12 @@ type WireDriver = Range * WireDriverType
 
 type WireContent =
     { range: Range
-      mutable drivers: WireDriver }
+      mutable drivers: WireDriver list }
 
 type VariableComp =
-    | Input of Range
-    | Reg of RegContent
-    | Wire of WireContent
+    | InputComp of Range
+    | RegComp of RegContent
+    | WireComp of WireContent
 
 type ModuleInputDriver =
     | ModExpressionOutput of ExpressionT * IdentifierT list
@@ -47,7 +47,7 @@ type ModuleInputDriver =
 
 type ModuleInstanceComp =
     { moduleName: IdentifierT
-      mutable drivers: ModuleInputDriver }
+      mutable drivers: ModuleInputDriver list }
 
 type AlwaysComp =
     { eventControl: EventControlT
