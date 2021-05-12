@@ -7,12 +7,30 @@ open Netlist
 open CommonHelpers
 open CommonHelpers.Operators
 
-module private Internal =
+module private Helpers =
     let safeMapAdd (map: Map<'a,'b>) (key: 'a, value: 'b) =
         if map.ContainsKey key
         then Error <| sprintf "%A is already a registered component. It cannot be declared again." key
         else Ok <| map.Add(key,value)
 
+    let netLValToRangeList (variableMap: Map<IdentifierT,VariableComp>) (netLVal: NetLValueT) =
+        let rec toRangeListRec (offset, currLst) =
+            function
+            | NetLValueT.Ranged rangedNLV ->
+                if variableMap.ContainsKey rangedNLV.Name
+                then
+                    let range = Util.optRangeTToRangeDefault variableMap.[rangedNLV.Name].range rangedNLV.Range
+                    let entry = (rangedNLV.Name, range, range.offset offset)
+                    Ok (offset + range.size, entry::currLst)
+                else Error <| sprintf "Cannot find the component %A." rangedNLV.Name
+            | NetLValueT.Concat c ->
+                ((offset, currLst), List.rev c)
+                ||> ResList.fold toRangeListRec
+        // Returns result of list of (name, idenRange, valueRange)
+        toRangeListRec (0u,[]) netLVal ?>> snd
+
+
+module private Internal =
     let processInputOutput md =
         md.ports
         |> List.map (fun (name, pType, range) ->
@@ -22,8 +40,8 @@ module private Internal =
             | Output Reg -> (name, RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }))
         |> Map.ofList
 
-    let processVariables netlist item =
-        match item with
+    let processVariables netlist =
+        function
         | ModuleItemDeclaration mid ->
             let newEntries =
                 mid.names
@@ -35,17 +53,41 @@ module private Internal =
                         | Reg -> RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }
                     (name, node))
             (netlist.variables, newEntries)
-            ||> ResList.fold safeMapAdd
+            ||> ResList.fold Helpers.safeMapAdd
             ?>> fun newVars -> { netlist with variables = newVars }
         | _ -> Ok netlist
 
-    let processInitialBlock netlist item = Ok netlist
+    let processInitialBlock netlist =
+        function
+        | InitialConstruct ic ->
+            ic
+            |> ResList.map (fun assignment ->
+                let rhsValue = ConstExprEval.evalConstExpr assignment.RHS
+                assignment.LHS
+                |> Helpers.netLValToRangeList netlist.variables 
+                ?> ResList.map (fun (name, idenRange, valueRange) ->
+                    match netlist.variables.[name] with
+                    | RegComp rc -> 
+                        rc.initVal <- rc.initVal.setRange idenRange (rhsValue.getRange valueRange)
+                        Ok()
+                    | _ -> Error <| sprintf "Can only assign initial values to 'reg' types. %A is not a 'reg'." name))
+            ?>> fun _ -> netlist
+        | _ -> Ok netlist
 
-    let processContinuousAssigns netlist item = Ok netlist
+    let processContinuousAssigns netlist =
+        function
+        | ContinuousAssign ca -> Ok netlist
+        | _ -> Ok netlist
 
-    let processModuleInstances mds netlist item = Ok netlist
+    let processModuleInstances mds netlist =
+        function
+        | ModuleInstantiation mi -> Ok netlist
+        | _ -> Ok netlist
 
-    let processAlwaysBlocks netlist item = Ok netlist
+    let processAlwaysBlocks netlist =
+        function
+        | AlwaysConstruct ac -> Ok netlist
+        | _ -> Ok netlist
 
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =

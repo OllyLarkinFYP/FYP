@@ -253,6 +253,11 @@ module test(a,b,c,d,e);
   output e;
   input [2:0] d;
 
+  reg [1:0] test1;
+  reg [2:0] test2;
+
+  initial {test1[0],e} = 5'b11001;
+
   assign {a,b,c,e} = d[2:0];
 
 endmodule
@@ -264,7 +269,7 @@ let print str = printfn "%A" str
 let main argv =
     let parser = LangConstructs.pSourceText
     let result = 
-        program2
+        testStr
         |> run parser
         |> function
         | Success (ast,_,_) -> 

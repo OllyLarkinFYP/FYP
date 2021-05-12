@@ -40,6 +40,13 @@ type VariableComp =
     | InputComp of Range
     | RegComp of RegContent
     | WireComp of WireContent
+    with 
+        member this.range =
+            match this with
+            | InputComp r -> r
+            | RegComp rc -> rc.range
+            | WireComp wc -> wc.range
+        static member getRange (vc: VariableComp) = vc.range
 
 type ModuleInputDriver =
     | ModExpressionOutput of ExpressionT * IdentifierT list
