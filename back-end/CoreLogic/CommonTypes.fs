@@ -30,10 +30,6 @@ type Range =
             match this with
             | Single _ -> Single 0u
             | Ranged (a,b) -> Ranged (a-b,0u)
-        member this.toMask () =
-            match this with
-            | Single a -> [a]
-            | Ranged (a,b) -> [b..a]
         member this.lower =
             match this with
             | Single a

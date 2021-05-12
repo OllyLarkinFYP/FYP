@@ -12,10 +12,15 @@ type ModuleOutputContent =
       portName: IdentifierT
       range: Range }
 
+type ExpressionOutputContent =
+    { expression: ExpressionT
+      vars: IdentifierT list
+      range: Range }
+
 type RegDriverType =
-    | RegExpressionOutput of ExpressionT * IdentifierT list
+    | RegExpressionOutput of ExpressionOutputContent
     | RegModuleOutput of ModuleOutputContent
-    | RegAlwaysOutput of uint 
+    | RegAlwaysOutput of uint * Range
     | RegUnassigned
 
 type RegDriver = Range * RegDriverType
@@ -26,7 +31,7 @@ type RegContent =
       mutable drivers: RegDriver list }
 
 type WireDriverType =
-    | WireExpressionOutput of ExpressionT * IdentifierT list
+    | WireExpressionOutput of ExpressionOutputContent
     | WireModuleOutput of ModuleOutputContent
     | WireUnassigned
 

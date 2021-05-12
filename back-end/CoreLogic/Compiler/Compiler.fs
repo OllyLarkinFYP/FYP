@@ -13,13 +13,13 @@ module private Helpers =
         then Error <| sprintf "%A is already a registered component. It cannot be declared again." key
         else Ok <| map.Add(key,value)
 
-    let netLValToRangeList (variableMap: Map<IdentifierT,VariableComp>) (netLVal: NetLValueT) =
+    let netLValToRangeList (netlist: Netlist) (netLVal: NetLValueT) =
         let rec toRangeListRec (offset, currLst) =
             function
             | NetLValueT.Ranged rangedNLV ->
-                if variableMap.ContainsKey rangedNLV.Name
+                if netlist.variables.ContainsKey rangedNLV.Name
                 then
-                    let range = Util.optRangeTToRangeDefault variableMap.[rangedNLV.Name].range rangedNLV.Range
+                    let range = Util.optRangeTToRangeDefault netlist.variables.[rangedNLV.Name].range rangedNLV.Range
                     let entry = (rangedNLV.Name, range, range.offset offset)
                     Ok (offset + range.size, entry::currLst)
                 else Error <| sprintf "Cannot find the component %A." rangedNLV.Name
@@ -28,6 +28,20 @@ module private Helpers =
                 ||> ResList.fold toRangeListRec
         // Returns result of list of (name, idenRange, valueRange)
         toRangeListRec (0u,[]) netLVal ?>> snd
+
+    let rec getExprVars exp =
+        let rec getPrimaryVars primary =
+            match primary with
+            | PrimaryT.Ranged r -> [r.Name]
+            | PrimaryT.Concat c -> List.collect getExprVars c
+            | PrimaryT.Brackets b -> getExprVars b
+            | _ -> []
+        match exp with
+        | Primary p -> getPrimaryVars p
+        | UniExpression u -> getExprVars u.Expression
+        | BinaryExpression b -> getExprVars b.LHS @ getExprVars b.RHS
+        | CondExpression c -> getExprVars c.Condition @ getExprVars c.TrueVal @ getExprVars c.FalseVal
+        |> List.distinct
 
 
 module private Internal =
@@ -64,7 +78,7 @@ module private Internal =
             |> ResList.map (fun assignment ->
                 let rhsValue = ConstExprEval.evalConstExpr assignment.RHS
                 assignment.LHS
-                |> Helpers.netLValToRangeList netlist.variables 
+                |> Helpers.netLValToRangeList netlist 
                 ?> ResList.map (fun (name, idenRange, valueRange) ->
                     match netlist.variables.[name] with
                     | RegComp rc -> 
@@ -76,7 +90,27 @@ module private Internal =
 
     let processContinuousAssigns netlist =
         function
-        | ContinuousAssign ca -> Ok netlist
+        | ContinuousAssign ca ->
+            ca
+            |> ResList.map (fun netAssign ->
+                netAssign.LHS
+                |> Helpers.netLValToRangeList netlist
+                ?> ResList.map (fun (name, idenRange, valueRange) ->
+                    let exprOutCont = 
+                        { expression = netAssign.RHS
+                          vars = Helpers.getExprVars netAssign.RHS
+                          range = valueRange }
+                    match netlist.variables.[name] with
+                    | RegComp rc -> 
+                        let driver = RegExpressionOutput exprOutCont
+                        rc.drivers <- (idenRange,driver)::rc.drivers
+                        Ok()
+                    | WireComp wc -> 
+                        let driver = WireExpressionOutput exprOutCont
+                        wc.drivers <- (idenRange,driver)::wc.drivers
+                        Ok()
+                    | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name))
+                ?>> fun _ -> netlist
         | _ -> Ok netlist
 
     let processModuleInstances mds netlist =

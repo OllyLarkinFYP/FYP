@@ -249,16 +249,16 @@ module test(a,b,c,d,e);
 
   output a;
   output b;
-  output c;
+  output [1:0] c;
   output e;
   input [2:0] d;
 
   reg [1:0] test1;
   reg [2:0] test2;
 
-  initial {test1[0],e} = 5'b11001;
+  initial {test1[0],test2} = 5'b11001;
 
-  assign {a,b,c,e} = d[2:0];
+  assign {c[0],e} = d[2:0];
 
 endmodule
 "
