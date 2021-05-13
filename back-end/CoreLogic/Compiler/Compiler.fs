@@ -29,6 +29,18 @@ module private Helpers =
         // Returns result of list of (name, idenRange, valueRange)
         toRangeListRec (0u,[]) netLVal ?>> snd
 
+    let rec expToNetLVal (exp: ExpressionT) =
+        let error = Error "Expressions can not be driven. Only a reg/wire/concatenation can be driven."
+        let primaryToNetLVal prim =
+            match prim with
+            | PrimaryT.Number _ -> error
+            | PrimaryT.Ranged r -> Ok <| NetLValueT.Ranged r
+            | PrimaryT.Brackets b -> expToNetLVal b
+            | PrimaryT.Concat c -> ResList.map expToNetLVal c ?>> NetLValueT.Concat
+        match exp with
+        | Primary p -> primaryToNetLVal p
+        | _ -> error
+
     let rec getExprVars exp =
         let rec getPrimaryVars primary =
             match primary with
@@ -42,6 +54,21 @@ module private Helpers =
         | BinaryExpression b -> getExprVars b.LHS @ getExprVars b.RHS
         | CondExpression c -> getExprVars c.Condition @ getExprVars c.TrueVal @ getExprVars c.FalseVal
         |> List.distinct
+
+    let getExprOutCont exp range =
+        { expression = exp
+          vars = getExprVars exp
+          range = range }
+
+    let validateNamedModulePorts modDec (namedPorts: {| Name: IdentifierT; Value: ExpressionT option |} list) =
+        namedPorts
+        |> ResList.map (fun namedPort ->
+            modDec.ports
+            |> List.tryFind (fun (name,_,_) -> name = namedPort.Name)
+            |> function
+            | Some _ -> Ok()
+            | None -> Error <| sprintf "The module %A was instantiated with incorrect ports. %A is not a port of the module." modDec.name namedPort.Name) 
+        |> ResList.ignore
 
 
 module private Internal =
@@ -96,10 +123,7 @@ module private Internal =
                 netAssign.LHS
                 |> Helpers.netLValToRangeList netlist
                 ?> ResList.map (fun (name, idenRange, valueRange) ->
-                    let exprOutCont = 
-                        { expression = netAssign.RHS
-                          vars = Helpers.getExprVars netAssign.RHS
-                          range = valueRange }
+                    let exprOutCont = Helpers.getExprOutCont netAssign.RHS valueRange
                     match netlist.variables.[name] with
                     | RegComp rc -> 
                         let driver = RegExpressionOutput exprOutCont
@@ -115,7 +139,59 @@ module private Internal =
 
     let processModuleInstances mds netlist =
         function
-        | ModuleInstantiation mi -> Ok netlist
+        | ModuleInstantiation mi ->
+            mds
+            |> List.tryFind (fun modDec -> modDec.name = mi.Name)
+            |> function
+            | None -> Error <| sprintf "The module %A could not be found. Make sure this module is a part of the project." mi.Name
+            | Some modDec ->
+                match mi.Module.PortConnections with
+                | Unnamed expLst -> 
+                    if expLst.Length <> modDec.ports.Length
+                    then Error <| sprintf "This module %A was instantiated with an incorrect number of ports. The module has %A ports but %A were provided." mi.Name modDec.ports.Length expLst.Length
+                    else Ok (List.zip modDec.ports expLst)
+                | Named namedPorts ->
+                    Helpers.validateNamedModulePorts modDec namedPorts
+                    ?>> fun _ ->
+                        modDec.ports
+                        |> List.choose (fun (pName, pType, pRange) ->
+                            let port =
+                                namedPorts
+                                |> List.find (fun namedPort -> namedPort.Name = pName)
+                            match port.Value with
+                            | None -> None
+                            | Some exp -> Some ((pName, pType, pRange), exp))
+                ?> ResList.choose (fun ((pName, pType, pRange), exp) ->
+                    match pType with
+                    | Input -> Ok <| Some (pName, pRange, Helpers.getExprOutCont exp pRange)
+                    | Output _ ->
+                        exp
+                        |> Helpers.expToNetLVal
+                        ?> Helpers.netLValToRangeList netlist
+                        ?> ResList.map (fun (name, idenRange, valueRange) ->
+                            let modOutCont =
+                                { instanceName = mi.Module.Name
+                                  portName = pName
+                                  range = valueRange }
+                            match netlist.variables.[name] with
+                            | RegComp rc -> 
+                                let driver = RegModuleOutput modOutCont
+                                rc.drivers <- (idenRange,driver)::rc.drivers
+                                Ok()
+                            | WireComp wc -> 
+                                let driver = WireModuleOutput modOutCont
+                                wc.drivers <- (idenRange,driver)::wc.drivers
+                                Ok()
+                            | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name)
+                        ?>> fun _ -> None)
+                ?> fun driverLst ->
+                    let newEntry =
+                        mi.Module.Name,
+                            { moduleName = mi.Name
+                              drivers = driverLst }
+                    (netlist.moduleInstances, newEntry)
+                    ||> Helpers.safeMapAdd
+                    ?>> fun newModInstMap -> { netlist with moduleInstances = newModInstMap }
         | _ -> Ok netlist
 
     let processAlwaysBlocks netlist =

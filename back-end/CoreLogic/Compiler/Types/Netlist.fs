@@ -12,6 +12,7 @@ type ModuleOutputContent =
       portName: IdentifierT
       range: Range }
 
+// The range here represents the range of the output from the expression used
 type ExpressionOutputContent =
     { expression: ExpressionT
       vars: IdentifierT list
@@ -21,7 +22,6 @@ type RegDriverType =
     | RegExpressionOutput of ExpressionOutputContent
     | RegModuleOutput of ModuleOutputContent
     | RegAlwaysOutput of uint * Range
-    | RegUnassigned
 
 type RegDriver = Range * RegDriverType
 
@@ -33,11 +33,12 @@ type RegContent =
 type WireDriverType =
     | WireExpressionOutput of ExpressionOutputContent
     | WireModuleOutput of ModuleOutputContent
-    | WireUnassigned
 
+// The range here represents the range of the wire that is driven
 type WireDriver = Range * WireDriverType
 
 type WireContent =
+    // The range here represents the ramge of the wire
     { range: Range
       mutable drivers: WireDriver list }
 
@@ -53,13 +54,12 @@ type VariableComp =
             | WireComp wc -> wc.range
         static member getRange (vc: VariableComp) = vc.range
 
-type ModuleInputDriver =
-    | ModExpressionOutput of ExpressionT * IdentifierT list
-    | ModUnassigned
+// The IdentifierT refers to the port name
+type ModuleInputDriver = IdentifierT * Range * ExpressionOutputContent
 
 type ModuleInstanceComp =
     { moduleName: IdentifierT
-      mutable drivers: ModuleInputDriver list }
+      drivers: ModuleInputDriver list }
 
 type AlwaysComp =
     { eventControl: EventControlT
