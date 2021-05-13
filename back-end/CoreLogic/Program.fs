@@ -244,21 +244,26 @@ module UART_TX(
 endmodule
 "
 
-let testStr = @"
-module test(a,b,c,d,e);
+let mod1 = @"
+module mod1(a,b,c);
 
-  output a;
-  output b;
-  output [1:0] c;
-  output e;
-  input [2:0] d;
+  input a;
+  input b;
+  output c;
 
-  reg [1:0] test1;
-  reg [2:0] test2;
+  mod2 test(a,b,c);
 
-  initial {test1[0],test2} = 5'b11001;
+endmodule
+"
 
-  assign {c[0],e} = d[2:0];
+let mod2 = @"
+module mod2(a,b,c);
+
+  input a;
+  input b;
+  output c;
+  
+  assign c = a + b;
 
 endmodule
 "
@@ -268,19 +273,31 @@ let print str = printfn "%A" str
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
-    let result = 
-        testStr
-        |> run parser
-        |> function
-        | Success (ast,_,_) -> 
-            let decs = Compiler.collectDecs [ast]
-            printfn "****************"
-            printfn "AST: \n%A" ast
-            printfn "****************"
-            Compiler.compileAST decs ast
-        | Failure (msg,_,_) -> failwith msg
-    match result with
+    // let result = 
+    //     testStr
+    //     |> run parser
+    //     |> function
+    //     | Success (ast,_,_) -> 
+    //         let decs = Compiler.collectDecs [ast]
+    //         printfn "****************"
+    //         printfn "AST: \n%A" ast
+    //         printfn "****************"
+    //         Compiler.compileAST decs ast
+    //     | Failure (msg,_,_) -> failwith msg
+    // match result with
+    // | Result.Error e -> printfn "%s" e
+    // | Result.Ok net -> 
+    //     printfn "%s" (net.ToString()) 
+    let asts =
+        [mod1; mod2]
+        |> List.map (fun modStr ->
+            modStr
+            |> run parser
+            |> function
+            | Success (ast, _, _) -> ast
+            | Failure (msg, _, _) -> failwith msg)
+    let decs = Compiler.collectDecs asts
+    match Compiler.compileAST decs asts.[0] with
     | Result.Error e -> printfn "%s" e
-    | Result.Ok net -> 
-        printfn "%s" (net.ToString()) 
+    | Result.Ok net -> printfn "%s" (net.ToString())
     0 // return an integer exit code
