@@ -21,7 +21,7 @@ type ExpressionOutputContent =
 type RegDriverType =
     | RegExpressionOutput of ExpressionOutputContent
     | RegModuleOutput of ModuleOutputContent
-    | RegAlwaysOutput of uint * Range
+    | RegAlwaysOutput of uint
 
 type RegDriver = Range * RegDriverType
 

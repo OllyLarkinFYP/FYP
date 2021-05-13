@@ -41,24 +41,95 @@ module private Helpers =
         | Primary p -> primaryToNetLVal p
         | _ -> error
 
-    let rec getExprVars exp =
-        let rec getPrimaryVars primary =
-            match primary with
-            | PrimaryT.Ranged r -> [r.Name]
-            | PrimaryT.Concat c -> List.collect getExprVars c
-            | PrimaryT.Brackets b -> getExprVars b
-            | _ -> []
-        match exp with
-        | Primary p -> getPrimaryVars p
-        | UniExpression u -> getExprVars u.Expression
-        | BinaryExpression b -> getExprVars b.LHS @ getExprVars b.RHS
-        | CondExpression c -> getExprVars c.Condition @ getExprVars c.TrueVal @ getExprVars c.FalseVal
-        |> List.distinct
+    let getExprVars exp =
+        let rec getExprVarsRec exp =
+            let rec getPrimaryVars primary =
+                match primary with
+                | PrimaryT.Ranged r -> [r.Name]
+                | PrimaryT.Concat c -> List.collect getExprVarsRec c
+                | PrimaryT.Brackets b -> getExprVarsRec b
+                | _ -> []
+            match exp with
+            | Primary p -> getPrimaryVars p
+            | UniExpression u -> getExprVarsRec u.Expression
+            | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
+            | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
+        getExprVarsRec exp |> List.distinct
 
-    let getExprOutCont exp range =
-        { expression = exp
-          vars = getExprVars exp
-          range = range }
+    let getEventControlVars eventControl =
+        match eventControl with
+        | Star -> []
+        | EventList eventExps ->
+            eventExps
+            |> List.collect (EventExpressionT.unwrap >> getExprVars)
+            |> List.distinct
+
+    let getStatementOrNullVars sn =
+        let rec getStatementOrNullVarsRec sn =
+            match sn with
+            | None -> []
+            | Some statement -> 
+                match statement with
+                | BlockingAssignment a -> getExprVars a.RHS
+                | Case c ->
+                    getExprVars c.CaseExpr @
+                        (c.Items
+                        |> List.collect
+                            (function 
+                            | Default s -> getStatementOrNullVarsRec s
+                            | Item i -> getStatementOrNullVarsRec i.Body @ (List.collect getExprVars i.Elems)))
+                | Conditional c ->
+                    let cond = getExprVars c.Condition
+                    let body = getStatementOrNullVarsRec c.Body
+                    let elseBody = getStatementOrNullVarsRec c.ElseBody
+                    let elseIf =
+                        c.ElseIf
+                        |> List.collect (fun ei -> getExprVars ei.Condition @ getStatementOrNullVarsRec ei.Body)
+                    cond @ body @ elseIf @ elseBody
+                | NonblockingAssignment a -> getExprVars a.RHS
+                | SeqBlock s -> List.collect (Some >> getStatementOrNullVarsRec) s
+        getStatementOrNullVarsRec sn |> List.distinct
+
+    let getStatementOrNullOutputs sn =
+        let rec getStatementOrNullOutputsRec sn =
+            match sn with
+            | None -> []
+            | Some statement ->
+                match statement with
+                | BlockingAssignment a -> [a.LHS]
+                | Case c ->
+                    c.Items
+                    |> List.collect
+                        (function
+                        | Default s -> getStatementOrNullOutputsRec s
+                        | Item i -> getStatementOrNullOutputsRec i.Body)
+                | Conditional c ->
+                    let trueBody = getStatementOrNullOutputsRec c.Body
+                    let falseBody = getStatementOrNullOutputsRec c.ElseBody
+                    let elseIf = c.ElseIf |> List.collect (fun ei -> getStatementOrNullOutputsRec ei.Body)
+                    trueBody @ falseBody @ elseIf
+                | NonblockingAssignment a -> [a.LHS]
+                | SeqBlock s -> List.collect (Some >> getStatementOrNullOutputsRec) s
+        getStatementOrNullOutputsRec sn |> List.distinct
+
+    let getTimingControlVars tc =
+        getEventControlVars tc.Control @ getStatementOrNullVars tc.Statement |> List.distinct
+
+    let validateDrivingVars netlist idenLst =
+        idenLst
+        |> ResList.map (fun iden ->
+            if netlist.variables.ContainsKey iden
+            then Ok()
+            else Error <| sprintf "The component %A was used but this is not an input/reg/wire." iden)
+        ?>> fun _ -> idenLst
+
+    let getExprOutCont netlist exp range =
+        getExprVars exp
+        |> validateDrivingVars netlist
+        ?>> fun drivingVars ->
+            { expression = exp
+              vars = drivingVars
+              range = range }
 
     let validateNamedModulePorts modDec (namedPorts: {| Name: IdentifierT; Value: ExpressionT option |} list) =
         namedPorts
@@ -69,6 +140,14 @@ module private Helpers =
             | Some _ -> Ok()
             | None -> Error <| sprintf "The module %A was instantiated with incorrect ports. %A is not a port of the module." modDec.name namedPort.Name) 
         |> ResList.ignore
+
+    let validateNewDriver name (currDrivers: (Range * 'a) list) (newRange: Range, d: 'a) =
+        currDrivers
+        |> ResList.map (fun (range, _) ->
+            if Range.overlap range newRange
+            then Error <| sprintf "Cannot drive the range %s of %s, as the range %s of %s is already being driven." (newRange.ToString()) name (range.ToString()) name
+            else Ok())
+        ?>> fun _ -> (newRange, d)
 
 
 module private Internal =
@@ -123,17 +202,22 @@ module private Internal =
                 netAssign.LHS
                 |> Helpers.netLValToRangeList netlist
                 ?> ResList.map (fun (name, idenRange, valueRange) ->
-                    let exprOutCont = Helpers.getExprOutCont netAssign.RHS valueRange
-                    match netlist.variables.[name] with
-                    | RegComp rc -> 
-                        let driver = RegExpressionOutput exprOutCont
-                        rc.drivers <- (idenRange,driver)::rc.drivers
-                        Ok()
-                    | WireComp wc -> 
-                        let driver = WireExpressionOutput exprOutCont
-                        wc.drivers <- (idenRange,driver)::wc.drivers
-                        Ok()
-                    | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name))
+                    Helpers.getExprOutCont netlist netAssign.RHS valueRange
+                    ?> fun exprOutCont ->
+                        match netlist.variables.[name] with
+                        | RegComp rc -> 
+                            RegExpressionOutput exprOutCont
+                            |> Util.tuple idenRange 
+                            |> Helpers.validateNewDriver name rc.drivers
+                            ?>> fun driver ->
+                                rc.drivers <- driver::rc.drivers
+                        | WireComp wc -> 
+                            WireExpressionOutput exprOutCont
+                            |> Util.tuple idenRange 
+                            |> Helpers.validateNewDriver name wc.drivers
+                            ?>> fun driver ->
+                                wc.drivers <- driver::wc.drivers
+                        | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name))
                 ?>> fun _ -> netlist
         | _ -> Ok netlist
 
@@ -163,7 +247,9 @@ module private Internal =
                             | Some exp -> Some ((pName, pType, pRange), exp))
                 ?> ResList.choose (fun ((pName, pType, pRange), exp) ->
                     match pType with
-                    | Input -> Ok <| Some (pName, pRange, Helpers.getExprOutCont exp pRange)
+                    | Input ->
+                        Helpers.getExprOutCont netlist exp pRange
+                        ?> fun vars -> Ok <| Some (pName, pRange, vars)
                     | Output _ ->
                         exp
                         |> Helpers.expToNetLVal
@@ -175,13 +261,17 @@ module private Internal =
                                   range = valueRange }
                             match netlist.variables.[name] with
                             | RegComp rc -> 
-                                let driver = RegModuleOutput modOutCont
-                                rc.drivers <- (idenRange,driver)::rc.drivers
-                                Ok()
+                                RegModuleOutput modOutCont
+                                |> Util.tuple idenRange 
+                                |> Helpers.validateNewDriver name rc.drivers
+                                ?>> fun driver ->
+                                    rc.drivers <- driver::rc.drivers
                             | WireComp wc -> 
-                                let driver = WireModuleOutput modOutCont
-                                wc.drivers <- (idenRange,driver)::wc.drivers
-                                Ok()
+                                WireModuleOutput modOutCont
+                                |> Util.tuple idenRange 
+                                |> Helpers.validateNewDriver name wc.drivers
+                                ?>> fun driver ->
+                                    wc.drivers <- driver::wc.drivers
                             | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name)
                         ?>> fun _ -> None)
                 ?> fun driverLst ->
@@ -194,10 +284,37 @@ module private Internal =
                     ?>> fun newModInstMap -> { netlist with moduleInstances = newModInstMap }
         | _ -> Ok netlist
 
-    let processAlwaysBlocks netlist =
-        function
-        | AlwaysConstruct ac -> Ok netlist
-        | _ -> Ok netlist
+    let processAlwaysBlocks =
+        let getID =
+            let mutable num = 0u
+            fun () ->
+                num <- num + 1u
+                num
+        fun netlist ->
+            function
+            | AlwaysConstruct ac -> 
+                Helpers.getEventControlVars ac.Control @ Helpers.getStatementOrNullVars ac.Statement 
+                |> List.distinct
+                |> Helpers.validateDrivingVars netlist
+                ?> fun vars ->
+                    let ID = getID()
+                    Helpers.getStatementOrNullOutputs ac.Statement
+                    |> ResList.collect (Helpers.netLValToRangeList netlist)
+                    ?> ResList.map (fun (name, idenRange, _) ->
+                        match netlist.variables.[name] with
+                        | RegComp rc -> 
+                            RegAlwaysOutput ID
+                            |> Util.tuple idenRange 
+                            |> Helpers.validateNewDriver name rc.drivers
+                            ?>> fun driver ->
+                                rc.drivers <- driver::rc.drivers
+                        | _ -> Error <| sprintf "Cannot drive %A from an always block as it is not a 'reg'. Only 'reg' components can be driven." name)
+                    ?> fun _ ->
+                        let newEntry = (ID, { eventControl = ac.Control; statement = ac.Statement; inputs = vars })
+                        (netlist.alwaysBlocks, newEntry)
+                        ||> Helpers.safeMapAdd
+                        ?>> fun newMap -> { netlist with alwaysBlocks = newMap }
+            | _ -> Ok netlist
 
 let collectDecs (asts: ASTT list) : ModuleDeclaration list =
     let orderList order lst =

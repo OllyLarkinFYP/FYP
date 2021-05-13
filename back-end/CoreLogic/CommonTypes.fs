@@ -40,6 +40,10 @@ type Range =
             | Ranged (a,_) -> a
         member this.contains i =
             i <= this.upper && i >= this.lower
+        override this.ToString() =
+            match this with
+            | Single a -> sprintf "[%d]" a
+            | Ranged (a,b) -> sprintf "[%d..%d]" a b
 
 type MaskDir =
     | Up

@@ -25,6 +25,13 @@ module ResList =
                 match map f tl with
                 | Error e -> Error e
                 | Ok processedTl -> Ok (res :: processedTl)
+                
+    let collect f lst =
+        let rec reduce =
+            function
+            | [] -> []
+            | hd::tl -> hd @ (reduce tl)
+        map f lst ?>> reduce
 
     let rec choose f =
         function
@@ -95,3 +102,5 @@ module Util =
             if comp a b
             then Some a
             else None)
+
+    let tuple a b = a,b

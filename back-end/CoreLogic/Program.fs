@@ -249,9 +249,10 @@ module mod1(a,b,c);
 
   input a;
   input b;
-  output c;
+  output reg [1:0] c;
 
-  mod2 test(a,b,c);
+  assign c = a + b;
+  assign c = a - b;
 
 endmodule
 "
