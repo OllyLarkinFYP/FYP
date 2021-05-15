@@ -41,11 +41,26 @@ module private Helpers =
         | Primary p -> primaryToNetLVal p
         | _ -> error
 
+    let squashIdenRangeList (idenRangeLst: (IdentifierT * Range) list) =
+        idenRangeLst
+        |> List.map (fun (iden, range) ->
+            let newRange = 
+                (range, idenRangeLst)
+                ||> List.fold (fun currR (iden2, range2) ->
+                    if iden = iden2
+                    then
+                        match Range.merge currR range2 with
+                        | Some r -> r
+                        | None -> currR
+                    else currR)
+            (iden, newRange))
+        |> List.distinct
+
     let getExprVars exp =
         let rec getExprVarsRec exp =
             let rec getPrimaryVars primary =
                 match primary with
-                | PrimaryT.Ranged r -> [r.Name]
+                | PrimaryT.Ranged r -> [r.Name, Util.optRangeTToRange r.Range]
                 | PrimaryT.Concat c -> List.collect getExprVarsRec c
                 | PrimaryT.Brackets b -> getExprVarsRec b
                 | _ -> []
@@ -54,7 +69,7 @@ module private Helpers =
             | UniExpression u -> getExprVarsRec u.Expression
             | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
             | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
-        getExprVarsRec exp |> List.distinct
+        getExprVarsRec exp |> squashIdenRangeList
 
     let getEventControlVars eventControl =
         match eventControl with
@@ -62,7 +77,7 @@ module private Helpers =
         | EventList eventExps ->
             eventExps
             |> List.collect (EventExpressionT.unwrap >> getExprVars)
-            |> List.distinct
+            |> squashIdenRangeList
 
     let getStatementOrNullVars sn =
         let rec getStatementOrNullVarsRec sn =
@@ -88,7 +103,7 @@ module private Helpers =
                     cond @ body @ elseIf @ elseBody
                 | NonblockingAssignment a -> getExprVars a.RHS
                 | SeqBlock s -> List.collect (Some >> getStatementOrNullVarsRec) s
-        getStatementOrNullVarsRec sn |> List.distinct
+        getStatementOrNullVarsRec sn |> squashIdenRangeList
 
     let getStatementOrNullOutputs sn =
         let rec getStatementOrNullOutputsRec sn =
@@ -113,11 +128,11 @@ module private Helpers =
         getStatementOrNullOutputsRec sn |> List.distinct
 
     let getTimingControlVars tc =
-        getEventControlVars tc.Control @ getStatementOrNullVars tc.Statement |> List.distinct
+        getEventControlVars tc.Control @ getStatementOrNullVars tc.Statement |> squashIdenRangeList
 
     let validateDrivingVars netlist idenLst =
         idenLst
-        |> ResList.map (fun iden ->
+        |> ResList.map (fun (iden,_) ->
             if netlist.variables.ContainsKey iden
             then Ok()
             else Error <| sprintf "The component %A was used but this is not an input/reg/wire." iden)

@@ -260,10 +260,10 @@ let mod2 = @"
 module mod2(a,b,c);
 
   input a;
-  input b;
+  input [1:0] b;
   output c;
   
-  assign c = a + b;
+  assign c = a + b[0] + b[1];
 
 endmodule
 "

@@ -15,7 +15,7 @@ type ModuleOutputContent =
 // The range here represents the range of the output from the expression used
 type ExpressionOutputContent =
     { expression: ExpressionT
-      vars: IdentifierT list
+      vars: (IdentifierT * Range) list
       range: Range }
 
 type RegDriverType =
@@ -64,7 +64,7 @@ type ModuleInstanceComp =
 type AlwaysComp =
     { eventControl: EventControlT
       statement: StatementOrNullT
-      inputs: IdentifierT list }
+      inputs: (IdentifierT * Range) list }
 
 type Netlist = 
     { moduleDeclaration: ModuleDeclaration

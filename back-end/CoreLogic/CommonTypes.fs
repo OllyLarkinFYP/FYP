@@ -44,6 +44,13 @@ type Range =
             match this with
             | Single a -> sprintf "[%d]" a
             | Ranged (a,b) -> sprintf "[%d..%d]" a b
+        static member adjacent (r1: Range) (r2: Range) = r1.lower = r2.upper + 1u || r2.lower = r1.upper + 1u
+        static member merge (r1: Range) (r2: Range) =
+            let cond = Range.overlap r1 r2 || Range.adjacent r1 r2
+            match r1, r2 with
+            | Single a, Single b when a = b -> Some r1 // r1 and r2 are the same
+            | _ when cond -> Some <| Ranged (max r1.upper r2.upper, min r1.lower r2.lower)
+            | _ -> None
 
 type MaskDir =
     | Up
