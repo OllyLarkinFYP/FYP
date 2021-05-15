@@ -149,6 +149,22 @@ module private Helpers =
             else Ok())
         ?>> fun _ -> (newRange, d)
 
+    let getTopLevels (netlists: Netlist list) =
+        let containsNetlist netlist containingNet =
+            containingNet.moduleInstances
+            |> Map.toList
+            |> List.exists (fun (_, modInst) -> modInst.moduleName = netlist.moduleDeclaration.name)
+        netlists
+        |> List.choose (fun netlist -> 
+            netlists
+            |> List.exists (containsNetlist netlist)
+            |> function
+            | true -> None
+            | false -> Some netlist.moduleDeclaration.name)
+        |> function
+        | [] -> Error "Cannot find a top level module. This implies that all modules are instantiated by another module. This cannot be simulated please provide a top level module."
+        | top -> Ok top
+
 
 module private Internal =
     let processInputOutput md =
@@ -375,3 +391,11 @@ let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) =
         ?> ResList.tupleFold (Internal.processModuleInstances modDecs)
         ?> ResList.tupleFold Internal.processAlwaysBlocks
         ?>> fst
+
+let compileProject (asts: ASTT list) =
+    asts
+    |> ResList.map (compileAST <| collectDecs asts)
+    ?> fun netlists ->
+        netlists
+        |> Helpers.getTopLevels
+        ?>> fun topLevels -> (topLevels, netlists)

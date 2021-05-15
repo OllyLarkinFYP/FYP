@@ -251,8 +251,7 @@ module mod1(a,b,c);
   input b;
   output reg [1:0] c;
 
-  assign c = a + b;
-  assign c = a - b;
+  mod2 ayy(a,b,c[0]);
 
 endmodule
 "
@@ -289,16 +288,19 @@ let main argv =
     // | Result.Error e -> printfn "%s" e
     // | Result.Ok net -> 
     //     printfn "%s" (net.ToString()) 
-    let asts =
-        [mod1; mod2]
-        |> List.map (fun modStr ->
-            modStr
-            |> run parser
-            |> function
-            | Success (ast, _, _) -> ast
-            | Failure (msg, _, _) -> failwith msg)
-    let decs = Compiler.collectDecs asts
-    match Compiler.compileAST decs asts.[0] with
+    [mod1; mod2]
+    |> List.map (fun modStr ->
+        modStr
+        |> run parser
+        |> function
+        | Success (ast, _, _) -> ast
+        | Failure (msg, _, _) -> failwith msg)
+    |> Compiler.compileProject
+    |> function
+    | Result.Ok (topLevels, nets) ->
+        printfn "Top Level Modules: %A" topLevels
+        nets
+        |> List.map (fun net -> printfn "%s" (net.ToString()))
+        |> ignore
     | Result.Error e -> printfn "%s" e
-    | Result.Ok net -> printfn "%s" (net.ToString())
     0 // return an integer exit code
