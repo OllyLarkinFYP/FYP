@@ -73,21 +73,21 @@ type CommentTests () =
     [<Test>]
     member this.``Single line comment should parse``() =
         "// this is a comment"
-        |> parserTest Token.pComment true
+        |> parserTest Utils.pComment true
 
     [<Test>]
     member this.``Multi line comment should parse``() =
         @"/* this is a 
         multi line comment test
         yo yo */"
-        |> parserTest Token.pComment true
+        |> parserTest Utils.pComment true
 
     [<Test>]
     member this.``Multi line comment without end should not parse``() =
         @"/* this is a 
         multi line comment test
         yo yo"
-        |> parserTest Token.pComment false
+        |> parserTest Utils.pComment false
 
 
 

@@ -244,16 +244,26 @@ module UART_TX(
 endmodule
 "
 
-let testStr = @"
-module test(a,b,c,d,e);
+let mod1 = @"
+module mod1(a,b,c);
 
-  output a;
-  output b;
+  input a;
+  input b;
+  output reg [1:0] c;
+
+  mod2 ayy(a,b,c[0]);
+
+endmodule
+"
+
+let mod2 = @"
+module mod2(a,b,c);
+
+  input a;
+  input [1:0] b;
   output c;
-  output e;
-  input [2:0] d;
-
-  assign {a,b,c,e} = d[2:0];
+  
+//   assign c = a + b[0] + b[1];
 
 endmodule
 "
@@ -263,25 +273,36 @@ let print str = printfn "%A" str
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
-    let result = 
-        program
+    // let result = 
+    //     testStr
+    //     |> run parser
+    //     |> function
+    //     | Success (ast,_,_) -> 
+    //         let decs = Compiler.collectDecs [ast]
+    //         printfn "****************"
+    //         printfn "AST: \n%A" ast
+    //         printfn "****************"
+    //         Compiler.compileAST decs ast
+    //     | Failure (msg,_,_) -> failwith msg
+    // match result with
+    // | Result.Error e -> printfn "%s" e
+    // | Result.Ok net -> 
+    //     printfn "%s" (net.ToString()) 
+    [mod1; mod2]
+    |> List.map (fun modStr ->
+        modStr
         |> run parser
         |> function
-        | Success (ast,_,_) -> 
-            let decs = Compiler.collectDecs [ast]
-            printfn "****************"
-            printfn "AST: \n%A" ast
-            printfn "****************"
-            Compiler.compileAST decs ast
-        | Failure (msg,_,_) -> failwith msg
-    match result with
-    | Result.Error e -> printfn "%s" e
-    | Result.Ok net -> 
-        printfn "Declaration: \n%A" net.modDec
-        printfn "*********************"
-        net.nodes
+        | Success (ast, _, _) -> ast
+        | Failure (msg, _, _) -> failwith msg)
+    |> Compiler.compileProject
+    |> function
+    | Result.Ok netCollection ->
+        printfn "Top level modules: %A" netCollection.topLevelMods
+        netCollection.netlists
         |> Map.toList
-        |> List.map (printfn "%A")
+        |> List.map (fun (name, netlist) ->
+            printfn "%s: %s" name (netlist.ToString()))
         |> ignore
-
+    | Result.Error e -> printfn "%s" e
     0 // return an integer exit code
