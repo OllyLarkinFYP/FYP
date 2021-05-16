@@ -263,7 +263,7 @@ module mod2(a,b,c);
   input [1:0] b;
   output c;
   
-  assign c = a + b[0] + b[1];
+//   assign c = a + b[0] + b[1];
 
 endmodule
 "
@@ -297,10 +297,12 @@ let main argv =
         | Failure (msg, _, _) -> failwith msg)
     |> Compiler.compileProject
     |> function
-    | Result.Ok (topLevels, nets) ->
-        printfn "Top Level Modules: %A" topLevels
-        nets
-        |> List.map (fun net -> printfn "%s" (net.ToString()))
+    | Result.Ok netCollection ->
+        printfn "Top level modules: %A" netCollection.topLevelMods
+        netCollection.netlists
+        |> Map.toList
+        |> List.map (fun (name, netlist) ->
+            printfn "%s: %s" name (netlist.ToString()))
         |> ignore
     | Result.Error e -> printfn "%s" e
     0 // return an integer exit code

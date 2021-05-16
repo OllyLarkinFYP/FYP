@@ -91,8 +91,3 @@ module Token =
         let numberWithoutBase =
             decimalValue |>> fun str -> VNum (uint64 str, VNum.defaultSize)
         (numberWithBase <|> numberWithoutBase) .>> spaces |>> fun num -> num.trim()
-
-    let pComment: Parser<unit, unit> =
-        let singleLine = skipString "//" .>> skipRestOfLine true
-        let multiLine = skipString "/*" .>> skipCharsTillString "*/" true 100000
-        (singleLine <|> multiLine) .>> spaces
