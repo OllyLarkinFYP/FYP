@@ -3,75 +3,92 @@ namespace Netlist
 open AST
 open CommonTypes
 
-type RegContent =
-    { range: Range
-      mutable initVal: VNum }
-
-type ModuleContent =
-    { moduleName: IdentifierT
-      inputMap: Map<IdentifierT,uint>
-      outputMap: Map<IdentifierT,uint> }
-
-type AlwaysContent =
-  { body: StatementOrNullT
-    inputMap: Map<IdentifierT,uint>
-    outputMap: Map<IdentifierT,uint> }
-
-type Component =
-    | InputComp of Range
-    | OutputReg of RegContent
-    | OutputWire of Range
-    | ModuleInst of ModuleContent
-    | Expression of ExpressionT * Map<IdentifierT,uint>
-    | EventControl of EventControlT * Map<IdentifierT,uint>
-    | Always of AlwaysContent
-    | RegComp of RegContent
-    | WireComp of Range
-
-type Connection = 
-    { myRange: Range
-      theirName: IdentifierT
-      theirPinNum: uint
-      theirRange: Range }
-
-type Port = 
-    { range: Range
-      mutable connections: Connection array }
-    with
-        member this.addConnection (myName: IdentifierT) myRange theirName theirPinNum theirRange =
-            (false, this.connections)
-            ||> Array.fold (fun overlap connection -> 
-                if Range.overlap connection.myRange myRange
-                then true
-                else overlap)
-            |> function
-            // No overlap
-            | false -> 
-                this.connections <-
-                    [|{ myRange = myRange; theirName = theirName; theirPinNum = theirPinNum; theirRange = theirRange }|]
-                    |> Array.append this.connections
-                Ok()
-            // overlap with existing connections
-            // TODO: improve this
-            | true -> Error <| sprintf "%A has bits being driven by multiple components. Cannot also drive using %A." myName theirName 
-
 type ModuleDeclaration =
     { name: IdentifierT
       ports: (IdentifierT * PortDirAndType * Range) list }
 
-type Node = 
-    { comp: Component
-      inputs: Port array }
-    with
-        static member initInputComp range = { comp = InputComp range; inputs = [||] }
-        static member initOutputReg (range: Range) = { comp = OutputReg { range = range; initVal = VNum.unknown <| range.size }; inputs = [|{ range = range; connections = [||] }|] }
-        static member initOutputWire range = { comp = OutputWire range; inputs = [|{ range = range; connections = [||] }|] }
-        static member initRegComp (range: Range) = { comp = RegComp { range = range; initVal = VNum.unknown <| range.size }; inputs = [|{ range = range; connections = [||] }|] }
-        static member initWireComp range = { comp = WireComp range; inputs = [|{ range = range; connections = [||] }|] }
+type ModuleOutputContent =
+    { instanceName: IdentifierT
+      portName: IdentifierT
+      range: Range }
+
+// The range here represents the range of the output from the expression used
+type ExpressionOutputContent =
+    { expression: ExpressionT
+      vars: (IdentifierT * Range) list
+      range: Range }
+
+type RegDriverType =
+    | RegExpressionOutput of ExpressionOutputContent
+    | RegModuleOutput of ModuleOutputContent
+    | RegAlwaysOutput of uint
+
+type RegDriver = Range * RegDriverType
+
+type RegContent =
+    { range: Range
+      mutable initVal: VNum
+      mutable drivers: RegDriver list }
+
+type WireDriverType =
+    | WireExpressionOutput of ExpressionOutputContent
+    | WireModuleOutput of ModuleOutputContent
+
+// The range here represents the range of the wire that is driven
+type WireDriver = Range * WireDriverType
+
+type WireContent =
+    // The range here represents the ramge of the wire
+    { range: Range
+      mutable drivers: WireDriver list }
+
+type VariableComp =
+    | InputComp of Range
+    | RegComp of RegContent
+    | WireComp of WireContent
+    with 
+        member this.range =
+            match this with
+            | InputComp r -> r
+            | RegComp rc -> rc.range
+            | WireComp wc -> wc.range
+        static member getRange (vc: VariableComp) = vc.range
+
+// The IdentifierT refers to the port name
+type ModuleInputDriver = IdentifierT * Range * ExpressionOutputContent
+
+type ModuleInstanceComp =
+    { moduleName: IdentifierT
+      drivers: ModuleInputDriver list }
+
+type AlwaysComp =
+    { eventControl: EventControlT
+      statement: StatementOrNullT
+      inputs: (IdentifierT * Range) list }
 
 type Netlist = 
-    { modDec: ModuleDeclaration
-      nodes: Map<IdentifierT,Node> }
+    { moduleDeclaration: ModuleDeclaration
+      variables: Map<IdentifierT,VariableComp> // includes input/wire/reg
+      moduleInstances: Map<IdentifierT,ModuleInstanceComp>
+      alwaysBlocks: Map<uint,AlwaysComp> }
+    with
+        override this.ToString () =
+            let displayMap (m: Map<'a,'b>) =
+                m
+                |> Map.toList
+                |> List.map (fun elem -> "\t" + elem.ToString() + "\n")
+                |> function
+                | [] -> ""
+                | a -> List.reduce (+) a
+            let title = "Netlist:\n"
+            let modDec = sprintf "ModuleDeclaration: \n\t%A\n" this.moduleDeclaration
+            let variables = "Variables: \n" + displayMap this.variables
+            let moduleInstances = "Module Instances: \n" + displayMap this.moduleInstances
+            let alwaysBlocks = "Always Blocks: \n" + displayMap this.alwaysBlocks
+            title + modDec + variables + moduleInstances + alwaysBlocks
+            
 
 /// Different modules listed with their names as the key
-type NetlistCollection = Map<IdentifierT,Netlist>
+type NetlistCollection = 
+    { netlists: Map<IdentifierT,Netlist>
+      topLevelMods: IdentifierT list }

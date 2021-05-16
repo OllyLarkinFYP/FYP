@@ -22,18 +22,35 @@ type Range =
             match this with
             | Single a -> Single <| a + diff
             | Ranged (a,b) -> Ranged (a+diff, b+diff)
+        member this.offsetDown diff =
+            match this with
+            | Single a -> Single <| a - diff
+            | Ranged (a,b) -> Ranged (a-diff, b-diff)
         member this.ground () =
             match this with
             | Single _ -> Single 0u
             | Ranged (a,b) -> Ranged (a-b,0u)
-        member this.toMask () =
-            match this with
-            | Single a -> [a]
-            | Ranged (a,b) -> [b..a]
         member this.lower =
             match this with
-            | Single a -> a
-            | Ranged (_,b) -> b
+            | Single a
+            | Ranged (_,a) -> a
+        member this.upper =
+            match this with
+            | Single a
+            | Ranged (a,_) -> a
+        member this.contains i =
+            i <= this.upper && i >= this.lower
+        override this.ToString() =
+            match this with
+            | Single a -> sprintf "[%d]" a
+            | Ranged (a,b) -> sprintf "[%d..%d]" a b
+        static member adjacent (r1: Range) (r2: Range) = r1.lower = r2.upper + 1u || r2.lower = r1.upper + 1u
+        static member merge (r1: Range) (r2: Range) =
+            let cond = Range.overlap r1 r2 || Range.adjacent r1 r2
+            match r1, r2 with
+            | Single a, Single b when a = b -> Some r1 // r1 and r2 are the same
+            | _ when cond -> Some <| Ranged (max r1.upper r2.upper, min r1.lower r2.lower)
+            | _ -> None
 
 type MaskDir =
     | Up
@@ -122,22 +139,29 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         match down with
         | Down -> VNum(this.value &&& (~~~ m), this.size, this.unknownBits)
         | Up   -> VNum(this.value ||| m, this.size, this.unknownBits)
-
-    member this.maskUnknown maskLst =
-        let newUnknown = 
-            this.unknownBits
-            |> List.filter (fun a -> List.contains a maskLst |> not)
-        VNum(this.value, this.size, newUnknown)
-
-    member this.selectRange (range: Range) =
-        let shifted : VNum = VNum.(>>>) (this, VNum range.lower)
-        VNum(shifted.value, range.size, shifted.unknownBits).trim()
         
     member this.maskDown () =
         this.mask (Down, this.unknownBits)
 
     member this.maskUp () = 
         this.mask (Up, this.unknownBits)
+
+    member this.setRange (range: Range) (value: VNum) =
+        let shiftedVal: VNum = VNum.(<<<) (value.getRange <| range.ground(), VNum range.lower)
+        let oldUnknowns = this.unknownBits |> List.filter (range.contains >> not)
+        let newUnknowns =
+            shiftedVal.unknownBits @ oldUnknowns
+            |> List.distinct
+        let allOnes = ~~~0UL
+        let mask = (allOnes >>> int (width - range.upper - 1u)) <<< int range.lower
+        let newVal = shiftedVal.value &&& mask
+        let oldVal = this.value &&& (~~~mask)
+        VNum(newVal ||| oldVal, this.size, newUnknowns).trim()
+
+    member this.getRange (range: Range) =
+        let unknowns = this.unknownBits |> List.map (fun bit -> bit - range.lower)
+        let value = this.value >>> int range.lower
+        VNum(value, range.size, unknownBits).trim()
 
     /// Masks out anything above the size of the number as well as unknown bits
     member this.trim () = 
