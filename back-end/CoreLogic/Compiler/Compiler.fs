@@ -413,4 +413,9 @@ let compileProject (asts: ASTT list) =
     ?> fun netlists ->
         netlists
         |> Helpers.getTopLevels
-        ?>> fun topLevels -> (topLevels, netlists)
+        ?>> fun topLevels ->
+            let netMap =
+                netlists
+                |> List.map (fun net -> (net.moduleDeclaration.name, net))
+                |> Map.ofList
+            { netlists = netMap; topLevelMods = topLevels }

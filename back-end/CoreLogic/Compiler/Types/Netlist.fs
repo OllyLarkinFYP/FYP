@@ -89,4 +89,6 @@ type Netlist =
             
 
 /// Different modules listed with their names as the key
-type NetlistCollection = Map<IdentifierT,Netlist>
+type NetlistCollection = 
+    { netlists: Map<IdentifierT,Netlist>
+      topLevelMods: IdentifierT list }
