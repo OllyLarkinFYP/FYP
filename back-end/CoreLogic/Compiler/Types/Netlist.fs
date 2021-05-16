@@ -1,53 +1,94 @@
-namespace rec Netlist
+namespace Netlist
 
-open System
 open AST
 open CommonTypes
 
-/// Different modules listed with their names as the key
-type NetlistCollection = Map<string,Netlist>
+type ModuleDeclaration =
+    { name: IdentifierT
+      ports: (IdentifierT * PortDirAndType * Range) list }
 
-type PortType =
-    | Wire
-    | Logic
-    | Reg
+type ModuleOutputContent =
+    { instanceName: IdentifierT
+      portName: IdentifierT
+      range: Range }
+
+// The range here represents the range of the output from the expression used
+type ExpressionOutputContent =
+    { expression: ExpressionT
+      vars: (IdentifierT * Range) list
+      range: Range }
+
+type RegDriverType =
+    | RegExpressionOutput of ExpressionOutputContent
+    | RegModuleOutput of ModuleOutputContent
+    | RegAlwaysOutput of uint
+
+type RegDriver = Range * RegDriverType
+
+type RegContent =
+    { range: Range
+      mutable initVal: VNum
+      mutable drivers: RegDriver list }
+
+type WireDriverType =
+    | WireExpressionOutput of ExpressionOutputContent
+    | WireModuleOutput of ModuleOutputContent
+
+// The range here represents the range of the wire that is driven
+type WireDriver = Range * WireDriverType
+
+type WireContent =
+    // The range here represents the ramge of the wire
+    { range: Range
+      mutable drivers: WireDriver list }
+
+type VariableComp =
+    | InputComp of Range
+    | RegComp of RegContent
+    | WireComp of WireContent
+    with 
+        member this.range =
+            match this with
+            | InputComp r -> r
+            | RegComp rc -> rc.range
+            | WireComp wc -> wc.range
+        static member getRange (vc: VariableComp) = vc.range
+
+// The IdentifierT refers to the port name
+type ModuleInputDriver = IdentifierT * Range * ExpressionOutputContent
+
+type ModuleInstanceComp =
+    { moduleName: IdentifierT
+      drivers: ModuleInputDriver list }
+
+type AlwaysComp =
+    { eventControl: EventControlT
+      statement: StatementOrNullT
+      inputs: (IdentifierT * Range) list }
 
 type Netlist = 
-    { name: IdentifierT
-      inputs: (string * PortType * Port) array
-      outputs: (string * PortType * Port) array
-      /// Map from instance name to node
-      nodes: Map<string,Node> }
-
-type Node = 
-    { comp: Component
-      inputs: Port array
-      outputs: Port array }
-
-type Component =
-    | ModuleInst of IdentifierT
-    // | UnaryOp of UnaryOperatorT
-    // | BinaryOp of BinaryOperatorT
-    // | TernaryOp
-    | Expression of ExpressionT
-    | Always of AlwaysConstructT
-    | Declaration of {| range: Range; portType: PortType; initVal: VNum |}
-
-type Port = 
-    { range: Range
-      connections: Connection array }
-
-type Range = 
-    | Single
-    | Ranged of uint32 * uint32
+    { moduleDeclaration: ModuleDeclaration
+      variables: Map<IdentifierT,VariableComp> // includes input/wire/reg
+      moduleInstances: Map<IdentifierT,ModuleInstanceComp>
+      alwaysBlocks: Map<uint,AlwaysComp> }
     with
-        member this.size () =
-            match this with
-            | Single -> 1u
-            | Ranged (msb, lsb) -> msb - lsb
+        override this.ToString () =
+            let displayMap (m: Map<'a,'b>) =
+                m
+                |> Map.toList
+                |> List.map (fun elem -> "\t" + elem.ToString() + "\n")
+                |> function
+                | [] -> ""
+                | a -> List.reduce (+) a
+            let title = "Netlist:\n"
+            let modDec = sprintf "ModuleDeclaration: \n\t%A\n" this.moduleDeclaration
+            let variables = "Variables: \n" + displayMap this.variables
+            let moduleInstances = "Module Instances: \n" + displayMap this.moduleInstances
+            let alwaysBlocks = "Always Blocks: \n" + displayMap this.alwaysBlocks
+            title + modDec + variables + moduleInstances + alwaysBlocks
+            
 
-type Connection = 
-    { myRange: Range
-      theirName: string
-      theirPinNum: uint
-      theirRange: Range }
+/// Different modules listed with their names as the key
+type NetlistCollection = 
+    { netlists: Map<IdentifierT,Netlist>
+      topLevelMods: IdentifierT list }

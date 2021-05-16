@@ -2,6 +2,56 @@ namespace CommonTypes
 
 open System
 
+type Range = 
+    | Single of uint32
+    | Ranged of uint32 * uint32
+    with
+        static member max () = Ranged (63u,0u)
+        static member defaultRange () = Ranged (31u,0u)
+        static member overlap r1 r2 =
+            match r1, r2 with
+            | Single a, Single b -> a = b
+            | Single a, Ranged (b,c) 
+            | Ranged (b,c), Single a -> a <= b && a >= c
+            | Ranged (a,b), Ranged (c,d) -> (a <= c && a >= d) || (b <= c && b >= d)
+        member this.size =
+            match this with
+            | Single _ -> 1u
+            | Ranged (msb, lsb) -> msb - lsb + 1u
+        member this.offset diff =
+            match this with
+            | Single a -> Single <| a + diff
+            | Ranged (a,b) -> Ranged (a+diff, b+diff)
+        member this.offsetDown diff =
+            match this with
+            | Single a -> Single <| a - diff
+            | Ranged (a,b) -> Ranged (a-diff, b-diff)
+        member this.ground () =
+            match this with
+            | Single _ -> Single 0u
+            | Ranged (a,b) -> Ranged (a-b,0u)
+        member this.lower =
+            match this with
+            | Single a
+            | Ranged (_,a) -> a
+        member this.upper =
+            match this with
+            | Single a
+            | Ranged (a,_) -> a
+        member this.contains i =
+            i <= this.upper && i >= this.lower
+        override this.ToString() =
+            match this with
+            | Single a -> sprintf "[%d]" a
+            | Ranged (a,b) -> sprintf "[%d..%d]" a b
+        static member adjacent (r1: Range) (r2: Range) = r1.lower = r2.upper + 1u || r2.lower = r1.upper + 1u
+        static member merge (r1: Range) (r2: Range) =
+            let cond = Range.overlap r1 r2 || Range.adjacent r1 r2
+            match r1, r2 with
+            | Single a, Single b when a = b -> Some r1 // r1 and r2 are the same
+            | _ when cond -> Some <| Ranged (max r1.upper r2.upper, min r1.lower r2.lower)
+            | _ -> None
+
 type MaskDir =
     | Up
     | Down
@@ -38,6 +88,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
     new(v: int, s: int) = VNum(uint64 v, uint s, [])
     new(c: char) = VNum(uint64 c, 4u, [])
     new(i: int) = VNum(uint64 i, 32u, [])
+    new(v: uint) = VNum(uint64 v, 32u, [])
     new(b: bool) = if b then VNum(1UL,1u,[]) else VNum(0UL,1u,[])
 
     /// Constructs a VNum from binary string 
@@ -88,12 +139,29 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         match down with
         | Down -> VNum(this.value &&& (~~~ m), this.size, this.unknownBits)
         | Up   -> VNum(this.value ||| m, this.size, this.unknownBits)
-
-    member this.mask () =
+        
+    member this.maskDown () =
         this.mask (Down, this.unknownBits)
 
     member this.maskUp () = 
         this.mask (Up, this.unknownBits)
+
+    member this.setRange (range: Range) (value: VNum) =
+        let shiftedVal: VNum = VNum.(<<<) (value.getRange <| range.ground(), VNum range.lower)
+        let oldUnknowns = this.unknownBits |> List.filter (range.contains >> not)
+        let newUnknowns =
+            shiftedVal.unknownBits @ oldUnknowns
+            |> List.distinct
+        let allOnes = ~~~0UL
+        let mask = (allOnes >>> int (width - range.upper - 1u)) <<< int range.lower
+        let newVal = shiftedVal.value &&& mask
+        let oldVal = this.value &&& (~~~mask)
+        VNum(newVal ||| oldVal, this.size, newUnknowns).trim()
+
+    member this.getRange (range: Range) =
+        let unknowns = this.unknownBits |> List.map (fun bit -> bit - range.lower)
+        let value = this.value >>> int range.lower
+        VNum(value, range.size, unknownBits).trim()
 
     /// Masks out anything above the size of the number as well as unknown bits
     member this.trim () = 
@@ -103,7 +171,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         let ub =
             this.unknownBits
             |> List.filter (fun i -> i < this.size)
-        VNum(this.value &&& m, this.size, ub).mask()
+        VNum(this.value &&& m, this.size, ub).maskDown()
 
     member this.toBool () =
         if this.trim().value = 0UL || this.isUnknown
@@ -277,8 +345,8 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
 
     static member (|||) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        let aVal = num1.mask().value
-        let bVal = num2.mask().value
+        let aVal = num1.maskDown().value
+        let bVal = num2.maskDown().value
         let newVal = aVal ||| bVal
         let ones = VNum(newVal, newSize).getBits 0
         let unknowns = num1.unknownBits @ num2.unknownBits
@@ -289,3 +357,20 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         if num1.isUnknown || num2.isUnknown
         then VNum.unknown newSize
         else VNum(pown (num1.trim().value) (int <| num2.trim().value), newSize)
+
+type PortType =
+    | Wire
+    | Reg
+
+type PortDirAndType =
+    | Input
+    | Output of PortType
+
+type MutMap<'TKey, 'TValue when 'TKey : comparison>(m) =
+    let mutable map : Map<'TKey,'TValue> = m
+
+    member _.Add keyValPair = map <- map.Add keyValPair
+    member _.ContainsKey = map.ContainsKey
+    member _.Item key = map.Item key
+    member _.TryFind key = Map.tryFind key map
+    member _.Map = map

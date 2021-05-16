@@ -6,6 +6,7 @@ open AST
 open Token
 open Expression
 open ConstantExpression
+open CommonTypes
 
 module LangConstructs =
 
@@ -36,8 +37,10 @@ module LangConstructs =
             Keyword.pElse
             >>. pStatementOrNull
         ) |>> function
-        | ((cond, ifBody), elseIfList), elseBody -> 
+        | ((cond, ifBody), elseIfList), (Some elseBody) -> 
             { ConditionalStatementT.Condition = cond; Body = ifBody; ElseIf = elseIfList; ElseBody = elseBody }
+        | ((cond, ifBody), elseIfList), None -> 
+            { ConditionalStatementT.Condition = cond; Body = ifBody; ElseIf = elseIfList; ElseBody = None }
 
     let pCaseItem: Parser<CaseItemT,unit> = 
         choice [
@@ -72,16 +75,16 @@ module LangConstructs =
         |>> function
         | eControl, statement -> { ProceduralTimingControlStatementT.Control = eControl; Statement = statement }
 
-    // This parser is self recursive so needs a forward reference
-    // The implementation is defined underneath
-    let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
+    // // This parser is self recursive so needs a forward reference
+    // // The implementation is defined underneath
+    // let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
 
-    do pVariableLValueImpl := 
-        choice [
-            Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
-            pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-                VariableLValueT.Ranged {| Name = iden; Range = range |}
-        ]
+    // do pVariableLValueImpl := 
+    //     choice [
+    //         Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
+    //         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+    //             VariableLValueT.Ranged {| Name = iden; Range = range |}
+    //     ]
 
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
@@ -95,12 +98,12 @@ module LangConstructs =
         ]
 
     let pBlockingAssignment =
-        pVariableLValue .>>? Symbol.pAssign .>>. pExpression
+        pNetLValue .>>? Symbol.pAssign .>>. pExpression
         |>> function
         | lval, exp -> { BlockingAssignmentT.LHS = lval; RHS = exp }
 
     let pNonBlockingAssignment =
-        pVariableLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
+        pNetLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
         |>> function
         | lval, exp -> { NonblockingAssignmentT.LHS = lval; RHS = exp }
 
@@ -111,7 +114,16 @@ module LangConstructs =
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
-        Keyword.pInitial >>. pStatement
+        let pConstantAssignment =
+            pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
+            |>> function
+            | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
+        let initialBody =
+            choice [
+                pConstantAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
+                Keyword.pBegin >>. many (pConstantAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
+            ]
+        Keyword.pInitial >>. initialBody
 
     let pNetAssignment =
         pNetLValue .>>? Symbol.pAssign .>>. pExpression
@@ -130,82 +142,47 @@ module LangConstructs =
         sepBy1 pIdentifier Symbol.pComma
 
     let pNetDeclaration =
-        Keyword.pWire >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
+        Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> 
+        | range, idens -> 
             { names = idens
               range = range
-              signed = Option.isSome signed
-              decType = NetDeclaration }
+              decType = Wire }
 
     let pRegDeclaration = 
-        Keyword.pReg >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
+        Keyword.pReg >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
         |>> function
-        | (signed, range), idens -> 
+        | range, idens -> 
             { names = idens
               range = range
-              signed = Option.isSome signed
-              decType = RegDeclaration }
-
-    let pLogicDeclaration = 
-        Keyword.pLogic >>. opt Keyword.pSigned .>>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
-        |>> function
-        | (signed, range), idens -> 
-            { names = idens
-              range = range
-              signed = Option.isSome signed
-              decType = LogicDeclaration }
+              decType = Reg }
 
     let pModuleOrGenerateItemDeclaration =
         choice [
             pNetDeclaration
             pRegDeclaration
-            pLogicDeclaration
         ]
 
     let pInputDeclaration =
-        let logicOrWire =
-            choice [
-                Keyword.pLogic >>% InputPortDecType.Logic
-                opt Keyword.pWire >>% InputPortDecType.Wire
-            ]
-        Keyword.pInput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pIdentifier
         |>> function
-        | ((InputPortDecType.Logic, signed), range), iden -> 
+        | range, iden -> 
             { name = iden
               range = range
-              signed = Option.isSome signed
-              dir = Input InputPortDecType.Logic }
-        | ((InputPortDecType.Wire, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Input InputPortDecType.Logic }
+              dir = Input }
 
     let pOutputDeclaration = 
-        let logicOrWire =
+        let regOrWire =
             choice [
-                Keyword.pLogic >>% OutputPortDecType.Logic
-                Keyword.pReg >>% OutputPortDecType.Reg
-                opt Keyword.pWire >>% OutputPortDecType.Wire
+                Keyword.pReg >>% Reg
+                opt Keyword.pWire >>% Wire
             ]
-        Keyword.pOutput >>. logicOrWire .>>. opt Keyword.pSigned .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pIdentifier
         |>> function
-        | ((OutputPortDecType.Logic, signed), range), iden -> 
+        | (portType, range), iden -> 
             { name = iden
               range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Logic }
-        | ((OutputPortDecType.Reg, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Reg }
-        | ((OutputPortDecType.Wire, signed), range), iden -> 
-            { name = iden
-              range = range
-              signed = Option.isSome signed
-              dir = Output OutputPortDecType.Wire }
+              dir = Output portType }
 
     let pPortDeclaration =
         choice [
@@ -213,21 +190,16 @@ module LangConstructs =
             pOutputDeclaration
         ]
 
-    let pPort =
-        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac)
-        |>> function
-        | (iden, opRange) -> { PortT.name = iden; range = opRange }
-
     let pListOfPortConnections =
         let named =
             Symbol.pPeriod >>. pIdentifier .>>. opt (Symbol.pOpenRBrac >>. opt pExpression .>> Symbol.pCloseRBrac)
             |>> function
             | iden, None
-            | iden, Some (None) -> PortConnectionT.Named {| Name = iden; Value = None |}
-            | iden, Some (Some exp) -> PortConnectionT.Named {| Name = iden; Value = Some exp |}
+            | iden, Some (None) -> {| Name = iden; Value = None |}
+            | iden, Some (Some exp) -> {| Name = iden; Value = Some exp |}
         choice [
-            sepBy1 named Symbol.pComma
-            sepBy pExpression Symbol.pComma |>> List.map PortConnectionT.Unnamed
+            sepBy1 named Symbol.pComma |>> PortConnectionT.Named
+            sepBy pExpression Symbol.pComma |>> PortConnectionT.Unnamed
         ]
 
     let pModuleInstance =
@@ -255,7 +227,7 @@ module LangConstructs =
         op1 <|> op2
 
     let pListOfPorts = 
-        Symbol.pOpenRBrac >>. sepBy1 pPort Symbol.pComma .>> Symbol.pCloseRBrac
+        Symbol.pOpenRBrac >>. sepBy1 pIdentifier Symbol.pComma .>> Symbol.pCloseRBrac
 
     let pListOfPortDeclarations =
         Symbol.pOpenRBrac >>. sepBy pPortDeclaration Symbol.pComma .>> Symbol.pCloseRBrac
@@ -276,15 +248,12 @@ module LangConstructs =
                   info = ModDec2 {| ports = ports; body = moduleItems |}}
         modDec1 <|> modDec2
 
-    let pSourceText isSystemVerilog = 
-        spaces >>. pModuleDeclaration .>> eof |>> fun m -> 
-            { modDec = m 
-              isSystemVerilog = isSystemVerilog }
+    let pSourceText = 
+        spaces >>. pModuleDeclaration .>> eof
 
     do pStatementImpl := 
         choice [
             pSeqBlock |>> StatementT.SeqBlock
-            pProceduralTimingControlStatement |>> StatementT.ProceduralTimingControl
             pConditionalStatement |>> StatementT.Conditional
             pCaseStatement |>> StatementT.Case
             pBlockingAssignment .>> Symbol.pSemiColon |>> StatementT.BlockingAssignment

@@ -70,7 +70,7 @@ module VNumTests =
 
                 "Mask correctly removes internally specified bits",
                     5UL,
-                        VNum(7,3,[1u]).mask().value
+                        VNum(7,3,[1u]).maskDown().value
             ]
 
             equalityTests "int" [

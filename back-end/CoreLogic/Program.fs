@@ -1,7 +1,5 @@
 open System
 open Parser
-open CommonTypes
-open CommonHelpers
 open FParsec
 
 let program = @"
@@ -25,6 +23,8 @@ module UART_TX(
   reg [8:0] data_next;
   reg tx_reg;              
   reg tx_next;
+
+  initial current_state[1] = 1;
   
   always @(posedge clk, negedge resetn)
   begin
@@ -120,7 +120,16 @@ module UART_TX(
 endmodule
 "
 
-let testStr = "12'o12x"
+let program2 = @"
+module UART_TX(
+  clk,
+  resetn,
+  tx_start,        
+  b_tick,          
+  d_in,      
+  tx_done,         
+  tx              
+  );
 
   input wire clk;
   input wire resetn;

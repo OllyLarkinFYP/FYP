@@ -5,41 +5,21 @@ open CommonTypes
 
 // ######### A.1.2 Verilog Source Text #########
 
-type ASTT = 
-    { modDec: ModuleDeclarationT 
-      isSystemVerilog: bool }
-
 type ModuleDeclarationInfo =
-    | ModDec1 of {| ports: PortT List; body: ModuleItemT List |}
+    | ModDec1 of {| ports: IdentifierT List; body: ModuleItemT List |}
     | ModDec2 of {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}
 
-type ModuleDeclarationT =
+type ASTT =
     { name: IdentifierT
       info: ModuleDeclarationInfo }
 
 
 // ######### A.1.3 Module Parameters And Ports #########
 
-type PortT = { name: IdentifierT; range: ConstantRangeExpressionT Option }
-
-type InputPortDecType =
-    | Wire
-    | Logic
-
-type OutputPortDecType =
-    | Wire
-    | Logic
-    | Reg
-
-type PortDecDirType =   
-    | Input of InputPortDecType
-    | Output of OutputPortDecType
-
 type PortDeclarationT = 
     { name: IdentifierT
       range: RangeT option
-      signed: bool
-      dir: PortDecDirType }
+      dir: PortDirAndType }
 
 
 // ######### A.1.4 Module Items #########
@@ -55,16 +35,10 @@ type NonPortModuleItemT =
     | InitialConstruct of InitialConstructT
     | AlwaysConstruct of AlwaysConstructT
 
-type ModuleOrGenItemDecType =
-    | NetDeclaration
-    | RegDeclaration
-    | LogicDeclaration
-
 type ModuleOrGenerateItemDeclarationT =
     { names: IdentifierT list
       range: RangeT option
-      signed: bool
-      decType: ModuleOrGenItemDecType }
+      decType: PortType }
 
 
 // ######### A.2.5 Declaration Ranges #########
@@ -76,11 +50,11 @@ type RangeT = { MSB: ConstantExpressionT; LSB: ConstantExpressionT }
 
 type ModuleInstantiationT = { Name: IdentifierT; Module: ModuleInstanceT }
 
-type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT List }
+type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT }
 
 type PortConnectionT =
-    | Unnamed of ExpressionT
-    | Named of {| Name: IdentifierT; Value: ExpressionT option |}
+    | Unnamed of ExpressionT list
+    | Named of {| Name: IdentifierT; Value: ExpressionT option |} list
 
 
 // ######### A.6.1 Continuous Assignment Statements #########
@@ -92,13 +66,15 @@ type NetAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
 // ######### A.6.2 Procedural Blocks and Assignments #########
 
-type InitialConstructT = StatementT
+type InitialConstructT = ConstantAssignmentT list
 
 type AlwaysConstructT = ProceduralTimingControlStatementT
 
-type BlockingAssignmentT = { LHS: VariableLValueT; RHS: ExpressionT }
+type BlockingAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
-type NonblockingAssignmentT = { LHS: VariableLValueT; RHS: ExpressionT }
+type ConstantAssignmentT = { LHS: NetLValueT; RHS: ConstantExpressionT }
+
+type NonblockingAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
 
 // ######### A.6.3 Parallel and Sequential Blocks #########
@@ -113,7 +89,6 @@ type StatementT =
     | Case of CaseStatementT
     | Conditional of ConditionalStatementT
     | NonblockingAssignment of NonblockingAssignmentT
-    | ProceduralTimingControl of ProceduralTimingControlStatementT
     | SeqBlock of SeqBlockT
 
 type StatementOrNullT = StatementT Option
@@ -131,6 +106,12 @@ type EventControlT =
 type EventExpressionT = 
     | Posedge of ExpressionT
     | Negedge of ExpressionT
+    with
+        member this.expr =
+            match this with
+            | Posedge e -> e
+            | Negedge e -> e
+        static member unwrap (eventE: EventExpressionT) = eventE.expr
 
 
 // ######### A.6.6 Conditional Statements #########
@@ -139,7 +120,7 @@ type ConditionalStatementT = {
     Condition: ExpressionT
     Body: StatementOrNullT
     ElseIf: {| Condition: ExpressionT; Body: StatementOrNullT |} List
-    ElseBody: StatementOrNullT Option
+    ElseBody: StatementOrNullT
 }
 
 
@@ -162,26 +143,22 @@ type ConstantConcatenationT = ConstantExpressionT List
 
 // ######### A.8.3 Expressions #########
 
-type ConstantRangeExpressionT =
-    | Expr of ConstantExpressionT
-    | Range of {| LHS: ConstantExpressionT; RHS: ConstantExpressionT |}
-
 type ConstantExpressionT =
     | Primary of ConstantPrimaryT
     | UniExpression of {| Operator: UnaryOperatorT; Expression: ConstantExpressionT |}
     | BinaryExpression of {| LHS: ConstantExpressionT; BinOperator: BinaryOperatorT; RHS: ConstantExpressionT |}
     | CondExpression of {| Condition: ConstantExpressionT; TrueVal: ConstantExpressionT; FalseVal: ConstantExpressionT |}
 
-type RangeExpressionT =
-    | Expr of ExpressionT
-    | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
+// type RangeExpressionT =
+//     | Expr of ExpressionT
+//     | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
 
 type ExpressionT =
     | Primary of PrimaryT
     | UniExpression of {| Operator: UnaryOperatorT; Expression: ExpressionT |}
     | BinaryExpression of {| LHS: ExpressionT; BinOperator: BinaryOperatorT; RHS: ExpressionT |}
     | CondExpression of {| Condition: ExpressionT; TrueVal: ExpressionT; FalseVal: ExpressionT |}
-
+    
 
 // ######### A.8.4 Primaries #########
 
@@ -192,7 +169,7 @@ type ConstantPrimaryT =
 
 type PrimaryT =
     | Number of VNum
-    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT option |}
+    | Ranged of {| Name: IdentifierT; Range: RangeT option |}
     | Concat of ConcatenationT
     | Brackets of ExpressionT
 
@@ -200,12 +177,17 @@ type PrimaryT =
 // ######### A.8.5 Expression Left-Side Values #########
 
 type NetLValueT =
-    | Ranged of {| Name: IdentifierT; Range: ConstantRangeExpressionT Option |}
+    | Ranged of {| Name: IdentifierT; Range: RangeT Option |}
     | Concat of NetLValueT List
+    with
+        member this.getNames () =
+            match this with
+            | Ranged a -> [ a.Name ]
+            | Concat c -> List.collect (fun (a: NetLValueT) -> a.getNames()) c
 
-type VariableLValueT =
-    | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
-    | Concat of VariableLValueT list
+// type VariableLValueT =
+//     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
+//     | Concat of VariableLValueT list
 
 
 // ######### A.8.6 Operators #########
