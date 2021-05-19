@@ -36,11 +36,11 @@ type SimState =
                     |> Map.map (fun _ modInstComp -> initRec netlistCollection modInstComp.moduleName)
                 { varMap = varMap; modInstMap = modInstMap }
             initRec
-        member this.addVar name (actualRange: Range) range value =
+        member this.addVar netlist name range value =
             let ranges, currVal =
                 if this.varMap.ContainsKey name
                 then this.varMap.[name]
-                else [], VNum.unknown actualRange.size
+                else [], VNum.unknown netlist.variables.[name].range.size
             let newVal = currVal.setRange range value
             let newRanges = Range.mergeInto ranges range
             { this with varMap = this.varMap.Add(name, (newRanges, newVal)) }
