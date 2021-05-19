@@ -30,7 +30,7 @@ module UART_TX(
   begin
     if(!resetn)
       begin
-        current_state <= idle_st;
+        current_state <= 1;
         b_reg <= 0;
         count_reg <= 0;
         data_reg <= 0;
@@ -57,24 +57,24 @@ module UART_TX(
     tx_next = tx_reg;
     
     case(current_state)
-      idle_st:
+      1:
       begin
         tx_next = 1'b1;
         if(tx_start)
         begin
-          next_state = start_st;
+          next_state = 2;
           b_next = 0;
           data_next = d_in;
         end
       end
       
-      start_st: 
+      2: 
       begin
         tx_next = 1'b0;
         if(b_tick)
           if(b_reg==15)
             begin
-              next_state = data_st;
+              next_state = 3;
               b_next = 0;
               count_next = 0;
             end
@@ -82,7 +82,7 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      data_st: 
+      3: 
       begin
         tx_next = data_reg[0];
         
@@ -92,7 +92,7 @@ module UART_TX(
               b_next = 0;
               data_next = data_reg >> 1;
               if(count_reg == 8)    
-                next_state = stop_st;
+                next_state = 4;
               else
                 count_next = count_reg + 1;
             end
@@ -100,13 +100,13 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      stop_st: 
+      4: 
       begin
         tx_next = 1'b1;
         if(b_tick)
           if(b_reg == 15)  
             begin
-              next_state = idle_st;
+              next_state = 1;
               tx_done = 1'b1;
             end
           else
@@ -154,7 +154,7 @@ module UART_TX(
   begin
     if(!resetn)
       begin
-        current_state <= idle_st;
+        current_state <= 1;
         b_reg <= 0;
         count_reg <= 0;
         data_reg <= 0;
@@ -181,24 +181,24 @@ module UART_TX(
     tx_next = tx_reg;
     
     case(current_state)
-      idle_st:
+      1:
       begin
         tx_next = 1'b1;
         if(tx_start)
         begin
-          next_state = start_st;
+          next_state = 2;
           b_next = 0;
           data_next = d_in;
         end
       end
       
-      start_st: 
+      2: 
       begin
         tx_next = 1'b0;
         if(b_tick)
           if(b_reg==15)
             begin
-              next_state = data_st;
+              next_state = 3;
               b_next = 0;
               count_next = 0;
             end
@@ -206,7 +206,7 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      data_st: 
+      3: 
       begin
         tx_next = data_reg[0];
         
@@ -216,7 +216,7 @@ module UART_TX(
               b_next = 0;
               data_next = data_reg >> 1;
               if(count_reg == 8)    
-                next_state = stop_st;
+                next_state = 4;
               else
                 count_next = count_reg + 1;
             end
@@ -224,13 +224,13 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      stop_st: 
+      4: 
       begin
         tx_next = 1'b1;
         if(b_tick)
           if(b_reg == 15)  
             begin
-              next_state = idle_st;
+              next_state = 1;
               tx_done = 1'b1;
             end
           else
@@ -273,7 +273,8 @@ let print str = printfn "%A" str
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
-    [mod1; mod2]
+    let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+    [program]
     |> List.map (fun modStr ->
         modStr
         |> run parser
@@ -290,4 +291,6 @@ let main argv =
             printfn "%s: %s" name (netlist.ToString()))
         |> ignore
     | Result.Error e -> printfn "%s" e
+    stopwatch.Stop()
+    printfn "Time taken: %Ams" stopwatch.ElapsedMilliseconds
     0 // return an integer exit code
