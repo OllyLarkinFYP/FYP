@@ -20,6 +20,15 @@ module private Helpers =
     let getVarFromState state variable range =
         (snd state.varMap.[variable]).getRange range
 
+    let simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange drivers f =
+        let folder state' (drivenRange, driverType) =
+            if Range.overlap varRange drivenRange
+            then f netlistCollection prevState state' inputs netlist varName drivenRange driverType
+            else state'
+
+        (currState, drivers)
+        ||> List.fold folder
+
 module private rec Internal =
 
     let simulateEOC netlistCollection prevState currState inputs netlist eoc varName drivenRange =
@@ -37,33 +46,24 @@ module private rec Internal =
         if Helpers.modInState currState moc.instanceName
         then raise <| NotImplementedException()
         else raise <| NotImplementedException()
-        
-    let simulateRC netlistCollection prevState currState inputs netlist varName varRange (rc: RegContent) =
-        let folder state' (drivenRange, driverType) =
-            if Range.overlap varRange drivenRange
-            then
-                match driverType with
-                | RegExpressionOutput eoc -> simulateEOC netlistCollection prevState state' inputs netlist eoc varName drivenRange
-                | RegModuleOutput moc -> simulateMOC netlistCollection prevState state' inputs netlist moc varName drivenRange
-                | RegAlwaysOutput i -> raise <| NotImplementedException() //TODO: this
-            else
-                state'
 
-        (currState, rc.drivers)
-        ||> List.fold folder
+    let simulateAlways netlistCollection prevState currState inputs netlist alwaysID varName drivenRange =
+        raise <| NotImplementedException() // TODO: this
+
+    let simulateRC netlistCollection prevState currState inputs netlist varName varRange (rc: RegContent) =
+        let f nc ps cs inp n vn dr dt =
+            match dt with
+            | RegExpressionOutput eoc -> simulateEOC nc ps cs inp n eoc vn dr
+            | RegModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
+            | RegAlwaysOutput i -> simulateAlways nc ps cs inp n i vn dr
+        Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange rc.drivers f
 
     let simulateWC netlistCollection prevState currState inputs netlist varName varRange (wc: WireContent) =
-        let folder state' (drivenRange, driverType) =
-            if Range.overlap varRange drivenRange
-            then
-                match driverType with
-                | WireExpressionOutput eoc -> simulateEOC netlistCollection prevState state' inputs netlist eoc varName drivenRange
-                | WireModuleOutput moc -> simulateMOC netlistCollection prevState state' inputs netlist moc varName drivenRange
-            else
-                state'
-
-        (currState, wc.drivers)
-        ||> List.fold folder
+        let f nc ps cs inp n vn dr dt =
+            match dt with
+            | WireExpressionOutput eoc -> simulateEOC nc ps cs inp n eoc vn dr
+            | WireModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
+        Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange wc.drivers f
 
     let simulateVars netlistCollection prevState currState (inputs: Map<IdentifierT,VNum>) netlist variables =
         let folder state (varName, varRange) =
