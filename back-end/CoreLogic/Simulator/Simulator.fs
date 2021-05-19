@@ -41,11 +41,16 @@ module private rec Internal =
         newState.addVar netlist varName drivenRange value 
 
     let simulateMOC netlistCollection prevState currState inputs netlist moc varName drivenRange =
-        // TODO: evaluate all input ranges (crossover ranges are not allowed to be inputs and outputs so no loops)
-        // TODO: using the above inputs, evaluate the outputs recursively using simulateVars on the netlist
-        if Helpers.modInState currState moc.instanceName
-        then raise <| NotImplementedException()
-        else raise <| NotImplementedException()
+        let state =
+            if Helpers.modInState currState moc.instanceName
+            then currState
+            else 
+                // TODO: evaluate all inputs to module
+                // TODO: providing inputs to module, simulate all output vars
+                // TODO: insert the returned state into currState and return it
+                raise <| NotImplementedException()
+        let value = Helpers.getVarFromState state.modInstMap.[moc.instanceName] moc.portName moc.range
+        state.addVar netlist varName drivenRange value
 
     let simulateAlways netlistCollection prevState currState inputs netlist alwaysID varName drivenRange =
         raise <| NotImplementedException() // TODO: this
