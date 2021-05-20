@@ -65,12 +65,25 @@ module private rec Internal =
         let value = Helpers.getVarFromState state.modInstMap.[moc.instanceName] moc.portName moc.range
         state.addVar netlist varName drivenRange value
 
+    let shouldEventControlTrigger netlistCollection prevState currState inputs netlist eventControl =
+        // TODO: for star, check all variables
+        // TODO: for not star, check each event expression
+        // TODO: evaluate the previous value of the expression
+        // TODO: evaluate the current value of the expression
+        // TODO: posedge -> if bit 0 goes from 0 to 1 -> true
+        // TODO: posedge -> if bit 0 goes from 1 to 0 -> true
+        raise <| NotImplementedException()
+
     let simulateAlways netlistCollection prevState currState inputs netlist alwaysID varName drivenRange =
         // TODO: simulate inputs so that they are in state
         // TODO: check if the block should run (based on timing statement)
         // TODO: if so, update state by evaluating body statement
         // TODO: if not return anyway
-        raise <| NotImplementedException()
+        let alwaysBlock = netlist.alwaysBlocks.[alwaysID]
+        let newState = simulateVars netlistCollection prevState currState inputs netlist alwaysBlock.inputs
+        if shouldEventControlTrigger netlistCollection prevState newState inputs netlist alwaysBlock.eventControl
+        then raise <| NotImplementedException() // TODO: should run
+        else newState
 
     let simulateRC netlistCollection prevState currState inputs netlist varName varRange (rc: RegContent) =
         let f nc ps cs inp n vn dr dt =
