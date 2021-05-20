@@ -31,13 +31,17 @@ module private Helpers =
 
 module private rec Internal =
 
-    let simulateEOC netlistCollection prevState currState inputs netlist eoc varName drivenRange =
+    let simulateEOC netlistCollection prevState currState inputs netlist eoc =
         let newState = simulateVars netlistCollection prevState currState inputs netlist eoc.vars
         let expInputs =
             eoc.vars
             |> List.map (fun (name, _) -> (name, snd newState.varMap.[name]))
             |> Map.ofList
         let value = (Util.expToConstExpr expInputs eoc.expression |> ConstExprEval.evalConstExpr).getRange eoc.range
+        (newState, value)
+
+    let simulateEOCIntoVar netlistCollection prevState currState inputs netlist eoc varName drivenRange =
+        let (newState, value) = simulateEOC netlistCollection prevState currState inputs netlist eoc
         newState.addVar netlist varName drivenRange value 
 
     let simulateMOC netlistCollection prevState currState inputs netlist moc varName drivenRange =
@@ -48,7 +52,19 @@ module private rec Internal =
                 // TODO: evaluate all inputs to module
                 // TODO: providing inputs to module, simulate all output vars
                 // TODO: insert the returned state into currState and return it
-                raise <| NotImplementedException()
+                let modInst = netlist.moduleInstances.[moc.instanceName]
+                let modNetlist = netlistCollection.netlists.[modInst.moduleName]
+                let (modInputs, newState) =
+                    (currState, modInst.drivers)
+                    ||> List.mapFold (fun state (portName, range, eoc) ->
+                        let (s, v) = simulateEOC netlistCollection prevState state inputs netlist eoc
+                        let value = v.getRange range
+                        (portName, value), s)
+                    |> function
+                    | inp, state -> Map.ofList inp, state
+                let simVars = modNetlist.moduleDeclaration.getOutputs()
+                let modState = simulateVars netlistCollection prevState.modInstMap.[moc.instanceName] SimState.empty modInputs modNetlist simVars
+                { newState with modInstMap = newState.modInstMap.Add(moc.instanceName, modState) }
         let value = Helpers.getVarFromState state.modInstMap.[moc.instanceName] moc.portName moc.range
         state.addVar netlist varName drivenRange value
 
@@ -58,7 +74,7 @@ module private rec Internal =
     let simulateRC netlistCollection prevState currState inputs netlist varName varRange (rc: RegContent) =
         let f nc ps cs inp n vn dr dt =
             match dt with
-            | RegExpressionOutput eoc -> simulateEOC nc ps cs inp n eoc vn dr
+            | RegExpressionOutput eoc -> simulateEOCIntoVar nc ps cs inp n eoc vn dr
             | RegModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
             | RegAlwaysOutput i -> simulateAlways nc ps cs inp n i vn dr
         Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange rc.drivers f
@@ -66,7 +82,7 @@ module private rec Internal =
     let simulateWC netlistCollection prevState currState inputs netlist varName varRange (wc: WireContent) =
         let f nc ps cs inp n vn dr dt =
             match dt with
-            | WireExpressionOutput eoc -> simulateEOC nc ps cs inp n eoc vn dr
+            | WireExpressionOutput eoc -> simulateEOCIntoVar nc ps cs inp n eoc vn dr
             | WireModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
         Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange wc.drivers f
 

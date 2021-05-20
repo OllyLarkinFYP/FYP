@@ -6,6 +6,13 @@ open CommonTypes
 type ModuleDeclaration =
     { name: IdentifierT
       ports: (IdentifierT * PortDirAndType * Range) list }
+    with
+        member this.getOutputs () =
+            this.ports
+            |> List.choose (fun (name, pType, range) -> 
+                match pType with
+                | Output _ -> Some (name, range)
+                | _ -> None)
 
 type ModuleOutputContent =
     { instanceName: IdentifierT
