@@ -115,3 +115,11 @@ module private rec Internal =
 
         (currState, variables)
         ||> List.fold folder
+
+let simulateProject netlistCollection moduleName numberOfCycles inputs vars =
+    let netlist = netlistCollection.netlists.[moduleName]
+    let prevState = SimState.init netlistCollection moduleName
+    numberOfCycles
+    |> List.map (fun cycle ->
+        let inp = Map.map (fun name (i: InputValue) -> i.getValue cycle) inputs
+        Internal.simulateVars netlistCollection prevState SimState.empty inp netlist vars)
