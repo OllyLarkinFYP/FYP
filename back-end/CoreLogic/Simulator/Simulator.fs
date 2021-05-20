@@ -44,14 +44,11 @@ module private rec Internal =
         let (newState, value) = simulateEOC netlistCollection prevState currState inputs netlist eoc
         newState.addVar netlist varName drivenRange value 
 
-    let simulateMOC netlistCollection prevState currState inputs netlist moc varName drivenRange =
+    let simulateMOCIntoVar netlistCollection prevState currState inputs netlist moc varName drivenRange =
         let state =
             if Helpers.modInState currState moc.instanceName
             then currState
             else 
-                // TODO: evaluate all inputs to module
-                // TODO: providing inputs to module, simulate all output vars
-                // TODO: insert the returned state into currState and return it
                 let modInst = netlist.moduleInstances.[moc.instanceName]
                 let modNetlist = netlistCollection.netlists.[modInst.moduleName]
                 let (modInputs, newState) =
@@ -69,13 +66,17 @@ module private rec Internal =
         state.addVar netlist varName drivenRange value
 
     let simulateAlways netlistCollection prevState currState inputs netlist alwaysID varName drivenRange =
-        raise <| NotImplementedException() // TODO: this
+        // TODO: simulate inputs so that they are in state
+        // TODO: check if the block should run (based on timing statement)
+        // TODO: if so, update state by evaluating body statement
+        // TODO: if not return anyway
+        raise <| NotImplementedException()
 
     let simulateRC netlistCollection prevState currState inputs netlist varName varRange (rc: RegContent) =
         let f nc ps cs inp n vn dr dt =
             match dt with
             | RegExpressionOutput eoc -> simulateEOCIntoVar nc ps cs inp n eoc vn dr
-            | RegModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
+            | RegModuleOutput moc -> simulateMOCIntoVar nc ps cs inp n moc vn dr
             | RegAlwaysOutput i -> simulateAlways nc ps cs inp n i vn dr
         Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange rc.drivers f
 
@@ -83,7 +84,7 @@ module private rec Internal =
         let f nc ps cs inp n vn dr dt =
             match dt with
             | WireExpressionOutput eoc -> simulateEOCIntoVar nc ps cs inp n eoc vn dr
-            | WireModuleOutput moc -> simulateMOC nc ps cs inp n moc vn dr
+            | WireModuleOutput moc -> simulateMOCIntoVar nc ps cs inp n moc vn dr
         Helpers.simulateIndiVar netlistCollection prevState currState inputs netlist varName varRange wc.drivers f
 
     let simulateVars netlistCollection prevState currState (inputs: Map<IdentifierT,VNum>) netlist variables =
