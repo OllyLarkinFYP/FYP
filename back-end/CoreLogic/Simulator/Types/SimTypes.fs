@@ -14,8 +14,6 @@ type InputValue =
             | Once vals -> if cycle >= uint vals.Length then vals.[vals.Length-1] else vals.[int cycle]
             | Repeating vals -> vals.[int cycle % vals.Length]
 
-type ModInput = Map<IdentifierT,InputValue>
-
 type SimState =
     { varMap: Map<IdentifierT, Range list * VNum>
       modInstMap: Map<IdentifierT,SimState> }

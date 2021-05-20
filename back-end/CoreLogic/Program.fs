@@ -1,6 +1,7 @@
 open System
 open Parser
 open FParsec
+open CommonTypes
 
 let program = @"
 module UART_TX(
@@ -251,7 +252,7 @@ module mod1(a,b,c);
   input b;
   output reg [1:0] c;
 
-  mod2 ayy(a,b,c[0]);
+  assign c = a + b;
 
 endmodule
 "
@@ -273,8 +274,7 @@ let print str = printfn "%A" str
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
-    let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-    [program]
+    [mod1]
     |> List.map (fun modStr ->
         modStr
         |> run parser
@@ -290,7 +290,12 @@ let main argv =
         |> List.map (fun (name, netlist) ->
             printfn "%s: %s" name (netlist.ToString()))
         |> ignore
+
+        let inp =
+            Map.empty.
+                Add("a", SimTypes.Repeating [VNum 0; VNum 0; VNum 1; VNum 1]).
+                Add("b", SimTypes.Repeating [VNum 0; VNum 1; VNum 0; VNum 1])
+        let outState = Simulator.simulateProject netCollection "mod1" 5u inp ["c", Range.max]
+        printfn "%A" outState
     | Result.Error e -> printfn "%s" e
-    stopwatch.Stop()
-    printfn "Time taken: %Ams" stopwatch.ElapsedMilliseconds
     0 // return an integer exit code

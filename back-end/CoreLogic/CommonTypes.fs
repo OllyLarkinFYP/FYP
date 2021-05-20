@@ -6,8 +6,8 @@ type Range =
     | Single of uint32
     | Ranged of uint32 * uint32
     with
-        static member max () = Ranged (63u,0u)
-        static member defaultRange () = Ranged (31u,0u)
+        static member max = Ranged (63u,0u)
+        static member defaultRange = Ranged (31u,0u)
         static member overlap r1 r2 =
             match r1, r2 with
             | Single a, Single b -> a = b

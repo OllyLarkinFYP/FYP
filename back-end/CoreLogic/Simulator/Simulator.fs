@@ -119,7 +119,10 @@ module private rec Internal =
 let simulateProject netlistCollection moduleName numberOfCycles inputs vars =
     let netlist = netlistCollection.netlists.[moduleName]
     let prevState = SimState.init netlistCollection moduleName
-    numberOfCycles
+    [0u..numberOfCycles]
     |> List.map (fun cycle ->
         let inp = Map.map (fun name (i: InputValue) -> i.getValue cycle) inputs
-        Internal.simulateVars netlistCollection prevState SimState.empty inp netlist vars)
+        let outState = Internal.simulateVars netlistCollection prevState SimState.empty inp netlist vars
+        outState.varMap
+        |> Map.filter (fun name _ -> List.exists (fun (n,_) -> n = name) vars)
+        |> Map.map (fun _ (_, value) -> value))
