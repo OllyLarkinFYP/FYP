@@ -229,8 +229,3 @@ type BinaryOperatorT =
     | LogicalLeftShift
     | ArithmeticRightShift
     | ArithmeticLeftShift
-
-
-// ######### A.9.3 Identifiers ######
-
-type IdentifierT = string

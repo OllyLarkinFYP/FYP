@@ -1,6 +1,7 @@
 open System
 open Parser
 open FParsec
+open CommonTypes
 
 let program = @"
 module UART_TX(
@@ -23,14 +24,13 @@ module UART_TX(
   reg [8:0] data_next;
   reg tx_reg;              
   reg tx_next;
-
   initial current_state[1] = 1;
   
   always @(posedge clk, negedge resetn)
   begin
     if(!resetn)
       begin
-        current_state <= idle_st;
+        current_state <= 1;
         b_reg <= 0;
         count_reg <= 0;
         data_reg <= 0;
@@ -45,8 +45,6 @@ module UART_TX(
         tx_reg <= tx_next;
       end
   end
-
-
   always @*
   begin
     next_state = current_state;
@@ -57,24 +55,24 @@ module UART_TX(
     tx_next = tx_reg;
     
     case(current_state)
-      idle_st:
+      1:
       begin
         tx_next = 1'b1;
         if(tx_start)
         begin
-          next_state = start_st;
+          next_state = 2;
           b_next = 0;
           data_next = d_in;
         end
       end
       
-      start_st: 
+      2: 
       begin
         tx_next = 1'b0;
         if(b_tick)
           if(b_reg==15)
             begin
-              next_state = data_st;
+              next_state = 3;
               b_next = 0;
               count_next = 0;
             end
@@ -82,7 +80,7 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      data_st: 
+      3: 
       begin
         tx_next = data_reg[0];
         
@@ -92,7 +90,7 @@ module UART_TX(
               b_next = 0;
               data_next = data_reg >> 1;
               if(count_reg == 8)    
-                next_state = stop_st;
+                next_state = 4;
               else
                 count_next = count_reg + 1;
             end
@@ -100,13 +98,13 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      stop_st: 
+      4: 
       begin
         tx_next = 1'b1;
         if(b_tick)
           if(b_reg == 15)  
             begin
-              next_state = idle_st;
+              next_state = 1;
               tx_done = 1'b1;
             end
           else
@@ -130,7 +128,6 @@ module UART_TX(
   tx_done,         
   tx              
   );
-
   input wire clk;
   input wire resetn;
   input wire tx_start;        
@@ -154,7 +151,7 @@ module UART_TX(
   begin
     if(!resetn)
       begin
-        current_state <= idle_st;
+        current_state <= 1;
         b_reg <= 0;
         count_reg <= 0;
         data_reg <= 0;
@@ -169,8 +166,6 @@ module UART_TX(
         tx_reg <= tx_next;
       end
   end
-
-
   always @*
   begin
     next_state = current_state;
@@ -181,24 +176,24 @@ module UART_TX(
     tx_next = tx_reg;
     
     case(current_state)
-      idle_st:
+      1:
       begin
         tx_next = 1'b1;
         if(tx_start)
         begin
-          next_state = start_st;
+          next_state = 2;
           b_next = 0;
           data_next = d_in;
         end
       end
       
-      start_st: 
+      2: 
       begin
         tx_next = 1'b0;
         if(b_tick)
           if(b_reg==15)
             begin
-              next_state = data_st;
+              next_state = 3;
               b_next = 0;
               count_next = 0;
             end
@@ -206,7 +201,7 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      data_st: 
+      3: 
       begin
         tx_next = data_reg[0];
         
@@ -216,7 +211,7 @@ module UART_TX(
               b_next = 0;
               data_next = data_reg >> 1;
               if(count_reg == 8)    
-                next_state = stop_st;
+                next_state = 4;
               else
                 count_next = count_reg + 1;
             end
@@ -224,13 +219,13 @@ module UART_TX(
             b_next = b_reg + 1;
       end
       
-      stop_st: 
+      4: 
       begin
         tx_next = 1'b1;
         if(b_tick)
           if(b_reg == 15)  
             begin
-              next_state = idle_st;
+              next_state = 1;
               tx_done = 1'b1;
             end
           else
@@ -246,25 +241,20 @@ endmodule
 
 let mod1 = @"
 module mod1(a,b,c);
-
   input a;
   input b;
-  output reg [1:0] c;
-
-  mod2 ayy(a,b,c[0]);
-
+  output [1:0] c;
+  mod2 yumm(a,b,c);
 endmodule
 "
 
 let mod2 = @"
 module mod2(a,b,c);
-
   input a;
-  input [1:0] b;
-  output c;
+  input b;
+  output [1:0] c;
   
-//   assign c = a + b[0] + b[1];
-
+  assign c = a + b;
 endmodule
 "
 
@@ -273,21 +263,28 @@ let print str = printfn "%A" str
 [<EntryPoint>]
 let main argv =
     let parser = LangConstructs.pSourceText
-    [mod1; mod2]
-    |> List.map (fun modStr ->
-        modStr
-        |> run parser
-        |> function
-        | Success (ast, _, _) -> ast
-        | Failure (msg, _, _) -> failwith msg)
-    |> Compiler.compileProject
-    |> function
-    | Result.Ok netCollection ->
-        printfn "Top level modules: %A" netCollection.topLevelMods
-        netCollection.netlists
-        |> Map.toList
-        |> List.map (fun (name, netlist) ->
-            printfn "%s: %s" name (netlist.ToString()))
-        |> ignore
-    | Result.Error e -> printfn "%s" e
+    // [mod1; mod2]
+    // |> List.map (fun modStr ->
+    //     modStr
+    //     |> run parser
+    //     |> function
+    //     | Success (ast, _, _) -> ast
+    //     | Failure (msg, _, _) -> failwith msg)
+    // |> Compiler.compileProject
+    // |> function
+    // | Result.Ok netCollection ->
+    //     printfn "Top level modules: %A" netCollection.topLevelMods
+    //     netCollection.netlists
+    //     |> Map.toList
+    //     |> List.map (fun (name, netlist) ->
+    //         printfn "%s: %s" name (netlist.ToString()))
+    //     |> ignore
+
+    //     let inp =
+    //         Map.empty.
+    //             Add("a", SimTypes.Repeating [VNum 0; VNum 0; VNum 1; VNum 1]).
+    //             Add("b", SimTypes.Repeating [VNum 0; VNum 1; VNum 0; VNum 1])
+    //     let outState = Simulator.simulateProject netCollection "mod1" 5u inp ["c", Range.max]
+    //     printfn "%A" outState
+    // | Result.Error e -> printfn "%s" e
     0 // return an integer exit code

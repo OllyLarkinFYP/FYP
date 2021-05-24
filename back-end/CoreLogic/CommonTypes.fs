@@ -6,14 +6,14 @@ type Range =
     | Single of uint32
     | Ranged of uint32 * uint32
     with
-        static member max () = Ranged (63u,0u)
-        static member defaultRange () = Ranged (31u,0u)
+        static member max = Ranged (63u,0u)
+        static member defaultRange = Ranged (31u,0u)
         static member overlap r1 r2 =
             match r1, r2 with
             | Single a, Single b -> a = b
             | Single a, Ranged (b,c) 
             | Ranged (b,c), Single a -> a <= b && a >= c
-            | Ranged (a,b), Ranged (c,d) -> (a <= c && a >= d) || (b <= c && b >= d)
+            | Ranged (a,b), Ranged (c,d) -> (a <= c && a >= d) || (b <= c && b >= d) || (c <= a && a >= b) || (d <= a && b >= b)
         member this.size =
             match this with
             | Single _ -> 1u
@@ -44,13 +44,28 @@ type Range =
             match this with
             | Single a -> sprintf "[%d]" a
             | Ranged (a,b) -> sprintf "[%d..%d]" a b
+        member this.hasSubRange (r: Range) = r.lower >= this.lower && r.upper <= this.upper
         static member adjacent (r1: Range) (r2: Range) = r1.lower = r2.upper + 1u || r2.lower = r1.upper + 1u
+        static member mergeCondition r1 r2 = Range.overlap r1 r2 || Range.adjacent r1 r2
         static member merge (r1: Range) (r2: Range) =
-            let cond = Range.overlap r1 r2 || Range.adjacent r1 r2
             match r1, r2 with
             | Single a, Single b when a = b -> Some r1 // r1 and r2 are the same
-            | _ when cond -> Some <| Ranged (max r1.upper r2.upper, min r1.lower r2.lower)
+            | _ when Range.mergeCondition r1 r2 -> Some <| Ranged (max r1.upper r2.upper, min r1.lower r2.lower)
             | _ -> None
+        static member mergeInto (rLst: Range list) (r: Range) =
+            let rec mergeIntoRec rLst r =
+                ((None, []), rLst)
+                ||> List.fold (fun (retR, retL) r2 -> 
+                    match retR with
+                    | Some _ -> retR, r2::retL
+                    | None ->
+                        match Range.merge r r2 with
+                        | Some outR -> Some outR, retL
+                        | None -> None, r2::retL)
+                |> function
+                | Some mergedR, lst -> mergeIntoRec lst mergedR
+                | None, _ -> r::rLst
+            mergeIntoRec rLst r
 
 type MaskDir =
     | Up
@@ -293,7 +308,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
     /// https://stackoverflow.com/questions/51672820/how-do-i-explicitly-use-unchecked-arithmetic-operators-in-f
     static member (/) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        if num1.isUnknown || num2.isUnknown || num2 = VNum 0    // TODO: check if this is what happens
+        if num1.isUnknown || num2.isUnknown || num2 = VNum 0
         then VNum.unknown newSize
         else 
             let newVal =
@@ -332,7 +347,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
 
     static member (^^^) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
-        VNum(num1.value ^^^ num2.value, newSize, num1.unknownBits @ num2.unknownBits)
+        VNum(num1.value ^^^ num2.value, newSize, List.distinct (num1.unknownBits @ num2.unknownBits))
 
     static member (&&&) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
@@ -343,14 +358,14 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         let unknowns = num1.unknownBits @ num2.unknownBits
         VNum(newVal, newSize, Helpers.intersect ones unknowns)
 
-    static member (|||) (num1: VNum, num2: VNum) =
+    static member (|||) (num1: VNum, num2: VNum) = 
         let newSize = max num1.size num2.size
         let aVal = num1.maskDown().value
         let bVal = num2.maskDown().value
         let newVal = aVal ||| bVal
-        let ones = VNum(newVal, newSize).getBits 0
+        let zeroes = VNum(newVal, newSize).getBits 0
         let unknowns = num1.unknownBits @ num2.unknownBits
-        VNum(newVal, newSize, Helpers.intersect ones unknowns)
+        VNum(newVal, newSize, Helpers.intersect zeroes unknowns)
 
     static member (^^) (num1: VNum, num2: VNum) =
         let newSize = max num1.size num2.size
@@ -366,11 +381,4 @@ type PortDirAndType =
     | Input
     | Output of PortType
 
-type MutMap<'TKey, 'TValue when 'TKey : comparison>(m) =
-    let mutable map : Map<'TKey,'TValue> = m
-
-    member _.Add keyValPair = map <- map.Add keyValPair
-    member _.ContainsKey = map.ContainsKey
-    member _.Item key = map.Item key
-    member _.TryFind key = Map.tryFind key map
-    member _.Map = map
+type IdentifierT = string
