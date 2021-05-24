@@ -107,14 +107,14 @@ module LangConstructs =
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
-        let pConstantAssignment =
-            pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
+        let pRangedConstAssignment =
+            pRangedVar .>>? Symbol.pAssign .>>. pConstantExpression
             |>> function
-            | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
+            | lval, exp -> { RangedConstAssignT.LHS = lval; RHS = exp }
         let initialBody =
             choice [
-                pConstantAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
-                Keyword.pBegin >>. many (pConstantAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
+                pRangedConstAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
+                Keyword.pBegin >>. many (pRangedConstAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
             ]
         Keyword.pInitial >>. initialBody
 

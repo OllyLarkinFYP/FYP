@@ -211,21 +211,22 @@ module private Internal =
         | _ -> Ok netlist
 
     let processInitialBlock netlist =
-        function
-        | InitialConstruct ic ->
-            ic
-            |> ResList.map (fun assignment ->
-                let rhsValue = ConstExprEval.evalConstExpr assignment.RHS
-                assignment.LHS
-                |> Helpers.netLValToRangeList netlist 
-                ?> ResList.map (fun (name, idenRange, valueRange) ->
-                    match netlist.variables.[name] with
-                    | RegComp rc -> 
-                        rc.initVal <- rc.initVal.setRange idenRange (rhsValue.getRange valueRange)
-                        Ok()
-                    | _ -> Error <| sprintf "Can only assign initial values to 'reg' types. %A is not a 'reg'." name))
-            ?>> fun _ -> netlist
-        | _ -> Ok netlist
+        // function
+        // | InitialConstruct ic ->
+        //     ic
+        //     |> ResList.map (fun assignment ->
+        //         let rhsValue = ConstExprEval.evalConstExpr assignment.RHS
+        //         assignment.LHS
+        //         |> Helpers.netLValToRangeList netlist 
+        //         ?> ResList.map (fun (name, idenRange, valueRange) ->
+        //             match netlist.variables.[name] with
+        //             | RegComp rc -> 
+        //                 rc.initVal <- rc.initVal.setRange idenRange (rhsValue.getRange valueRange)
+        //                 Ok()
+        //             | _ -> Error <| sprintf "Can only assign initial values to 'reg' types. %A is not a 'reg'." name))
+        //     ?>> fun _ -> netlist
+        // | _ -> Ok netlist
+        raise <| NotImplementedException()
 
     let processContinuousAssigns netlist =
         function

@@ -66,7 +66,9 @@ type NetAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
 
 // ######### A.6.2 Procedural Blocks and Assignments #########
 
-type InitialConstructT = ConstantAssignmentT list
+type RangedConstAssignT = { LHS: RangedVarT; RHS: ConstantExpressionT }
+
+type InitialConstructT = RangedConstAssignT list
 
 type AlwaysConstructT = ProceduralTimingControlStatementT
 
