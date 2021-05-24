@@ -17,12 +17,12 @@ module private Helpers =
         let rec toRangeListRec (offset, currLst) =
             function
             | NetLValueT.Ranged rangedNLV ->
-                if netlist.variables.ContainsKey rangedNLV.Name
+                if netlist.variables.ContainsKey rangedNLV.name
                 then
-                    let range = Util.optRangeTToRangeDefault netlist.variables.[rangedNLV.Name].range rangedNLV.Range
-                    let entry = (rangedNLV.Name, range, range.offset offset)
+                    let range = Util.optRangeTToRangeDefault netlist.variables.[rangedNLV.name].range rangedNLV.range
+                    let entry = (rangedNLV.name, range, range.offset offset)
                     Ok (offset + range.size, entry::currLst)
-                else Error <| sprintf "Cannot find the component %A." rangedNLV.Name
+                else Error <| sprintf "Cannot find the component %A." rangedNLV.name
             | NetLValueT.Concat c ->
                 ((offset, currLst), List.rev c)
                 ||> ResList.fold toRangeListRec
@@ -57,27 +57,29 @@ module private Helpers =
         |> List.distinct
 
     let getExprVars exp =
-        let rec getExprVarsRec exp =
-            let rec getPrimaryVars primary =
-                match primary with
-                | PrimaryT.Ranged r -> [r.Name, Util.optRangeTToRange r.Range]
-                | PrimaryT.Concat c -> List.collect getExprVarsRec c
-                | PrimaryT.Brackets b -> getExprVarsRec b
-                | _ -> []
-            match exp with
-            | Primary p -> getPrimaryVars p
-            | UniExpression u -> getExprVarsRec u.Expression
-            | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
-            | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
-        getExprVarsRec exp |> squashIdenRangeList
+        // let rec getExprVarsRec exp =
+        //     let rec getPrimaryVars primary =
+        //         match primary with
+        //         | PrimaryT.Ranged r -> [r.name, Option.bind (Util.rangeTToRange >> Some) r.range]
+        //         | PrimaryT.Concat c -> List.collect getExprVarsRec c
+        //         | PrimaryT.Brackets b -> getExprVarsRec b
+        //         | _ -> []
+        //     match exp with
+        //     | Primary p -> getPrimaryVars p
+        //     | UniExpression u -> getExprVarsRec u.Expression
+        //     | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
+        //     | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
+        // getExprVarsRec exp |> squashIdenRangeList
+        raise <| NotImplementedException() // TODO: this
 
     let getEventControlVars eventControl =
-        match eventControl with
-        | Star -> []
-        | EventList eventExps ->
-            eventExps
-            |> List.collect (EventExpressionT.unwrap >> getExprVars)
-            |> squashIdenRangeList
+        // match eventControl with
+        // | Star -> []
+        // | EventList eventExps ->
+        //     eventExps
+        //     |> List.collect (EventExpressionT.unwrap >> getExprVars)
+        //     |> squashIdenRangeList
+        raise <| NotImplementedException() // TODO: this
 
     let getStatementOrNullVars sn =
         let rec getStatementOrNullVarsRec sn =

@@ -98,8 +98,8 @@ module Util =
                 function
                 | PrimaryT.Number v -> ConstantPrimaryT.Number v
                 | PrimaryT.Ranged r ->
-                    let range = optRangeTToRange r.Range
-                    let value = inputMap.[r.Name].getRange range
+                    let range = optRangeTToRange r.range
+                    let value = inputMap.[r.name].getRange range
                     ConstantPrimaryT.Number value
                 | PrimaryT.Concat c -> ConstantPrimaryT.Concat <| List.map toConstExprRec c
                 | PrimaryT.Brackets b -> ConstantPrimaryT.Brackets <| toConstExprRec b

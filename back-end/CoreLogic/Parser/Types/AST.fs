@@ -160,7 +160,7 @@ type ConstantPrimaryT =
 
 type PrimaryT =
     | Number of VNum
-    | Ranged of {| Name: IdentifierT; Range: RangeT option |}
+    | Ranged of RangedVarT
     | Concat of ConcatenationT
     | Brackets of ExpressionT
 

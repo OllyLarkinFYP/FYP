@@ -96,7 +96,7 @@ module Expression =
         Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac |>> Brackets
         pConcatenation |>> PrimaryT.Concat
         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. ConstantExpression.pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-            PrimaryT.Ranged {| Name = iden; Range = range |}
+            PrimaryT.Ranged { name = iden; range = range }
     ] |>> Primary
 
     let private binExpr e a b =
