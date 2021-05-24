@@ -100,18 +100,13 @@ type ProceduralTimingControlStatementT = { Control: EventControlT; Statement: St
 
 /// Empty list means it is using '*'
 type EventControlT = 
-    | EventList of EventExpressionT List
+    | EventList of (EventControlType * RangedVarT) List
     | Star
 
-type EventExpressionT = 
-    | Posedge of ExpressionT
-    | Negedge of ExpressionT
-    with
-        member this.expr =
-            match this with
-            | Posedge e -> e
-            | Negedge e -> e
-        static member unwrap (eventE: EventExpressionT) = eventE.expr
+type EventControlType =
+    | Posedge
+    | Negedge
+    | Neither
 
 
 // ######### A.6.6 Conditional Statements #########
@@ -149,10 +144,6 @@ type ConstantExpressionT =
     | BinaryExpression of {| LHS: ConstantExpressionT; BinOperator: BinaryOperatorT; RHS: ConstantExpressionT |}
     | CondExpression of {| Condition: ConstantExpressionT; TrueVal: ConstantExpressionT; FalseVal: ConstantExpressionT |}
 
-// type RangeExpressionT =
-//     | Expr of ExpressionT
-//     | Range of {| LHS: ExpressionT; RHS: ExpressionT |}
-
 type ExpressionT =
     | Primary of PrimaryT
     | UniExpression of {| Operator: UnaryOperatorT; Expression: ExpressionT |}
@@ -176,18 +167,18 @@ type PrimaryT =
 
 // ######### A.8.5 Expression Left-Side Values #########
 
+type RangedVarT = 
+    { name: IdentifierT
+      range: RangeT option }
+
 type NetLValueT =
-    | Ranged of {| Name: IdentifierT; Range: RangeT Option |}
+    | Ranged of RangedVarT
     | Concat of NetLValueT List
     with
         member this.getNames () =
             match this with
-            | Ranged a -> [ a.Name ]
+            | Ranged a -> [ a.name ]
             | Concat c -> List.collect (fun (a: NetLValueT) -> a.getNames()) c
-
-// type VariableLValueT =
-//     | Ranged of {| Name: IdentifierT; Range: RangeExpressionT Option |}
-//     | Concat of VariableLValueT list
 
 
 // ######### A.8.6 Operators #########

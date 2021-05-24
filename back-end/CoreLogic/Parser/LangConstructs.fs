@@ -54,10 +54,15 @@ module LangConstructs =
         |>> function
         | expr, items -> { CaseStatementT.CaseExpr = expr; Items = items }
 
+    let pRangedVar: Parser<RangedVarT,unit> =
+        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+            { name = iden; range = range }
+
     let pEventExpression =
         choice [
-            Keyword.pPosedge >>. pExpression |>> EventExpressionT.Posedge
-            Keyword.pNegedge >>. pExpression |>> EventExpressionT.Negedge
+            Keyword.pPosedge >>. pRangedVar |>> fun rv -> (Posedge, rv)
+            Keyword.pNegedge >>. pRangedVar |>> fun rv -> (Negedge, rv)
+            pRangedVar |>> fun rv -> (Neither, rv)
         ]
 
     let pEventExpressionList =
@@ -75,17 +80,6 @@ module LangConstructs =
         |>> function
         | eControl, statement -> { ProceduralTimingControlStatementT.Control = eControl; Statement = statement }
 
-    // // This parser is self recursive so needs a forward reference
-    // // The implementation is defined underneath
-    // let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
-
-    // do pVariableLValueImpl := 
-    //     choice [
-    //         Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
-    //         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-    //             VariableLValueT.Ranged {| Name = iden; Range = range |}
-    //     ]
-
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
     let pNetLValue, pNetLValueImpl : Parser<NetLValueT,unit> * Parser<NetLValueT,unit> ref = createParserForwardedToRef()
@@ -93,8 +87,7 @@ module LangConstructs =
     do pNetLValueImpl := 
         choice [
             Symbol.pOpenCBrac >>. sepBy1 pNetLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> NetLValueT.Concat
-            pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-                NetLValueT.Ranged {| Name = iden; Range = range |}
+            pRangedVar |>> NetLValueT.Ranged
         ]
 
     let pBlockingAssignment =
