@@ -5,7 +5,7 @@ open AST
 open CommonTypes
 open Compiler.CompResult
 open Compiler.Netlist
-open Compiler
+open Compiler.Utils
 open CommonHelpers
 
 // module private Helpers =
@@ -433,7 +433,7 @@ module private Validate =
 
 module private rec Internal =
 
-    let processInputOutput ast : CompRet<VarMap * NonPortModuleItemT List> =
+    let processInputOutput ast : CompRes<VarMap * NonPortModuleItemT List> =
         let processPD (pd: PortDeclarationT) =
             let range = Util.optRangeTToRange pd.range
             match pd.dir with
@@ -457,7 +457,7 @@ module private rec Internal =
                 |> Map.ofList
             Succ (vm, md2.body)
 
-    let compileModule (ast: ASTT) (asts: ASTT list) (prefix: string) : CompRet<Netlist> =
+    let compileModule (ast: ASTT) (asts: ASTT list) (prefix: string) : CompRes<Netlist> =
         // TODO: collect inputs and outputs and register them as vars (inputs and reg/wire respectively)
         // TODO: collect all vars inside the module (reg/wire) and register as vars
         // TODO: collect initial block and register as initial (make sure only reg)
@@ -473,7 +473,7 @@ module private rec Internal =
             initNetlist
 
 module Compile =
-    let project modName (asts: ASTT list) : CompRet<Netlist> =
+    let project modName (asts: ASTT list) : CompRes<Netlist> =
         asts
         |> List.tryFind (fun ast -> ast.name = modName)
         |> function
