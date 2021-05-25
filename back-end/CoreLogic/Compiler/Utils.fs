@@ -9,19 +9,28 @@ module Utils =
         match r with
         | Fail e -> Fail e
         | Succ v -> f v
-        | SuccW (v, w) ->
+        | Warn (v, w) ->
             match f v with
             | Fail e -> Fail e
-            | Succ v' -> SuccW (v', w)
-            | SuccW (v', w') -> SuccW (v', w @ w')
+            | Succ v' -> Warn (v', w)
+            | Warn (v', w') -> Warn (v', w @ w')
 
     /// Similar to bind except 'f' does not need to return a CompRes, just a value
     let (?>>) (r: CompRes<_>) f =
         match r with
         | Fail e -> Fail e
         | Succ v -> Succ (f v)
-        | SuccW (v, w) -> SuccW (f v, w)
+        | Warn (v, w) -> Warn (f v, w)
 
     type List<'T> with
         static member compRetMap mapper list =
-            raise <| System.NotImplementedException()
+            let rec compRetMapRec =
+                function
+                | [] -> Succ []
+                | hd::tl ->
+                    mapper hd
+                    ?> fun v ->
+                        compRetMapRec tl
+                        ?>> fun pTl -> v::pTl
+            compRetMapRec list 
+

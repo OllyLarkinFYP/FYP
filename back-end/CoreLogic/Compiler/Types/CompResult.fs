@@ -8,6 +8,6 @@ module CompResult =
 
     type CompRes<'Result> =
         | Succ of 'Result
-        | SuccW of 'Result * CompWarnings
+        | Warn of 'Result * CompWarnings
         | Fail of CompErrors
         
