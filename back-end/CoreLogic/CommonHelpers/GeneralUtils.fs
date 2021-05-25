@@ -4,7 +4,7 @@ open System
 open AST
 open CommonTypes
 
-module Operators =
+module private Operators =
     let (?>) r f = Result.bind f r
     let (?>>) r f =
         match r with

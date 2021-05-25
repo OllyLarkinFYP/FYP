@@ -7,12 +7,14 @@
     <Compile Include="CommonTypes.fs" />
     <Compile Include="Parser/Types/AST.fs" />
     <Compile Include="Compiler/Types/Netlist.fs" />
+    <Compile Include="Compiler/Types/General.fs" />
     <Compile Include="CommonHelpers/ConstExprEval.fs" />
     <Compile Include="CommonHelpers/GeneralUtils.fs" />
     <Compile Include="Parser/Utils.fs" />
     <Compile Include="Parser/Tokens.fs" />
     <Compile Include="Parser/Expressions.fs" />
     <Compile Include="Parser/LangConstructs.fs" />
+    <Compile Include="Compiler/Errors.fs" />
     <Compile Include="Compiler/Compiler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
