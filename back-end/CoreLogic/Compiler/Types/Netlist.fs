@@ -63,4 +63,30 @@ module Netlist =
         { varMap: VarMap
           initial: InitItem list
           alwaysBlocks: AlwaysBlock list }
+        with
+            override this.ToString() =
+                let vm =
+                    this.varMap
+                    |> Map.toList
+                    |> List.map (fun (key, value) -> sprintf "\t[%A, %A]\n" key value)
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                let i =
+                    this.initial
+                    |> List.map (fun item -> sprintf "\t%A\n" item)
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                let a =
+                    this.alwaysBlocks
+                    |> List.map (fun item -> sprintf "\t%A\n" item)
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                sprintf " varMap =\n%s\n initial =\n%s\n alwaysBlocks =\n%s\n" vm i a
+
         

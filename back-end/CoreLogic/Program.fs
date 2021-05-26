@@ -258,5 +258,10 @@ let main _ =
     |> startTiming
     |> Compiler.Compile.project "UART_TX"
     |> stopTiming "COM"
-    |> printfn "%A"
+    |> function
+    | Compiler.CompResult.Fail _ as r -> printfn "%A" r
+    | Compiler.CompResult.Succ s -> printfn "SUCC:\n %s" <| s.ToString()
+    | Compiler.CompResult.Warn (s, w) ->
+        printfn "WARN:\n %s" <| s.ToString()
+        printfn "WARNINGS:\n %A" w
     0 // return an integer exit code
