@@ -15,5 +15,5 @@ module Errors =
         let duplicateModInstDefinition name = Fail [ sprintf "The module instance %A has already been declared. The name cannot be re-used for another component." name ]
 
     module ProcessInitial =
-        let regDoesNotExist name = Fail [ sprintf "The reg %A has not been declared." name ]
-        let shouldBeReg name = Fail [ sprintf "%A is not a reg. Only regs can be given an initial value." name ]
+        let regDoesNotExist name = Fail [ sprintf "The reg %A has not been declared and, therefore, cannot be initialised." name ]
+        let shouldBeReg name = Fail [ sprintf "%A is not a reg. Only regs can be initialised." name ]
