@@ -8,6 +8,7 @@ module Errors =
 
     module ProcessPorts =
         let portsDontMatchPortDecs ports decs = Fail [ sprintf "The ports declared in the module definition do not match the ports declared inside the module.\nThe module definition has ports %A, but the the ports declared inside the module are %A" ports decs ]
+        let duplicatePorts name = Fail [ sprintf "The port %A is declared multiple times. It can only be declared once." name ]
 
     module UniqueNames =
         let duplicateVarDefinition name = Fail [ sprintf "The input/reg/wire %A has already been declared. The name cannot be re-used for another component." name ]

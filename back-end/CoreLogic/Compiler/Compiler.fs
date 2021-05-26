@@ -438,6 +438,15 @@ module private Validate =
         | _, true -> Errors.UniqueNames.duplicateModInstDefinition name
         | _ -> Succ ()
 
+    let uniquePorts ports =
+        ports
+        |> List.countBy fst
+        |> List.compRetMap (fun (name, num) ->
+            if num > 1
+            then Errors.ProcessPorts.duplicatePorts name
+            else Succ ())
+        ?>> ignore
+
 module private rec Internal =
 
     let processInputOutput ast : CompRes<VarMap * NonPortModuleItemT List> =
@@ -456,13 +465,14 @@ module private rec Internal =
                     | NonPortModuleItem item -> (ports, item::items)
                     | PortDeclaration pd -> ((processPD pd)::ports, items))
             Validate.portsMatchDecs md1.ports ports
+            ?> fun _ -> Validate.uniquePorts ports
             ?>> fun _ -> (Map.ofList ports, items)
         | ModDec2 md2 ->
-            let vm =
-                md2.ports
-                |> List.map processPD
-                |> Map.ofList
-            Succ (vm, md2.body)
+            let ports = List.map processPD md2.ports
+            Validate.uniquePorts ports
+            ?> fun _ -> 
+                let vm = Map.ofList ports
+                Succ (vm, md2.body)
 
     let processModuleVariable (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
