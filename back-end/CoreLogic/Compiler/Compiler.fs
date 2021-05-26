@@ -474,6 +474,55 @@ module private Helpers =
             | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
         getExprVarsRec exp |> squashIdenRangeList
 
+    let getEventControlVars (statementVars: (IdentifierT * Range) list) (ec: EventControlT) =
+        match ec with
+        | Star -> statementVars
+        | EventList el ->
+            el
+            |> List.map (fun (_, rangedVar) -> 
+                let range = Util.optRangeTToRangeDefault Range.max rangedVar.range
+                (rangedVar.name, range))
+        |> squashIdenRangeList
+
+    let getStatementVars (statementOrNull: StatementOrNullT) =
+        match statementOrNull with
+        | None -> []
+        | Some statement ->
+            let rec varsRec statement =
+                let optStatementVars =
+                    function
+                    | None -> []
+                    | Some s -> varsRec s
+                match statement with
+                | BlockingAssignment ba -> getExprVars ba.RHS
+                | NonblockingAssignment nba -> getExprVars nba.RHS
+                | SeqBlock sb -> List.collect varsRec sb
+                | Case c -> 
+                    let caseExprVars = getExprVars c.CaseExpr
+                    let itemVars =
+                        c.Items
+                        |> List.collect
+                            (function
+                            | Default s -> optStatementVars s
+                            | Item i -> 
+                                let expVars = List.collect getExprVars i.Elems
+                                let bodyVars = optStatementVars i.Body
+                                expVars @ bodyVars)
+                    caseExprVars @ itemVars
+                | Conditional c ->
+                    let condVars = getExprVars c.Condition
+                    let bodyVars = optStatementVars c.Body
+                    let elseBodyVars = optStatementVars c.ElseBody
+                    let elseIfVars =
+                        c.ElseIf
+                        |> List.collect (fun elseIf ->
+                            let condVars' = getExprVars elseIf.Condition
+                            let bodyVars' = optStatementVars elseIf.Body
+                            condVars' @ bodyVars')
+                    condVars @ bodyVars @ elseBodyVars @ elseIfVars
+            varsRec statement
+        |> squashIdenRangeList
+
 module private Validate =
     let portsMatchDecs ports portDecs =
         let portNames = List.map fst portDecs
@@ -597,7 +646,7 @@ module private rec Internal =
         | _ -> Succ netlist
 
     let processAlwaysBlocks (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: collect always blocks and register in alwaysBlocks
+        // TODO: 
         match item with
         | AlwaysConstruct ac -> Succ netlist
         | _ -> Succ netlist
