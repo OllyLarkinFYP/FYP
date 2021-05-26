@@ -457,20 +457,47 @@ module private rec Internal =
                 |> Map.ofList
             Succ (vm, md2.body)
 
-    let compileModule (ast: ASTT) (asts: ASTT list) (prefix: string) : CompRes<Netlist> =
-        // TODO: collect inputs and outputs and register them as vars (inputs and reg/wire respectively)
+    let processModuleVariable (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect all vars inside the module (reg/wire) and register as vars
+        match item with
+        | ModuleItemDeclaration mid -> Succ netlist
+        | _ -> Succ netlist
+
+    let processInitialBlock (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect initial block and register as initial (make sure only reg)
+        match item with
+        | InitialConstruct ic -> Succ netlist
+        | _ -> Succ netlist
+
+    let processContinuousAssignments (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect continuous assignments and register in vars
+        match item with
+        | ContinuousAssign ca -> Succ netlist
+        | _ -> Succ netlist
+
+    let processAlwaysBlocks (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect always blocks and register in alwaysBlocks
+        match item with
+        | AlwaysConstruct ac -> Succ netlist
+        | _ -> Succ netlist
+
+    let processModuleInstances (ast: ASTT) (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect module instances, compile them with their netlist and current prefix + instance name prefix, then add and connect with master netlist
+        match item with
+        | ModuleInstantiation mi -> Succ netlist
+        | _ -> Succ netlist
+
+    let compileModule (ast: ASTT) (asts: ASTT list) (prefix: string) : CompRes<Netlist> =
         processInputOutput ast.info
-        ?>> fun (initialVarMap, items) ->
-            let initNetlist =
-                { varMap = initialVarMap
-                  initial = []
-                  alwaysBlocks = [] }
-            initNetlist
+        ?> fun (initialVarMap, items) ->
+            { varMap = initialVarMap
+              initial = []
+              alwaysBlocks = [] }
+            |> List.compRetFold (processModuleVariable ast) items
+            ?> List.compRetFold (processInitialBlock ast) items
+            ?> List.compRetFold (processContinuousAssignments ast) items
+            ?> List.compRetFold (processAlwaysBlocks ast) items
+            ?> List.compRetFold (processModuleInstances ast asts) items
 
 module Compile =
     let project modName (asts: ASTT list) : CompRes<Netlist> =

@@ -10,4 +10,3 @@ module CompResult =
         | Succ of 'Result
         | Warn of 'Result * CompWarnings
         | Fail of CompErrors
-        

@@ -4,7 +4,7 @@ open Compiler.CompResult
 
 module Utils =
 
-    /// A kind of bind function for the above type
+    /// A bind operator for the CompRes type
     let (?>) (r: CompRes<_>) f =
         match r with
         | Fail e -> Fail e
@@ -15,7 +15,8 @@ module Utils =
             | Succ v' -> Warn (v', w)
             | Warn (v', w') -> Warn (v', w @ w')
 
-    /// Similar to bind except 'f' does not need to return a CompRes, just a value
+    /// Similar to bind except 'f' does not need to return a CompRes, just a value.
+    /// Cannot generate errors or warnings
     let (?>>) (r: CompRes<_>) f =
         match r with
         | Fail e -> Fail e
@@ -24,13 +25,21 @@ module Utils =
 
     type List<'T> with
         static member compRetMap mapper list =
-            let rec compRetMapRec =
+            let rec mapRec =
                 function
                 | [] -> Succ []
                 | hd::tl ->
                     mapper hd
-                    ?> fun v ->
-                        compRetMapRec tl
-                        ?>> fun pTl -> v::pTl
-            compRetMapRec list 
+                    ?> fun pHd ->
+                        mapRec tl
+                        ?>> fun pTl -> pHd::pTl
+            mapRec list 
 
+        static member compRetFold folder list (state: 'State) =
+            let rec foldRec lst s =
+                match lst with
+                | [] -> Succ s
+                | hd::tl ->
+                    folder s hd
+                    ?> foldRec tl
+            foldRec list state
