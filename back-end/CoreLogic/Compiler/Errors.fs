@@ -28,4 +28,4 @@ module Errors =
 
     module ProcessContAssign =
         let canOnlyDriveWire name = Fail [ sprintf "Cannot drive input/reg. %A is not a wire and, therefore, cannot be driver" name ]
-        let multiDrivenRanges name r1 r2 = Fail [ sprintf "There is an overlap of the ranges being driven in %A. Ranges %A and %A cannot be driven by different components as they overlap." name r1 r2 ]
+        let multiDrivenRanges name r1 r2 = Fail [ sprintf "There is an overlap of the ranges being driven in %A. Ranges %s and %s cannot be driven by different components as they overlap." name (r1.ToString()) (r2.ToString()) ]
