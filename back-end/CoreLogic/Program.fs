@@ -220,6 +220,8 @@ module mod1(a,b,c);
 
     reg [1:0] d;
 
+    assign {c[0], c[1]} = 5;
+
     initial begin
         d = 5;
     end

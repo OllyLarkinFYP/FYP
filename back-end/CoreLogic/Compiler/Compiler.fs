@@ -431,18 +431,48 @@ module private Helpers =
             | NetLValueT.Ranged rangedNLV ->
                 if netlist.varMap.ContainsKey rangedNLV.name
                 then
-                    match netlist.varMap.[rangedNLV.name] with
-                    | Wire _, _ -> 
-                        let range = Util.optRangeTToRangeDefault (snd netlist.varMap.[rangedNLV.name]) rangedNLV.range
-                        let entry = (rangedNLV.name, range, range.offset offset)
+                    match netlist.varMap.[rangedNLV.name].var with
+                    | Wire _ -> 
+                        let range = Util.optRangeTToRangeDefault netlist.varMap.[rangedNLV.name].range rangedNLV.range
+                        let entry = (rangedNLV.name, range, range.ground().offset offset)
                         Succ (offset + range.size, entry::currLst)
                     | _ -> Errors.NetLValueE.shouldBeWire rangedNLV.name
                 else Errors.NetLValueE.doesNotExist rangedNLV.name
             | NetLValueT.Concat c ->
                 (List.rev c, (offset, currLst))
-                ||> List.compRetFold toRangeListRec
+                ||> List.compResFold toRangeListRec
         // Returns result of list of (name, idenRange, valueRange)
         toRangeListRec (0u,[]) netLVal ?>> snd
+
+    let squashIdenRangeList (idenRangeLst: (IdentifierT * Range) list) =
+        idenRangeLst
+        |> List.map (fun (iden, range) ->
+            let newRange = 
+                (range, idenRangeLst)
+                ||> List.fold (fun currR (iden2, range2) ->
+                    if iden = iden2
+                    then
+                        match Range.merge currR range2 with
+                        | Some r -> r
+                        | None -> currR
+                    else currR)
+            (iden, newRange))
+        |> List.distinct
+
+    let getExprVars exp =
+        let rec getExprVarsRec exp =
+            let rec getPrimaryVars primary =
+                match primary with
+                | PrimaryT.Ranged r -> [r.name, Util.optRangeTToRangeDefault Range.max r.range]
+                | PrimaryT.Concat c -> List.collect getExprVarsRec c
+                | PrimaryT.Brackets b -> getExprVarsRec b
+                | _ -> []
+            match exp with
+            | Primary p -> getPrimaryVars p
+            | UniExpression u -> getExprVarsRec u.Expression
+            | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
+            | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
+        getExprVarsRec exp |> squashIdenRangeList
 
 module private Validate =
     let portsMatchDecs ports portDecs =
@@ -461,7 +491,7 @@ module private Validate =
     let uniquePorts ports =
         ports
         |> List.countBy fst
-        |> List.compRetMap (fun (name, num) ->
+        |> List.compResMap (fun (name, num) ->
             if num > 1
             then Errors.ProcessPorts.duplicatePorts name
             else Succ ())
@@ -470,10 +500,20 @@ module private Validate =
     let isReg (varMap: VarMap) name =
         if varMap.ContainsKey name
         then
-            match varMap.[name] with
-            | (VarElem.Reg, _) -> Succ ()
+            match varMap.[name].var with
+            | VarElem.Reg -> Succ ()
             | _ -> Errors.ProcessInitial.shouldBeReg name
         else Errors.ProcessInitial.regDoesNotExist name
+
+    let varExists (varMap: VarMap) (var: IdentifierT) =
+        if varMap.ContainsKey var
+        then Succ ()
+        else Errors.General.varDoesNotExist var
+
+    let varsExist (varMap: VarMap) (vars: (IdentifierT * Range) list) =
+        // TODO: check var range
+        vars
+        |> List.compResMap (fun (name, _) -> varExists varMap name)
 
 
 module private rec Internal =
@@ -482,9 +522,9 @@ module private rec Internal =
         let processPD (pd: PortDeclarationT) =
             let range = Util.optRangeTToRange pd.range
             match pd.dir with
-            | PortDirAndType.Input -> (pd.name, (Input, range))
-            | PortDirAndType.Output PortType.Wire -> (pd.name, (Wire [], range))
-            | PortDirAndType.Output PortType.Reg -> (pd.name, (Reg, range))
+            | PortDirAndType.Input -> (pd.name, { var = Input; range = range })
+            | PortDirAndType.Output PortType.Wire -> (pd.name, { var = Wire []; range = range })
+            | PortDirAndType.Output PortType.Reg -> (pd.name, { var = Reg; range = range })
         match ast with
         | ModDec1 md1 ->
             let (ports, items) =
@@ -507,14 +547,14 @@ module private rec Internal =
         match item with
         | ModuleItemDeclaration mid ->
             (mid.names, netlist.varMap)
-            ||> List.compRetFold (fun vMap name ->
+            ||> List.compResFold (fun vMap name ->
                 Validate.uniqueIdentifier vMap [] name
                 ?>> fun _ ->
                     let newEntry = 
                         let range = Util.optRangeTToRange mid.range
                         match mid.decType with
-                        | PortType.Wire -> (VarElem.Wire [], range)
-                        | PortType.Reg -> (VarElem.Reg, range)
+                        | PortType.Wire -> { var = Wire []; range = range }
+                        | PortType.Reg -> { var = Reg; range = range }
                     vMap.Add(name, newEntry))
             ?>> fun varMap -> { netlist with varMap = varMap }
         | _ -> Succ netlist
@@ -523,7 +563,7 @@ module private rec Internal =
         match item with
         | InitialConstruct ic ->
             ic
-            |> List.compRetMap (fun rca ->
+            |> List.compResMap (fun rca ->
                 let rhs = ConstExprEval.evalConstExpr rca.RHS
                 Validate.isReg netlist.varMap rca.LHS.name
                 ?>> fun _ ->
@@ -536,9 +576,24 @@ module private rec Internal =
         | _ -> Succ netlist
 
     let processContinuousAssignments (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: collect continuous assignments and register in vars
         match item with
-        | ContinuousAssign ca -> Succ netlist
+        | ContinuousAssign ca ->
+            (ca, netlist.varMap)
+            ||> List.compResFold (fun vMap netAssign ->
+                let expVars = Helpers.getExprVars netAssign.RHS
+                Validate.varsExist vMap expVars
+                ?> fun _ -> Helpers.netLValToRangeList netlist netAssign.LHS
+                ?> fun varLst ->
+                    (varLst, vMap)
+                    ||> List.compResFold (fun vMap' (name, drivenRange, expRange) ->
+                        let driver =
+                            { drivenRange = drivenRange
+                              expRange = expRange
+                              exp = 
+                                { expression = netAssign.RHS
+                                  reqVars = expVars }}
+                        VarMap.addDriver vMap' name driver))
+            ?>> fun newVarMap -> { netlist with varMap = newVarMap }
         | _ -> Succ netlist
 
     let processAlwaysBlocks (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
@@ -560,11 +615,11 @@ module private rec Internal =
               initial = []
               alwaysBlocks = []
               modInstNames = [] }
-            |> List.compRetFold (processModuleVariable ast) items
-            ?> List.compRetFold (processInitialBlock ast) items
-            ?> List.compRetFold (processContinuousAssignments ast) items
-            ?> List.compRetFold (processAlwaysBlocks ast) items
-            ?> List.compRetFold (processModuleInstances ast asts) items
+            |> List.compResFold (processModuleVariable ast) items
+            ?> List.compResFold (processInitialBlock ast) items
+            ?> List.compResFold (processContinuousAssignments ast) items
+            ?> List.compResFold (processAlwaysBlocks ast) items
+            ?> List.compResFold (processModuleInstances ast asts) items
 
 module Compile =
     let project modName (asts: ASTT list) : CompRes<Netlist> =

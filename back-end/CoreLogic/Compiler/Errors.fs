@@ -3,6 +3,10 @@ namespace Compiler
 open Compiler.CompResult
 
 module Errors =
+
+    module General =
+        let varDoesNotExist name = Fail [ sprintf "The wire/reg %A has not been declared." name ]
+    
     module CompilerAPI =
         let astNotProvided name = Fail [ sprintf "The AST for %A was not provided to the compiler." name ]
 
@@ -21,3 +25,7 @@ module Errors =
     module NetLValueE =
         let shouldBeWire name = Fail [ sprintf "%A is not a wire. The left hand side of an assignment must be a wire." name ]
         let doesNotExist name = Fail [ sprintf "The wire %A has not been declared and, therefore, cannot be assigned to." name ]
+
+    module ProcessContAssign =
+        let canOnlyDriveWire name = Fail [ sprintf "Cannot drive input/reg. %A is not a wire and, therefore, cannot be driver" name ]
+        let multiDrivenRanges name r1 r2 = Fail [ sprintf "There is an overlap of the ranges being driven in %A. Ranges %A and %A cannot be driven by different components as they overlap." name r1 r2 ]

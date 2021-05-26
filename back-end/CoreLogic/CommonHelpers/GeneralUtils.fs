@@ -92,6 +92,10 @@ module Util =
     let unreachableCode () =
         failwithf "Unreachable code reached."
 
+    let printAndContinue a = 
+        printfn "\n%A\n" a
+        a
+
     let expToConstExpr (inputMap: Map<IdentifierT, VNum>) exp =
         let rec toConstExprRec exp =
             let toConstPrimary = 

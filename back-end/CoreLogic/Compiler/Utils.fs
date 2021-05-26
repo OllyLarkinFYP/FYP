@@ -24,7 +24,7 @@ module Utils =
         | Warn (v, w) -> Warn (f v, w)
 
     type List<'T> with
-        static member compRetMap mapper list =
+        static member compResMap mapper list =
             let rec mapRec =
                 function
                 | [] -> Succ []
@@ -39,7 +39,7 @@ module Utils =
                             mapRec tl ?>> fun pTl -> pHd::pTl
             mapRec list 
 
-        static member compRetFold folder list (state: 'State) =
+        static member compResFold folder list (state: 'State) =
             let rec foldRec lst s =
                 match lst with
                 | [] -> Succ s

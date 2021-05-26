@@ -2,6 +2,8 @@ namespace Compiler
 
 open AST
 open CommonTypes
+open Compiler.Utils
+open Compiler.CompResult
 
 module Netlist =
 
@@ -21,27 +23,51 @@ module Netlist =
         | Reg
         | Wire of Driver list
 
-    type VarMap = Map<IdentifierT, VarElem * Range>
+    type Variable =
+        { var: VarElem
+          range: Range }
+        with
+            override this.ToString() =
+                sprintf "{ var = %s; range = %s }" (this.var.ToString()) (this.range.ToString())
+
+    type VarMap = Map<IdentifierT, Variable>
 
     module VarMap =
         let inputs (vm: VarMap) =
             vm
             |> Map.filter (fun _ v ->
-                match v with
-                | (Input, _) -> true
+                match v.var with
+                | Input -> true
                 | _ -> false)
         let wires (vm: VarMap) =
             vm
             |> Map.filter (fun _ v ->
-                match v with
-                | (Wire _, _) -> true
+                match v.var with
+                | Wire _ -> true
                 | _ -> false)
         let regs (vm: VarMap) =
             vm
             |> Map.filter (fun _ v ->
-                match v with
-                | (Reg, _) -> true
+                match v.var with
+                | Reg -> true
                 | _ -> false)
+                
+        let addDriver (vm: VarMap) (name: IdentifierT) (driver: Driver) =
+            if vm.ContainsKey name
+            then
+                match vm.[name].var with
+                | Wire currDrivers ->
+                    currDrivers
+                    |> List.compResMap (fun d ->
+                        if Range.overlap d.drivenRange driver.drivenRange
+                        then Errors.ProcessContAssign.multiDrivenRanges name d.drivenRange driver.drivenRange
+                        else Succ ())
+                    ?>> fun _ ->
+                        let newDrivers = driver::currDrivers
+                        let newComp = { vm.[name] with var = Wire newDrivers }
+                        vm.Add(name, newComp)
+                | _ -> Errors.ProcessContAssign.canOnlyDriveWire name
+            else Errors.General.varDoesNotExist name
 
     type InitItem =
         { lhs: IdentifierT * Range
@@ -69,7 +95,7 @@ module Netlist =
                 let vm =
                     this.varMap
                     |> Map.toList
-                    |> List.map (fun (key, value) -> sprintf "\t[%A, %A]\n" key value)
+                    |> List.map (fun (key, value) -> sprintf "\t[%s, %s]\n" (key.ToString()) (value.ToString()))
                     |> fun lst ->
                         if lst.Length <> 0
                         then List.reduce (+) lst 
