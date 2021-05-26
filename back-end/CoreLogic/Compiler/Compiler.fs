@@ -431,6 +431,13 @@ module private Validate =
         then Errors.ProcessPorts.portsDontMatchPortDecs ports portNames
         else Succ ()
 
+    let uniqueIdentifier (varMap: Map<IdentifierT, _>) modInstNames name =
+        // TODO: make sure name is not a keyword
+        match varMap.ContainsKey name, List.contains name modInstNames with
+        | true, _ -> Errors.UniqueNames.duplicateVarDefinition name
+        | _, true -> Errors.UniqueNames.duplicateModInstDefinition name
+        | _ -> Succ ()
+
 module private rec Internal =
 
     let processInputOutput ast : CompRes<VarMap * NonPortModuleItemT List> =
@@ -462,16 +469,14 @@ module private rec Internal =
         | ModuleItemDeclaration mid ->
             (mid.names, netlist.varMap)
             ||> List.compRetFold (fun vMap name ->
-                // TODO: make sure name is not a keyword
-                if vMap.ContainsKey name
-                then Errors.ProcessVariables.duplicateDefinition name
-                else 
+                Validate.uniqueIdentifier vMap [] name
+                ?>> fun _ ->
                     let newEntry = 
                         let range = Util.optRangeTToRange mid.range
                         match mid.decType with
                         | PortType.Wire -> (VarElem.Wire [], range)
                         | PortType.Reg -> (VarElem.Reg, range)
-                    Succ <| vMap.Add(name, newEntry))
+                    vMap.Add(name, newEntry))
             ?>> fun varMap -> { netlist with varMap = varMap }
         | _ -> Succ netlist
 
@@ -504,7 +509,8 @@ module private rec Internal =
         ?> fun (initialVarMap, items) ->
             { varMap = initialVarMap
               initial = []
-              alwaysBlocks = [] }
+              alwaysBlocks = []
+              modInstNames = [] }
             |> List.compRetFold (processModuleVariable ast) items
             ?> List.compRetFold (processInitialBlock ast) items
             ?> List.compRetFold (processContinuousAssignments ast) items
