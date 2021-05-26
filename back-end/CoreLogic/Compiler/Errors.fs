@@ -17,3 +17,7 @@ module Errors =
     module ProcessInitial =
         let regDoesNotExist name = Fail [ sprintf "The reg %A has not been declared and, therefore, cannot be initialised." name ]
         let shouldBeReg name = Fail [ sprintf "%A is not a reg. Only regs can be initialised." name ]
+
+    module NetLValueE =
+        let shouldBeWire name = Fail [ sprintf "%A is not a wire. The left hand side of an assignment must be a wire." name ]
+        let doesNotExist name = Fail [ sprintf "The wire %A has not been declared and, therefore, cannot be assigned to." name ]

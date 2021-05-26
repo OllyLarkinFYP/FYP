@@ -424,6 +424,26 @@ open CommonHelpers
 //                 |> Map.ofList
 //             { netlists = netMap; topLevelMods = topLevels }
 
+module private Helpers =
+    let netLValToRangeList (netlist: Netlist) (netLVal: NetLValueT) =
+        let rec toRangeListRec (offset, currLst) =
+            function
+            | NetLValueT.Ranged rangedNLV ->
+                if netlist.varMap.ContainsKey rangedNLV.name
+                then
+                    match netlist.varMap.[rangedNLV.name] with
+                    | Wire _, _ -> 
+                        let range = Util.optRangeTToRangeDefault (snd netlist.varMap.[rangedNLV.name]) rangedNLV.range
+                        let entry = (rangedNLV.name, range, range.offset offset)
+                        Succ (offset + range.size, entry::currLst)
+                    | _ -> Errors.NetLValueE.shouldBeWire rangedNLV.name
+                else Errors.NetLValueE.doesNotExist rangedNLV.name
+            | NetLValueT.Concat c ->
+                (List.rev c, (offset, currLst))
+                ||> List.compRetFold toRangeListRec
+        // Returns result of list of (name, idenRange, valueRange)
+        toRangeListRec (0u,[]) netLVal ?>> snd
+
 module private Validate =
     let portsMatchDecs ports portDecs =
         let portNames = List.map fst portDecs
