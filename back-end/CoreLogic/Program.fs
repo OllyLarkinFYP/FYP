@@ -254,7 +254,7 @@ let main _ =
         a
 
     let parser = LangConstructs.pSourceText
-    [mod1]
+    [program1]
     |> List.map (fun modStr ->
         modStr
         |> startTiming
@@ -264,7 +264,7 @@ let main _ =
         | Success (ast, _, _) -> ast
         | Failure (msg, _, _) -> failwith msg)
     |> startTiming
-    |> Compiler.Compile.project "mod1"
+    |> Compiler.Compile.project "UART_TX"
     |> stopTiming "COM"
     |> function
     | Compiler.CompResult.Fail _ as r -> printfn "%A" r

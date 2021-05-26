@@ -646,9 +646,21 @@ module private rec Internal =
         | _ -> Succ netlist
 
     let processAlwaysBlocks (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: 
         match item with
-        | AlwaysConstruct ac -> Succ netlist
+        | AlwaysConstruct ac ->
+            let statementVars = Helpers.getStatementVars ac.Statement
+            let eventControlVars = Helpers.getEventControlVars statementVars ac.Control
+            Validate.varsExist netlist.varMap statementVars
+            ?> fun _ -> Validate.varsExist netlist.varMap eventControlVars
+            ?>> fun _ ->
+                let alwaysBlock = 
+                    { eventControl =
+                        { ec = ac.Control
+                          reqVars = eventControlVars }
+                      statement =
+                        { s = ac.Statement
+                          reqVars = statementVars }}
+                { netlist with alwaysBlocks = alwaysBlock::netlist.alwaysBlocks }
         | _ -> Succ netlist
 
     let processModuleInstances (ast: ASTT) (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
