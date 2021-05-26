@@ -458,9 +458,21 @@ module private rec Internal =
             Succ (vm, md2.body)
 
     let processModuleVariable (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: collect all vars inside the module (reg/wire) and register as vars
         match item with
-        | ModuleItemDeclaration mid -> Succ netlist
+        | ModuleItemDeclaration mid ->
+            (mid.names, netlist.varMap)
+            ||> List.compRetFold (fun vMap name ->
+                // TODO: make sure name is not a keyword
+                if vMap.ContainsKey name
+                then Errors.ProcessVariables.duplicateDefinition name
+                else 
+                    let newEntry = 
+                        let range = Util.optRangeTToRange mid.range
+                        match mid.decType with
+                        | PortType.Wire -> (VarElem.Wire [], range)
+                        | PortType.Reg -> (VarElem.Reg, range)
+                    Succ <| vMap.Add(name, newEntry))
+            ?>> fun varMap -> { netlist with varMap = varMap }
         | _ -> Succ netlist
 
     let processInitialBlock (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
