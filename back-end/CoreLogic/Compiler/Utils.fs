@@ -29,10 +29,14 @@ module Utils =
                 function
                 | [] -> Succ []
                 | hd::tl ->
-                    mapper hd
-                    ?> fun pHd ->
-                        mapRec tl
-                        ?>> fun pTl -> pHd::pTl
+                    match mapper hd with
+                    | Fail e ->
+                        match mapRec tl with
+                        | Fail e' -> Fail (e @ e')
+                        | _ -> Fail e
+                    | _ as r -> 
+                        r ?> fun pHd ->
+                            mapRec tl ?>> fun pTl -> pHd::pTl
             mapRec list 
 
         static member compRetFold folder list (state: 'State) =
@@ -40,6 +44,10 @@ module Utils =
                 match lst with
                 | [] -> Succ s
                 | hd::tl ->
-                    folder s hd
-                    ?> foldRec tl
+                    match folder s hd with
+                    | Fail e ->
+                        match foldRec tl s with
+                        | Fail e' -> Fail (e @ e')
+                        | _ -> Fail e
+                    | _ as r -> r ?> foldRec tl
             foldRec list state
