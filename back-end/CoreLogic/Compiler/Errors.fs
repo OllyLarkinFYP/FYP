@@ -13,3 +13,7 @@ module Errors =
     module UniqueNames =
         let duplicateVarDefinition name = Fail [ sprintf "The input/reg/wire %A has already been declared. The name cannot be re-used for another component." name ]
         let duplicateModInstDefinition name = Fail [ sprintf "The module instance %A has already been declared. The name cannot be re-used for another component." name ]
+
+    module ProcessInitial =
+        let regDoesNotExist name = Fail [ sprintf "The reg %A has not been declared." name ]
+        let shouldBeReg name = Fail [ sprintf "%A is not a reg. Only regs can be given an initial value." name ]

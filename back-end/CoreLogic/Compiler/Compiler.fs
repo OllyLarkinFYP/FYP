@@ -431,7 +431,7 @@ module private Validate =
         then Errors.ProcessPorts.portsDontMatchPortDecs ports portNames
         else Succ ()
 
-    let uniqueIdentifier (varMap: Map<IdentifierT, _>) modInstNames name =
+    let uniqueIdentifier (varMap: VarMap) modInstNames name =
         // TODO: make sure name is not a keyword
         match varMap.ContainsKey name, List.contains name modInstNames with
         | true, _ -> Errors.UniqueNames.duplicateVarDefinition name
@@ -446,6 +446,15 @@ module private Validate =
             then Errors.ProcessPorts.duplicatePorts name
             else Succ ())
         ?>> ignore
+
+    let isReg (varMap: VarMap) name =
+        if varMap.ContainsKey name
+        then
+            match varMap.[name] with
+            | (VarElem.Reg, _) -> Succ ()
+            | _ -> Errors.ProcessInitial.shouldBeReg name
+        else Errors.ProcessInitial.regDoesNotExist name
+
 
 module private rec Internal =
 
@@ -491,9 +500,19 @@ module private rec Internal =
         | _ -> Succ netlist
 
     let processInitialBlock (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: collect initial block and register as initial (make sure only reg)
         match item with
-        | InitialConstruct ic -> Succ netlist
+        | InitialConstruct ic ->
+            ic
+            |> List.compRetMap (fun rca ->
+                let rhs = ConstExprEval.evalConstExpr rca.RHS
+                Validate.isReg netlist.varMap rca.LHS.name
+                ?>> fun _ ->
+                    // TODO: warning if range is not subset of var range
+                    let lhs = (rca.LHS.name, Util.optRangeTToRangeDefault Range.max rca.LHS.range)
+                    { lhs = lhs
+                      rhs = rhs })
+            ?>> fun initialBlock ->
+                { netlist with initial = initialBlock }
         | _ -> Succ netlist
 
     let processContinuousAssignments (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
