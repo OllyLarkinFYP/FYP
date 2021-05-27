@@ -8,422 +8,6 @@ open Compiler.Netlist
 open Compiler.Utils
 open CommonHelpers
 
-// module private Helpers =
-//     let safeMapAdd (map: Map<'a,'b>) (key: 'a, value: 'b) =
-//         if map.ContainsKey key
-//         then Error <| sprintf "%A is already a registered component. It cannot be declared again." key
-//         else Ok <| map.Add(key,value)
-
-//     let netLValToRangeList (netlist: Netlist) (netLVal: NetLValueT) =
-//         let rec toRangeListRec (offset, currLst) =
-//             function
-//             | NetLValueT.Ranged rangedNLV ->
-//                 if netlist.variables.ContainsKey rangedNLV.name
-//                 then
-//                     let range = Util.optRangeTToRangeDefault netlist.variables.[rangedNLV.name].range rangedNLV.range
-//                     let entry = (rangedNLV.name, range, range.offset offset)
-//                     Ok (offset + range.size, entry::currLst)
-//                 else Error <| sprintf "Cannot find the component %A." rangedNLV.name
-//             | NetLValueT.Concat c ->
-//                 ((offset, currLst), List.rev c)
-//                 ||> ResList.fold toRangeListRec
-//         // Returns result of list of (name, idenRange, valueRange)
-//         toRangeListRec (0u,[]) netLVal ?>> snd
-
-//     let rec expToNetLVal (exp: ExpressionT) =
-//         let error = Error "Expressions can not be driven. Only a reg/wire/concatenation can be driven."
-//         let primaryToNetLVal prim =
-//             match prim with
-//             | PrimaryT.Number _ -> error
-//             | PrimaryT.Ranged r -> Ok <| NetLValueT.Ranged r
-//             | PrimaryT.Brackets b -> expToNetLVal b
-//             | PrimaryT.Concat c -> ResList.map expToNetLVal c ?>> NetLValueT.Concat
-//         match exp with
-//         | Primary p -> primaryToNetLVal p
-//         | _ -> error
-
-//     let squashIdenRangeList (idenRangeLst: (IdentifierT * Range) list) =
-//         idenRangeLst
-//         |> List.map (fun (iden, range) ->
-//             let newRange = 
-//                 (range, idenRangeLst)
-//                 ||> List.fold (fun currR (iden2, range2) ->
-//                     if iden = iden2
-//                     then
-//                         match Range.merge currR range2 with
-//                         | Some r -> r
-//                         | None -> currR
-//                     else currR)
-//             (iden, newRange))
-//         |> List.distinct
-
-//     let getExprVars exp =
-//         // let rec getExprVarsRec exp =
-//         //     let rec getPrimaryVars primary =
-//         //         match primary with
-//         //         | PrimaryT.Ranged r -> [r.name, Option.bind (Util.rangeTToRange >> Some) r.range]
-//         //         | PrimaryT.Concat c -> List.collect getExprVarsRec c
-//         //         | PrimaryT.Brackets b -> getExprVarsRec b
-//         //         | _ -> []
-//         //     match exp with
-//         //     | Primary p -> getPrimaryVars p
-//         //     | UniExpression u -> getExprVarsRec u.Expression
-//         //     | BinaryExpression b -> getExprVarsRec b.LHS @ getExprVarsRec b.RHS
-//         //     | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
-//         // getExprVarsRec exp |> squashIdenRangeList
-//         raise <| NotImplementedException() // TODO: this
-
-//     let getEventControlVars eventControl =
-//         // match eventControl with
-//         // | Star -> []
-//         // | EventList eventExps ->
-//         //     eventExps
-//         //     |> List.collect (EventExpressionT.unwrap >> getExprVars)
-//         //     |> squashIdenRangeList
-//         raise <| NotImplementedException() // TODO: this
-
-//     let getStatementOrNullVars sn =
-//         let rec getStatementOrNullVarsRec sn =
-//             match sn with
-//             | None -> []
-//             | Some statement -> 
-//                 match statement with
-//                 | BlockingAssignment a -> getExprVars a.RHS
-//                 | Case c ->
-//                     getExprVars c.CaseExpr @
-//                         (c.Items
-//                         |> List.collect
-//                             (function 
-//                             | Default s -> getStatementOrNullVarsRec s
-//                             | Item i -> getStatementOrNullVarsRec i.Body @ (List.collect getExprVars i.Elems)))
-//                 | Conditional c ->
-//                     let cond = getExprVars c.Condition
-//                     let body = getStatementOrNullVarsRec c.Body
-//                     let elseBody = getStatementOrNullVarsRec c.ElseBody
-//                     let elseIf =
-//                         c.ElseIf
-//                         |> List.collect (fun ei -> getExprVars ei.Condition @ getStatementOrNullVarsRec ei.Body)
-//                     cond @ body @ elseIf @ elseBody
-//                 | NonblockingAssignment a -> getExprVars a.RHS
-//                 | SeqBlock s -> List.collect (Some >> getStatementOrNullVarsRec) s
-//         getStatementOrNullVarsRec sn |> squashIdenRangeList
-
-//     let getStatementOrNullOutputs sn =
-//         let rec getStatementOrNullOutputsRec sn =
-//             match sn with
-//             | None -> []
-//             | Some statement ->
-//                 match statement with
-//                 | BlockingAssignment a -> [a.LHS]
-//                 | Case c ->
-//                     c.Items
-//                     |> List.collect
-//                         (function
-//                         | Default s -> getStatementOrNullOutputsRec s
-//                         | Item i -> getStatementOrNullOutputsRec i.Body)
-//                 | Conditional c ->
-//                     let trueBody = getStatementOrNullOutputsRec c.Body
-//                     let falseBody = getStatementOrNullOutputsRec c.ElseBody
-//                     let elseIf = c.ElseIf |> List.collect (fun ei -> getStatementOrNullOutputsRec ei.Body)
-//                     trueBody @ falseBody @ elseIf
-//                 | NonblockingAssignment a -> [a.LHS]
-//                 | SeqBlock s -> List.collect (Some >> getStatementOrNullOutputsRec) s
-//         getStatementOrNullOutputsRec sn |> List.distinct
-
-//     let getTimingControlVars tc =
-//         getEventControlVars tc.Control @ getStatementOrNullVars tc.Statement |> squashIdenRangeList
-
-//     let validateDrivingVars netlist idenLst =
-//         idenLst
-//         |> ResList.map (fun (iden,_) ->
-//             if netlist.variables.ContainsKey iden
-//             then Ok()
-//             else Error <| sprintf "The component %A was used but this is not an input/reg/wire." iden)
-//         ?>> fun _ -> idenLst
-
-//     let getExprOutCont netlist exp range =
-//         getExprVars exp
-//         |> validateDrivingVars netlist
-//         ?>> fun drivingVars ->
-//             { expression = exp
-//               vars = drivingVars
-//               range = range }
-
-//     let validateNamedModulePorts modDec (namedPorts: {| Name: IdentifierT; Value: ExpressionT option |} list) =
-//         namedPorts
-//         |> ResList.map (fun namedPort ->
-//             modDec.ports
-//             |> List.tryFind (fun (name,_,_) -> name = namedPort.Name)
-//             |> function
-//             | Some _ -> Ok()
-//             | None -> Error <| sprintf "The module %A was instantiated with incorrect ports. %A is not a port of the module." modDec.name namedPort.Name) 
-//         |> ResList.ignore
-
-//     let validateNewDriver name (currDrivers: (Range * 'a) list) (newRange: Range, d: 'a) =
-//         currDrivers
-//         |> ResList.map (fun (range, _) ->
-//             if Range.overlap range newRange
-//             then Error <| sprintf "Cannot drive the range %s of %s, as the range %s of %s is already being driven." (newRange.ToString()) name (range.ToString()) name
-//             else Ok())
-//         ?>> fun _ -> (newRange, d)
-
-//     let getTopLevels (netlists: Netlist list) =
-//         let containsNetlist netlist containingNet =
-//             containingNet.moduleInstances
-//             |> Map.toList
-//             |> List.exists (fun (_, modInst) -> modInst.moduleName = netlist.moduleDeclaration.name)
-//         netlists
-//         |> List.choose (fun netlist -> 
-//             netlists
-//             |> List.exists (containsNetlist netlist)
-//             |> function
-//             | true -> None
-//             | false -> Some netlist.moduleDeclaration.name)
-//         |> function
-//         | [] -> Error "Cannot find a top level module. This implies that all modules are instantiated by another module. This cannot be simulated please provide a top level module."
-//         | top -> Ok top
-
-
-// module private Internal =
-//     let processInputOutput md =
-//         md.ports
-//         |> List.map (fun (name, pType, range) ->
-//             match pType with
-//             | Input -> (name, InputComp range)
-//             | Output Wire -> (name, WireComp { range = range; drivers = [] })
-//             | Output Reg -> (name, RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }))
-//         |> Map.ofList
-
-//     let processVariables netlist =
-//         function
-//         | ModuleItemDeclaration mid ->
-//             let newEntries =
-//                 mid.names
-//                 |> List.map (fun name ->
-//                     let range = Util.optRangeTToRange mid.range
-//                     let node =
-//                         match mid.decType with
-//                         | Wire -> WireComp { range = range; drivers = [] }
-//                         | Reg -> RegComp { range = range; initVal = VNum.unknown range.size; drivers = [] }
-//                     (name, node))
-//             (netlist.variables, newEntries)
-//             ||> ResList.fold Helpers.safeMapAdd
-//             ?>> fun newVars -> { netlist with variables = newVars }
-//         | _ -> Ok netlist
-
-//     let processInitialBlock netlist =
-//         // function
-//         // | InitialConstruct ic ->
-//         //     ic
-//         //     |> ResList.map (fun assignment ->
-//         //         let rhsValue = ConstExprEval.evalConstExpr assignment.RHS
-//         //         assignment.LHS
-//         //         |> Helpers.netLValToRangeList netlist 
-//         //         ?> ResList.map (fun (name, idenRange, valueRange) ->
-//         //             match netlist.variables.[name] with
-//         //             | RegComp rc -> 
-//         //                 rc.initVal <- rc.initVal.setRange idenRange (rhsValue.getRange valueRange)
-//         //                 Ok()
-//         //             | _ -> Error <| sprintf "Can only assign initial values to 'reg' types. %A is not a 'reg'." name))
-//         //     ?>> fun _ -> netlist
-//         // | _ -> Ok netlist
-//         raise <| NotImplementedException()
-
-//     let processContinuousAssigns netlist =
-//         function
-//         | ContinuousAssign ca ->
-//             ca
-//             |> ResList.map (fun netAssign ->
-//                 netAssign.LHS
-//                 |> Helpers.netLValToRangeList netlist
-//                 ?> ResList.map (fun (name, idenRange, valueRange) ->
-//                     Helpers.getExprOutCont netlist netAssign.RHS valueRange
-//                     ?> fun exprOutCont ->
-//                         match netlist.variables.[name] with
-//                         | RegComp rc -> 
-//                             RegExpressionOutput exprOutCont
-//                             |> Util.tuple idenRange 
-//                             |> Helpers.validateNewDriver name rc.drivers
-//                             ?>> fun driver ->
-//                                 rc.drivers <- driver::rc.drivers
-//                         | WireComp wc -> 
-//                             WireExpressionOutput exprOutCont
-//                             |> Util.tuple idenRange 
-//                             |> Helpers.validateNewDriver name wc.drivers
-//                             ?>> fun driver ->
-//                                 wc.drivers <- driver::wc.drivers
-//                         | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name))
-//                 ?>> fun _ -> netlist
-//         | _ -> Ok netlist
-
-//     let processModuleInstances mds netlist =
-//         function
-//         | ModuleInstantiation mi ->
-//             mds
-//             |> List.tryFind (fun modDec -> modDec.name = mi.Name)
-//             |> function
-//             | None -> Error <| sprintf "The module %A could not be found. Make sure this module is a part of the project." mi.Name
-//             | Some modDec ->
-//                 match mi.Module.PortConnections with
-//                 | Unnamed expLst -> 
-//                     if expLst.Length <> modDec.ports.Length
-//                     then Error <| sprintf "This module %A was instantiated with an incorrect number of ports. The module has %A ports but %A were provided." mi.Name modDec.ports.Length expLst.Length
-//                     else Ok (List.zip modDec.ports expLst)
-//                 | Named namedPorts ->
-//                     Helpers.validateNamedModulePorts modDec namedPorts
-//                     ?>> fun _ ->
-//                         modDec.ports
-//                         |> List.choose (fun (pName, pType, pRange) ->
-//                             let port =
-//                                 namedPorts
-//                                 |> List.find (fun namedPort -> namedPort.Name = pName)
-//                             match port.Value with
-//                             | None -> None
-//                             | Some exp -> Some ((pName, pType, pRange), exp))
-//                 ?> ResList.choose (fun ((pName, pType, pRange), exp) ->
-//                     match pType with
-//                     | Input ->
-//                         Helpers.getExprOutCont netlist exp pRange
-//                         ?> fun vars -> Ok <| Some (pName, pRange, vars)
-//                     | Output _ ->
-//                         exp
-//                         |> Helpers.expToNetLVal
-//                         ?> Helpers.netLValToRangeList netlist
-//                         ?> ResList.map (fun (name, idenRange, valueRange) ->
-//                             let modOutCont =
-//                                 { instanceName = mi.Module.Name
-//                                   portName = pName
-//                                   range = valueRange }
-//                             match netlist.variables.[name] with
-//                             | RegComp rc -> 
-//                                 RegModuleOutput modOutCont
-//                                 |> Util.tuple idenRange 
-//                                 |> Helpers.validateNewDriver name rc.drivers
-//                                 ?>> fun driver ->
-//                                     rc.drivers <- driver::rc.drivers
-//                             | WireComp wc -> 
-//                                 WireModuleOutput modOutCont
-//                                 |> Util.tuple idenRange 
-//                                 |> Helpers.validateNewDriver name wc.drivers
-//                                 ?>> fun driver ->
-//                                     wc.drivers <- driver::wc.drivers
-//                             | _ -> Error <| sprintf "Cannot drive %A as it is not a reg/wire. Only reg/wires can be driven." name)
-//                         ?>> fun _ -> None)
-//                 ?> fun driverLst ->
-//                     let newEntry =
-//                         mi.Module.Name,
-//                             { moduleName = mi.Name
-//                               drivers = driverLst }
-//                     (netlist.moduleInstances, newEntry)
-//                     ||> Helpers.safeMapAdd
-//                     ?>> fun newModInstMap -> { netlist with moduleInstances = newModInstMap }
-//         | _ -> Ok netlist
-
-//     let processAlwaysBlocks =
-//         let getID =
-//             let mutable num = 0u
-//             fun () ->
-//                 num <- num + 1u
-//                 num
-//         fun netlist ->
-//             function
-//             | AlwaysConstruct ac -> 
-//                 Helpers.getEventControlVars ac.Control @ Helpers.getStatementOrNullVars ac.Statement 
-//                 |> List.distinct
-//                 |> Helpers.validateDrivingVars netlist
-//                 ?> fun vars ->
-//                     let ID = getID()
-//                     Helpers.getStatementOrNullOutputs ac.Statement
-//                     |> ResList.collect (Helpers.netLValToRangeList netlist)
-//                     ?> ResList.map (fun (name, idenRange, _) ->
-//                         match netlist.variables.[name] with
-//                         | RegComp rc -> 
-//                             RegAlwaysOutput ID
-//                             |> Util.tuple idenRange 
-//                             |> Helpers.validateNewDriver name rc.drivers
-//                             ?>> fun driver ->
-//                                 rc.drivers <- driver::rc.drivers
-//                         | _ -> Error <| sprintf "Cannot drive %A from an always block as it is not a 'reg'. Only 'reg' components can be driven." name)
-//                     ?> fun _ ->
-//                         let newEntry = (ID, { eventControl = ac.Control; statement = ac.Statement; inputs = vars })
-//                         (netlist.alwaysBlocks, newEntry)
-//                         ||> Helpers.safeMapAdd
-//                         ?>> fun newMap -> { netlist with alwaysBlocks = newMap }
-//             | _ -> Ok netlist
-
-// let collectDecs (asts: ASTT list) : ModuleDeclaration list =
-//     let orderList order lst =
-//         order
-//         |> List.map (fun name ->
-//             lst
-//             |> List.tryFind (fun (pname, _, _) -> name = pname)
-//             |> function
-//             // TODO: None here implies that the port list and port declarations don't match up
-//             | None -> raise <| NotImplementedException() 
-//             | Some p -> p)
-//     let processPortDec (pd: PortDeclarationT) = (pd.name, pd.dir, Util.optRangeTToRange pd.range)
-//     let processModDec1 (dec: {| ports: IdentifierT List; body: ModuleItemT List |}) =
-//         dec.body
-//         |> List.choose 
-//             (function
-//             | PortDeclaration pd -> Some <| processPortDec pd
-//             | _ -> None)
-//         |> orderList dec.ports
-//     let processModDec2 (dec: {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}) =
-//         List.map processPortDec dec.ports
-//     let getDec ast : ModuleDeclaration =
-//         let ports = 
-//             match ast.info with
-//             | ModDec1 dec -> processModDec1 dec
-//             | ModDec2 dec -> processModDec2 dec
-//         { ModuleDeclaration.name = ast.name; ports = ports}
-//     List.map getDec asts
-
-// let compileAST (modDecs: ModuleDeclaration list) (ast: ASTT) =
-//     modDecs
-//     |> List.tryFind (fun md -> md.name = ast.name)
-//     |> function
-//     | None -> 
-//         // This should be thrown if the provided module declarations do not include the ast to be compiled
-//         raise <| ArgumentException()
-//     | Some md ->
-//         let init =
-//             { moduleDeclaration = md
-//               variables = Internal.processInputOutput md
-//               moduleInstances = Map.empty
-//               alwaysBlocks = Map.empty }
-//         let items =
-//             ast.info
-//             |> function
-//             | ModDec1 elems ->
-//                 elems.body
-//                 |> List.choose 
-//                     (function
-//                     | PortDeclaration _ -> None
-//                     | NonPortModuleItem elem -> Some elem)
-//             | ModDec2 elems -> elems.body
-
-//         (init, items)
-//         |> ResList.tupleFold Internal.processVariables
-//         ?> ResList.tupleFold Internal.processInitialBlock
-//         ?> ResList.tupleFold Internal.processContinuousAssigns
-//         ?> ResList.tupleFold (Internal.processModuleInstances modDecs)
-//         ?> ResList.tupleFold Internal.processAlwaysBlocks
-//         ?>> fst
-
-// let compileProject (asts: ASTT list) =
-//     asts
-//     |> ResList.map (compileAST <| collectDecs asts)
-//     ?> fun netlists ->
-//         netlists
-//         |> Helpers.getTopLevels
-//         ?>> fun topLevels ->
-//             let netMap =
-//                 netlists
-//                 |> List.map (fun net -> (net.moduleDeclaration.name, net))
-//                 |> Map.ofList
-//             { netlists = netMap; topLevelMods = topLevels }
-
 module private Helpers =
     let netLValToRangeList (netlist: Netlist) (netLVal: NetLValueT) =
         let rec toRangeListRec (offset, currLst) =
@@ -523,6 +107,113 @@ module private Helpers =
             varsRec statement
         |> squashIdenRangeList
 
+    let applyPrefix (prefix: IdentifierT) (netlist: Netlist) =
+        let rec prefixExpression exp =
+            match exp with
+            | Primary p ->
+                match p with
+                | PrimaryT.Ranged r -> Primary (PrimaryT.Ranged { r with name = prefix + r.name })
+                | Brackets b -> Primary (Brackets (prefixExpression b))
+                | PrimaryT.Concat c -> Primary (PrimaryT.Concat (List.map prefixExpression c))
+                | _ -> Primary p
+            | UniExpression ue -> UniExpression {| ue with Expression = prefixExpression ue.Expression |}
+            | BinaryExpression be ->
+                BinaryExpression
+                    {| be with
+                        LHS = prefixExpression be.LHS
+                        RHS = prefixExpression be.RHS |}
+            | CondExpression ce ->
+                CondExpression
+                    {| Condition = prefixExpression ce.Condition
+                       TrueVal = prefixExpression ce.TrueVal
+                       FalseVal = prefixExpression ce.FalseVal |}
+        let prefixReqVars = List.map (fun (iden, range) -> prefix + iden, range)
+        let rec prefixNetLVal = 
+            function
+            | NetLValueT.Ranged rv -> NetLValueT.Ranged { rv with name = prefix + rv.name }
+            | NetLValueT.Concat c -> NetLValueT.Concat (List.map prefixNetLVal c)
+        let rec prefixStatement stmt = 
+            match stmt with
+            | None -> stmt
+            | Some statement ->
+                let rec prefixNonOptStmt s =
+                    match s with
+                    | BlockingAssignment ba ->
+                        BlockingAssignment 
+                            { LHS = prefixNetLVal ba.LHS 
+                              RHS = prefixExpression ba.RHS }
+                    | Case cs ->
+                        let prefixCaseItem =
+                            function
+                            | Item i ->
+                                let prefixedElems = List.map prefixExpression i.Elems
+                                let prefixedBody = prefixStatement i.Body
+                                Item
+                                    {| Elems = prefixedElems
+                                       Body = prefixedBody |}
+                            | Default s -> Default <| prefixStatement s
+                        Case
+                            { CaseExpr = prefixExpression cs.CaseExpr
+                              Items = List.map prefixCaseItem cs.Items }
+                    | Conditional cs ->
+                        let prefixElseIf (elseIf: {| Condition: ExpressionT; Body: StatementOrNullT |}) =
+                            {| Condition = prefixExpression elseIf.Condition
+                               Body = prefixStatement elseIf.Body |}
+                        Conditional
+                            { Condition = prefixExpression cs.Condition
+                              Body = prefixStatement cs.Body
+                              ElseIf = List.map prefixElseIf cs.ElseIf
+                              ElseBody = prefixStatement cs.ElseBody }
+                    | NonblockingAssignment nba -> 
+                        NonblockingAssignment 
+                            { LHS = prefixNetLVal nba.LHS
+                              RHS = prefixExpression nba.RHS }
+                    | SeqBlock sb -> SeqBlock (List.map prefixNonOptStmt sb)
+                Some <| prefixNonOptStmt statement
+        let prefixedVarMap =
+            netlist.varMap
+            |> Map.toList
+            |> List.map (fun (key, variable) -> 
+                let prefixedKey = prefix + key
+                match variable.var with
+                | Wire drivers ->
+                    let prefixedDrivers =   
+                        drivers
+                        |> List.map (fun driver ->
+                            let prefixedExp =
+                                { expression = prefixExpression driver.exp.expression
+                                  reqVars = prefixReqVars driver.exp.reqVars }
+                            { driver with exp = prefixedExp })
+                    (prefixedKey, { variable with var = Wire prefixedDrivers })
+                | _ -> (prefixedKey, variable))
+            |> Map.ofList
+        let prefixedInitial =
+            netlist.initial
+            |> List.map (fun initItem ->
+                { initItem with
+                    lhs = {| initItem.lhs with 
+                                varName = prefix + initItem.lhs.varName |}})
+        let prefixedAlwaysBlocks = 
+            netlist.alwaysBlocks
+            |> List.map (fun alwaysBlock ->
+                let prefixedEventControl =
+                    let prefixedEC =
+                        alwaysBlock.eventControl.ec
+                        |> List.map (fun (ect, iden, range) -> ect, prefix + iden, range)
+                    { ec = prefixedEC
+                      reqVars = prefixReqVars alwaysBlock.eventControl.reqVars }
+                let prefixedStatement =
+                    { s = prefixStatement alwaysBlock.statement.s
+                      reqVars = prefixReqVars alwaysBlock.statement.reqVars }
+                { eventControl = prefixedEventControl
+                  statement = prefixedStatement })
+
+        { netlist with
+            varMap = prefixedVarMap
+            initial = prefixedInitial
+            alwaysBlocks = prefixedAlwaysBlocks}
+
+
 module private Validate =
     let portsMatchDecs ports portDecs =
         let portNames = List.map fst portDecs
@@ -563,9 +254,15 @@ module private Validate =
         // TODO: check var range
         vars
         |> List.compResMap (fun (name, _) -> varExists varMap name)
+        ?>> ignore
+
+    let isUniqueModIsnt (modInstList: IdentifierT list) modInst =
+        if List.contains modInst modInstList
+        then Errors.ProcessModuleInstances.notUniqueModule modInst
+        else Succ ()
 
 
-module private rec Internal =
+module private Internal =
 
     let processInputOutput ast : CompRes<VarMap * NonPortModuleItemT List> =
         let processPD (pd: PortDeclarationT) =
@@ -592,7 +289,7 @@ module private rec Internal =
                 let vm = Map.ofList ports
                 Succ (vm, md2.body)
 
-    let processModuleVariable (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
+    let processModuleVariable (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | ModuleItemDeclaration mid ->
             (mid.names, netlist.varMap)
@@ -608,7 +305,7 @@ module private rec Internal =
             ?>> fun varMap -> { netlist with varMap = varMap }
         | _ -> Succ netlist
 
-    let processInitialBlock (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
+    let processInitialBlock (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | InitialConstruct ic ->
             ic
@@ -617,14 +314,16 @@ module private rec Internal =
                 Validate.isReg netlist.varMap rca.LHS.name
                 ?>> fun _ ->
                     // TODO: warning if range is not subset of var range
-                    let lhs = (rca.LHS.name, Util.optRangeTToRangeDefault Range.max rca.LHS.range)
+                    let lhs = 
+                        {| varName = rca.LHS.name
+                           range = Util.optRangeTToRangeDefault Range.max rca.LHS.range |}
                     { lhs = lhs
                       rhs = rhs })
             ?>> fun initialBlock ->
                 { netlist with initial = initialBlock }
         | _ -> Succ netlist
 
-    let processContinuousAssignments (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
+    let processContinuousAssignments (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | ContinuousAssign ca ->
             (ca, netlist.varMap)
@@ -645,7 +344,7 @@ module private rec Internal =
             ?>> fun newVarMap -> { netlist with varMap = newVarMap }
         | _ -> Succ netlist
 
-    let processAlwaysBlocks (ast: ASTT) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
+    let processAlwaysBlocks (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | AlwaysConstruct ac ->
             let statementVars = Helpers.getStatementVars ac.Statement
@@ -654,8 +353,18 @@ module private rec Internal =
             ?> fun _ -> Validate.varsExist netlist.varMap eventControlVars
             ?>> fun _ ->
                 let alwaysBlock = 
+                    let eventList = 
+                        match ac.Control with
+                        | EventList el -> 
+                            el
+                            |> List.map (fun (ect, rangedVar) ->
+                                let range = Util.optRangeTToRangeDefault Range.max rangedVar.range
+                                ect, rangedVar.name, range)
+                        | Star ->
+                            eventControlVars
+                            |> List.map (fun (var, range) -> Neither, var, range)
                     { eventControl =
-                        { ec = ac.Control
+                        { ec = eventList
                           reqVars = eventControlVars }
                       statement =
                         { s = ac.Statement
@@ -663,23 +372,40 @@ module private rec Internal =
                 { netlist with alwaysBlocks = alwaysBlock::netlist.alwaysBlocks }
         | _ -> Succ netlist
 
-    let processModuleInstances (ast: ASTT) (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
+    let rec processModuleInstances (ast: ASTT) (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         // TODO: collect module instances, compile them with their netlist and current prefix + instance name prefix, then add and connect with master netlist
         match item with
-        | ModuleInstantiation mi -> Succ netlist
+        | ModuleInstantiation mi ->
+            let moduleInstName = mi.Module.Name
+            Validate.isUniqueModIsnt netlist.modInstNames moduleInstName
+            ?> fun _ ->
+                // TODO: compile module -> get netlist
+                // TODO: apply instance name prefix to all vars in netlist
+                // TODO: merge netlist into current netlist, connecting input and output ports
+                // TODO:    - sub module netlist inputs should be converted to wires so they can be driven by the input exprs
+                // TODO: update current netlist and add instance name to instance list
+                asts
+                |> List.tryFind (fun a -> a.name = mi.Name)
+                |> function
+                | None -> Errors.ProcessModuleInstances.moduleDoesNotExist mi.Name
+                | Some modAST ->
+                    let subNetlist = 
+                        compileModule modAST asts
+                        ?>> Helpers.applyPrefix moduleInstName
+                    raise <| NotImplementedException()
         | _ -> Succ netlist
 
-    let compileModule (ast: ASTT) (asts: ASTT list) (prefix: string) : CompRes<Netlist> =
+    and compileModule (ast: ASTT) (asts: ASTT list) : CompRes<Netlist> =
         processInputOutput ast.info
         ?> fun (initialVarMap, items) ->
             { varMap = initialVarMap
               initial = []
               alwaysBlocks = []
               modInstNames = [] }
-            |> List.compResFold (processModuleVariable ast) items
-            ?> List.compResFold (processInitialBlock ast) items
-            ?> List.compResFold (processContinuousAssignments ast) items
-            ?> List.compResFold (processAlwaysBlocks ast) items
+            |> List.compResFold processModuleVariable items
+            ?> List.compResFold processInitialBlock items
+            ?> List.compResFold processContinuousAssignments items
+            ?> List.compResFold processAlwaysBlocks items
             ?> List.compResFold (processModuleInstances ast asts) items
 
 module Compile =
@@ -687,5 +413,5 @@ module Compile =
         asts
         |> List.tryFind (fun ast -> ast.name = modName)
         |> function
-        | Some thisAst -> Internal.compileModule thisAst asts ""
+        | Some thisAst -> Internal.compileModule thisAst asts
         | None ->  Errors.CompilerAPI.astNotProvided modName

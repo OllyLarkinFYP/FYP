@@ -70,11 +70,13 @@ module Netlist =
             else Errors.General.varDoesNotExist name
 
     type InitItem =
-        { lhs: IdentifierT * Range
+        { lhs: {| varName: IdentifierT; range: Range |}
           rhs: VNum }
 
+    type AlwaysEventControl = (EventControlType * IdentifierT * Range) List
+
     type EventControlContent =
-        { ec: EventControlT
+        { ec: AlwaysEventControl
           reqVars: ReqVarList }
 
     type StatementContent =
