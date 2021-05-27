@@ -90,13 +90,23 @@ module LangConstructs =
             pRangedVar |>> NetLValueT.Ranged
         ]
 
+    // This parser is self recursive so needs a forward reference
+    // The implementation is defined underneath
+    let pVarLValue, pVarLValueImpl : Parser<VarLValueT,unit> * Parser<VarLValueT,unit> ref = createParserForwardedToRef()
+
+    do pVarLValueImpl := 
+        choice [
+            Symbol.pOpenCBrac >>. sepBy1 pVarLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VarLValueT.Concat
+            pRangedVar |>> VarLValueT.Ranged
+        ]
+
     let pBlockingAssignment =
-        pNetLValue .>>? Symbol.pAssign .>>. pExpression
+        pVarLValue .>>? Symbol.pAssign .>>. pExpression
         |>> function
         | lval, exp -> { BlockingAssignmentT.LHS = lval; RHS = exp }
 
     let pNonBlockingAssignment =
-        pNetLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
+        pVarLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
         |>> function
         | lval, exp -> { NonblockingAssignmentT.LHS = lval; RHS = exp }
 
