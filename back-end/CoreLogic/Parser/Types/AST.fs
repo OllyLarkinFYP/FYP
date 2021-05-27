@@ -72,11 +72,9 @@ type InitialConstructT = RangedConstAssignT list
 
 type AlwaysConstructT = ProceduralTimingControlStatementT
 
-type BlockingAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
+type BlockingAssignmentT = { LHS: VarLValueT; RHS: ExpressionT }
 
-type ConstantAssignmentT = { LHS: NetLValueT; RHS: ConstantExpressionT }
-
-type NonblockingAssignmentT = { LHS: NetLValueT; RHS: ExpressionT }
+type NonblockingAssignmentT = { LHS: VarLValueT; RHS: ExpressionT }
 
 
 // ######### A.6.3 Parallel and Sequential Blocks #########
@@ -173,6 +171,10 @@ type RangedVarT =
     { name: IdentifierT
       range: RangeT option }
 
+type VarLValueT =
+    | Ranged of RangedVarT
+    | Concat of VarLValueT list
+    
 type NetLValueT =
     | Ranged of RangedVarT
     | Concat of NetLValueT List
