@@ -218,15 +218,7 @@ module mod1(a,b,c);
     input b;
     output [1:0] c;
 
-    reg [1:0] d;
-
-    assign {c[1], c[1]} = 5;
-
-    initial begin
-        d = 5;
-    end
-
-    mod2 yumm(a,b,c);
+    mod2 test(.a(a),.b(b),.c(c));
 endmodule
 "
 
@@ -254,7 +246,7 @@ let main _ =
         a
 
     let parser = LangConstructs.pSourceText
-    [program1]
+    [mod1;mod2]
     |> List.map (fun modStr ->
         modStr
         |> startTiming
@@ -264,7 +256,7 @@ let main _ =
         | Success (ast, _, _) -> ast
         | Failure (msg, _, _) -> failwith msg)
     |> startTiming
-    |> Compiler.Compile.project "UART_TX"
+    |> Compiler.Compile.project "mod1"
     |> stopTiming "COM"
     |> function
     | Compiler.CompResult.Fail _ as r -> printfn "%A" r

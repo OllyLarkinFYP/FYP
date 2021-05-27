@@ -8,16 +8,69 @@ open Compiler.Netlist
 open Compiler.Utils
 open CommonHelpers
 
+module private Validate =
+    let portsMatchDecs ports portDecs =
+        let portNames = List.map fst portDecs
+        if List.sort ports <> List.sort portNames
+        then Errors.ProcessPorts.portsDontMatchPortDecs ports portNames
+        else Succ ()
+
+    let uniqueIdentifier (varMap: VarMap) modInstNames name =
+        // TODO: make sure name is not a keyword
+        match varMap.ContainsKey name, List.contains name modInstNames with
+        | true, _ -> Errors.UniqueNames.duplicateVarDefinition name
+        | _, true -> Errors.UniqueNames.duplicateModInstDefinition name
+        | _ -> Succ ()
+
+    let uniquePorts ports =
+        ports
+        |> List.countBy fst
+        |> List.compResMap (fun (name, num) ->
+            if num > 1
+            then Errors.ProcessPorts.duplicatePorts name
+            else Succ ())
+        ?>> ignore
+
+    let isReg (varMap: VarMap) name =
+        if varMap.ContainsKey name
+        then
+            match varMap.[name].var with
+            | VarElem.Reg -> Succ ()
+            | _ -> Errors.ProcessInitial.shouldBeReg name
+        else Errors.ProcessInitial.regDoesNotExist name
+
+    let varExists (varMap: VarMap) (var: IdentifierT) =
+        if varMap.ContainsKey var
+        then Succ ()
+        else Errors.General.varDoesNotExist var
+
+    let varsExist (varMap: VarMap) (vars: (IdentifierT * Range) list) =
+        // TODO: check var range
+        vars
+        |> List.compResMap (fun (name, _) -> varExists varMap name)
+        ?>> ignore
+
+    let isUniqueModInst (modInstList: IdentifierT list) modInst =
+        if List.contains modInst modInstList
+        then Errors.ProcessModuleInstances.notUniqueModule modInst
+        else Succ ()
+
+    let allPortsProvided modInstName (ports: 'a list) (expLst: ExpressionT list) =
+        if ports.Length = expLst.Length
+        then Succ ()
+        else Errors.ProcessModuleInstances.portsDoNotMatch modInstName ports.Length expLst.Length
+
+
 module private Helpers =
-    let netLValToRangeList (netlist: Netlist) (netLVal: NetLValueT) =
+    let netLValToRangeList (varMap: VarMap) (netLVal: NetLValueT) =
         let rec toRangeListRec (offset, currLst) =
             function
             | NetLValueT.Ranged rangedNLV ->
-                if netlist.varMap.ContainsKey rangedNLV.name
+                if varMap.ContainsKey rangedNLV.name
                 then
-                    match netlist.varMap.[rangedNLV.name].var with
+                    match varMap.[rangedNLV.name].var with
                     | Wire _ -> 
-                        let range = Util.optRangeTToRangeDefault netlist.varMap.[rangedNLV.name].range rangedNLV.range
+                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name].range rangedNLV.range
                         let entry = (rangedNLV.name, range, range.ground().offset offset)
                         Succ (offset + range.size, entry::currLst)
                     | _ -> Errors.NetLValueE.shouldBeWire rangedNLV.name
@@ -213,81 +266,74 @@ module private Helpers =
             initial = prefixedInitial
             alwaysBlocks = prefixedAlwaysBlocks}
 
+    let rec expToNetLVal port modInst exp  =
+        let primaryToNetLVal =
+            function
+            | PrimaryT.Ranged rv -> Succ <| NetLValueT.Ranged rv
+            | Brackets b -> expToNetLVal port modInst b
+            | PrimaryT.Concat c -> 
+                c
+                |> List.compResMap (expToNetLVal port modInst)
+                ?>> NetLValueT.Concat
+            | _ -> Errors.ProcessModuleInstances.cannotDriveExpression port modInst
+        match exp with
+        | Primary p -> primaryToNetLVal p
+        | _ -> Errors.ProcessModuleInstances.cannotDriveExpression port modInst
 
-module private Validate =
-    let portsMatchDecs ports portDecs =
-        let portNames = List.map fst portDecs
-        if List.sort ports <> List.sort portNames
-        then Errors.ProcessPorts.portsDontMatchPortDecs ports portNames
-        else Succ ()
+    let orderPorts (order: IdentifierT list) (ports: (IdentifierT * 'a) list) =
+        order
+        |> List.map (fun name -> List.find (fun (n,_) -> name = n) ports)
 
-    let uniqueIdentifier (varMap: VarMap) modInstNames name =
-        // TODO: make sure name is not a keyword
-        match varMap.ContainsKey name, List.contains name modInstNames with
-        | true, _ -> Errors.UniqueNames.duplicateVarDefinition name
-        | _, true -> Errors.UniqueNames.duplicateModInstDefinition name
-        | _ -> Succ ()
-
-    let uniquePorts ports =
-        ports
-        |> List.countBy fst
-        |> List.compResMap (fun (name, num) ->
-            if num > 1
-            then Errors.ProcessPorts.duplicatePorts name
-            else Succ ())
-        ?>> ignore
-
-    let isReg (varMap: VarMap) name =
-        if varMap.ContainsKey name
-        then
-            match varMap.[name].var with
-            | VarElem.Reg -> Succ ()
-            | _ -> Errors.ProcessInitial.shouldBeReg name
-        else Errors.ProcessInitial.regDoesNotExist name
-
-    let varExists (varMap: VarMap) (var: IdentifierT) =
-        if varMap.ContainsKey var
-        then Succ ()
-        else Errors.General.varDoesNotExist var
-
-    let varsExist (varMap: VarMap) (vars: (IdentifierT * Range) list) =
-        // TODO: check var range
-        vars
-        |> List.compResMap (fun (name, _) -> varExists varMap name)
-        ?>> ignore
-
-    let isUniqueModIsnt (modInstList: IdentifierT list) modInst =
-        if List.contains modInst modInstList
-        then Errors.ProcessModuleInstances.notUniqueModule modInst
-        else Succ ()
-
-
-module private Internal =
-
-    let processInputOutput ast : CompRes<VarMap * NonPortModuleItemT List> =
-        let processPD (pd: PortDeclarationT) =
-            let range = Util.optRangeTToRange pd.range
-            match pd.dir with
-            | PortDirAndType.Input -> (pd.name, { var = Input; range = range })
-            | PortDirAndType.Output PortType.Wire -> (pd.name, { var = Wire []; range = range })
-            | PortDirAndType.Output PortType.Reg -> (pd.name, { var = Reg; range = range })
-        match ast with
+    let getPortsAndItems fPort fPost astInfo =
+        match astInfo with
         | ModDec1 md1 ->
             let (ports, items) =
                 (([], []), md1.body)
                 ||> List.fold (fun (ports, items) modItem ->
                     match modItem with
                     | NonPortModuleItem item -> (ports, item::items)
-                    | PortDeclaration pd -> ((processPD pd)::ports, items))
+                    | PortDeclaration pd -> ((fPort pd)::ports, items))
             Validate.portsMatchDecs md1.ports ports
             ?> fun _ -> Validate.uniquePorts ports
-            ?>> fun _ -> (Map.ofList ports, items)
+            ?>> fun _ -> 
+                let processedPorts =
+                    ports
+                    |> orderPorts md1.ports
+                    |> fPost
+                (processedPorts, items)
         | ModDec2 md2 ->
-            let ports = List.map processPD md2.ports
+            let ports = List.map fPort md2.ports
             Validate.uniquePorts ports
-            ?> fun _ -> 
-                let vm = Map.ofList ports
-                Succ (vm, md2.body)
+            ?>> fun _ -> (fPost ports, md2.body)
+
+    let registerNetAssigns varMap (netAssigns: NetAssignmentT list) =
+        (netAssigns, varMap)
+        ||> List.compResFold (fun vMap netAssign ->
+            let expVars = getExprVars netAssign.RHS
+            Validate.varsExist vMap expVars
+            ?> fun _ -> netLValToRangeList varMap netAssign.LHS
+            ?> fun varLst ->
+                (varLst, vMap)
+                ||> List.compResFold (fun vMap' (name, drivenRange, expRange) ->
+                    let driver =
+                        { drivenRange = drivenRange
+                          expRange = expRange
+                          exp = 
+                            { expression = netAssign.RHS
+                              reqVars = expVars }}
+                    VarMap.addDriver vMap' name driver))
+
+
+module private Internal =
+
+    let processInputOutput astInfo : CompRes<VarMap * NonPortModuleItemT List> =
+        let processPD (pd: PortDeclarationT) =
+            let range = Util.optRangeTToRange pd.range
+            match pd.dir with
+            | PortDirAndType.Input -> (pd.name, { var = Input; range = range })
+            | PortDirAndType.Output PortType.Wire -> (pd.name, { var = Wire []; range = range })
+            | PortDirAndType.Output PortType.Reg -> (pd.name, { var = Reg; range = range })
+        Helpers.getPortsAndItems processPD Map.ofList astInfo
 
     let processModuleVariable (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
@@ -326,21 +372,7 @@ module private Internal =
     let processContinuousAssignments (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | ContinuousAssign ca ->
-            (ca, netlist.varMap)
-            ||> List.compResFold (fun vMap netAssign ->
-                let expVars = Helpers.getExprVars netAssign.RHS
-                Validate.varsExist vMap expVars
-                ?> fun _ -> Helpers.netLValToRangeList netlist netAssign.LHS
-                ?> fun varLst ->
-                    (varLst, vMap)
-                    ||> List.compResFold (fun vMap' (name, drivenRange, expRange) ->
-                        let driver =
-                            { drivenRange = drivenRange
-                              expRange = expRange
-                              exp = 
-                                { expression = netAssign.RHS
-                                  reqVars = expVars }}
-                        VarMap.addDriver vMap' name driver))
+            Helpers.registerNetAssigns netlist.varMap ca
             ?>> fun newVarMap -> { netlist with varMap = newVarMap }
         | _ -> Succ netlist
 
@@ -349,6 +381,7 @@ module private Internal =
         | AlwaysConstruct ac ->
             let statementVars = Helpers.getStatementVars ac.Statement
             let eventControlVars = Helpers.getEventControlVars statementVars ac.Control
+            // TODO: validate statement does not write to wire
             Validate.varsExist netlist.varMap statementVars
             ?> fun _ -> Validate.varsExist netlist.varMap eventControlVars
             ?>> fun _ ->
@@ -372,27 +405,83 @@ module private Internal =
                 { netlist with alwaysBlocks = alwaysBlock::netlist.alwaysBlocks }
         | _ -> Succ netlist
 
-    let rec processModuleInstances (ast: ASTT) (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
-        // TODO: collect module instances, compile them with their netlist and current prefix + instance name prefix, then add and connect with master netlist
+    let rec processModuleInstances (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | ModuleInstantiation mi ->
             let moduleInstName = mi.Module.Name
-            Validate.isUniqueModIsnt netlist.modInstNames moduleInstName
+            let prefix = moduleInstName + ":"
+            Validate.isUniqueModInst netlist.modInstNames moduleInstName
             ?> fun _ ->
-                // TODO: compile module -> get netlist
-                // TODO: apply instance name prefix to all vars in netlist
-                // TODO: merge netlist into current netlist, connecting input and output ports
-                // TODO:    - sub module netlist inputs should be converted to wires so they can be driven by the input exprs
-                // TODO: update current netlist and add instance name to instance list
                 asts
                 |> List.tryFind (fun a -> a.name = mi.Name)
                 |> function
                 | None -> Errors.ProcessModuleInstances.moduleDoesNotExist mi.Name
                 | Some modAST ->
-                    let subNetlist = 
-                        compileModule modAST asts
-                        ?>> Helpers.applyPrefix moduleInstName
-                    raise <| NotImplementedException()
+                    compileModule modAST asts
+                    ?>> Helpers.applyPrefix prefix
+                    ?> fun subNetlist ->
+                        let newInitial = netlist.initial @ subNetlist.initial
+                        let newAlwaysBlocks = netlist.alwaysBlocks @ subNetlist.alwaysBlocks
+                        let processPD (pd: PortDeclarationT) = pd.name, pd.dir
+                        Helpers.getPortsAndItems processPD id modAST.info
+                        ?> fun (ports, _) ->
+                            // TODO: pair up expressions with ports (/)
+                            // TODO: seperate into inputs and outputs (/)
+                            // TODO: convert output expressions to net assignments (/)
+                            // TODO: add drivers in sub var map for inputs and convert them to wires
+                            // TODO: add drivers in parent var map for ouput netlvals
+                            // TODO: return sub varmap and parent varmap appended
+                            let prefixedPorts = ports |> List.map (fun (iden, pt) -> prefix + iden, pt)
+                            match mi.Module.PortConnections with
+                            | Unnamed expLst ->
+                                Validate.allPortsProvided moduleInstName prefixedPorts expLst
+                                ?>> fun _ -> List.zip prefixedPorts expLst
+                            | Named namedLst ->
+                                namedLst
+                                |> List.compResMap (fun namedPort ->
+                                    let exp =
+                                        match namedPort.Value with
+                                        | Some e -> e
+                                        | None -> Primary (Number (VNum.unknown 63u))
+                                    prefixedPorts
+                                    |> List.tryFind (fun (iden, _) -> iden = prefix + namedPort.Name)
+                                    |> function
+                                    | None -> Errors.ProcessModuleInstances.namedPortsDoNotMatch moduleInstName namedPort.Name
+                                    | Some port -> Succ (port, exp))
+                            ?> fun portExpLst ->
+                                let inputs =
+                                    portExpLst
+                                    |> List.choose (fun ((pName, pType), exp) ->
+                                        match pType with
+                                        | PortDirAndType.Input -> Some (pName, exp)
+                                        | _ -> None)
+                                portExpLst
+                                |> List.choose (fun ((pName, pType), exp) ->
+                                    match pType with
+                                    | PortDirAndType.Output _ -> Some (pName, exp)
+                                    | _ -> None)
+                                |> List.compResMap (fun (pName, exp) ->
+                                    Helpers.expToNetLVal pName moduleInstName exp
+                                    ?>> fun netVal ->
+                                        let outExp = Primary (PrimaryT.Ranged { name = pName; range = None })
+                                        { NetAssignmentT.LHS = netVal; RHS = outExp })
+                                ?> fun outputNetAssigns ->
+                                    let collectedVarMap = Map.fold (fun acc key value -> Map.add key value acc) subNetlist.varMap netlist.varMap
+                                    let collectedVarMap' =
+                                        (collectedVarMap, inputs)
+                                        ||> List.fold (fun vMap (iden, exp) ->
+                                            let expCont =
+                                                { expression = exp
+                                                  reqVars = Helpers.getExprVars exp }
+                                            let varElem = Wire [{ drivenRange = Range.max; expRange = Range.max; exp = expCont }]
+                                            let variable = { vMap.[iden] with var = varElem }
+                                            vMap.Add(iden, variable))
+                                    Helpers.registerNetAssigns collectedVarMap' outputNetAssigns
+                        ?>> fun newVarMap ->
+                            { varMap = newVarMap
+                              initial = newInitial
+                              alwaysBlocks = newAlwaysBlocks
+                              modInstNames = moduleInstName::netlist.modInstNames }
         | _ -> Succ netlist
 
     and compileModule (ast: ASTT) (asts: ASTT list) : CompRes<Netlist> =
@@ -406,7 +495,7 @@ module private Internal =
             ?> List.compResFold processInitialBlock items
             ?> List.compResFold processContinuousAssignments items
             ?> List.compResFold processAlwaysBlocks items
-            ?> List.compResFold (processModuleInstances ast asts) items
+            ?> List.compResFold (processModuleInstances asts) items
 
 module Compile =
     let project modName (asts: ASTT list) : CompRes<Netlist> =
