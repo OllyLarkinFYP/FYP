@@ -27,6 +27,10 @@ module Errors =
         let shouldBeWire (name: string) = Fail [ sprintf "%A is not a wire. The left hand side of an assignment must be a wire." name ]
         let doesNotExist (name: string) = Fail [ sprintf "The wire %A has not been declared and, therefore, cannot be assigned to." name ]
 
+    module VarLValueE =
+        let shouldBeReg (name: string) = Fail [ sprintf "%A is not a reg. The left hand side of a variable assignment must be a reg." name ]
+        let doesNotExist (name: string) = Fail [ sprintf "The reg %A has not been declared and, therefore, cannot be assigned to." name ]
+    
     module ProcessContAssign =
         let canOnlyDriveWire (name: string) = Fail [ sprintf "Cannot drive input/reg. %A is not a wire and, therefore, cannot be driver" name ]
         let multiDrivenRanges (name: string) (r1: Range) (r2: Range) = Fail [ sprintf "There is an overlap of the ranges being driven in %A. Ranges %s and %s cannot be driven by different components as they overlap." name (r1.ToString()) (r2.ToString()) ]

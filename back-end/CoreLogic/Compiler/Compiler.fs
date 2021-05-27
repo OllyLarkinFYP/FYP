@@ -60,6 +60,41 @@ module private Validate =
         then Succ ()
         else Errors.ProcessModuleInstances.portsDoNotMatch modInstName ports.Length expLst.Length
 
+    let rec varLValueOnlyWritesReg (varMap: VarMap) varLVal =
+        match varLVal with
+        | VarLValueT.Ranged rv ->
+            if varMap.ContainsKey rv.name
+            then
+                match varMap.[rv.name].var with
+                | Reg -> Succ()
+                | _ -> Errors.VarLValueE.shouldBeReg rv.name
+            else Errors.VarLValueE.doesNotExist rv.name
+        | VarLValueT.Concat c -> List.compResMap (varLValueOnlyWritesReg varMap) c ?>> ignore
+
+    let rec statementOnlyWritesReg varMap statement =
+        match statement with
+        | None -> Succ ()
+        | Some stmt ->
+            let rec stmtCheckRec s = 
+                match s with
+                | BlockingAssignment ba -> varLValueOnlyWritesReg varMap ba.LHS
+                | NonblockingAssignment nba -> varLValueOnlyWritesReg varMap nba.LHS
+                | SeqBlock sb -> List.compResMap stmtCheckRec sb ?>> ignore
+                | Case cs ->
+                    cs.Items
+                    |> List.compResMap (fun item ->
+                        match item with
+                        | Item i -> statementOnlyWritesReg varMap i.Body
+                        | Default s -> statementOnlyWritesReg varMap s)
+                    ?>> ignore
+                | Conditional cs ->
+                    statementOnlyWritesReg varMap cs.Body
+                    ?> fun _ ->
+                        cs.ElseIf
+                        |> List.compResMap (fun elseIf -> statementOnlyWritesReg varMap elseIf.Body)
+                    ?> fun _ -> statementOnlyWritesReg varMap cs.ElseBody
+            stmtCheckRec stmt
+
 
 module private Helpers =
     let netLValToRangeList (varMap: VarMap) (netLVal: NetLValueT) =
@@ -381,8 +416,8 @@ module private Internal =
         | AlwaysConstruct ac ->
             let statementVars = Helpers.getStatementVars ac.Statement
             let eventControlVars = Helpers.getEventControlVars statementVars ac.Control
-            // TODO: validate statement does not write to wire
-            Validate.varsExist netlist.varMap statementVars
+            Validate.statementOnlyWritesReg netlist.varMap ac.Statement
+            ?> fun _ -> Validate.varsExist netlist.varMap statementVars
             ?> fun _ -> Validate.varsExist netlist.varMap eventControlVars
             ?>> fun _ ->
                 let alwaysBlock = 
@@ -425,12 +460,6 @@ module private Internal =
                         let processPD (pd: PortDeclarationT) = pd.name, pd.dir
                         Helpers.getPortsAndItems processPD id modAST.info
                         ?> fun (ports, _) ->
-                            // TODO: pair up expressions with ports (/)
-                            // TODO: seperate into inputs and outputs (/)
-                            // TODO: convert output expressions to net assignments (/)
-                            // TODO: add drivers in sub var map for inputs and convert them to wires
-                            // TODO: add drivers in parent var map for ouput netlvals
-                            // TODO: return sub varmap and parent varmap appended
                             let prefixedPorts = ports |> List.map (fun (iden, pt) -> prefix + iden, pt)
                             match mi.Module.PortConnections with
                             | Unnamed expLst ->
