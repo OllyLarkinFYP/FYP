@@ -181,10 +181,10 @@ module private Helpers =
                        TrueVal = prefixExpression ce.TrueVal
                        FalseVal = prefixExpression ce.FalseVal |}
         let prefixReqVars = List.map (fun (iden, range) -> prefix + iden, range)
-        let rec prefixNetLVal = 
+        let rec prefixVarLVal = 
             function
-            | NetLValueT.Ranged rv -> NetLValueT.Ranged { rv with name = prefix + rv.name }
-            | NetLValueT.Concat c -> NetLValueT.Concat (List.map prefixNetLVal c)
+            | VarLValueT.Ranged rv -> VarLValueT.Ranged { rv with name = prefix + rv.name }
+            | VarLValueT.Concat c -> VarLValueT.Concat (List.map prefixVarLVal c)
         let rec prefixStatement stmt = 
             match stmt with
             | None -> stmt
@@ -193,7 +193,7 @@ module private Helpers =
                     match s with
                     | BlockingAssignment ba ->
                         BlockingAssignment 
-                            { LHS = prefixNetLVal ba.LHS 
+                            { LHS = prefixVarLVal ba.LHS 
                               RHS = prefixExpression ba.RHS }
                     | Case cs ->
                         let prefixCaseItem =
@@ -219,7 +219,7 @@ module private Helpers =
                               ElseBody = prefixStatement cs.ElseBody }
                     | NonblockingAssignment nba -> 
                         NonblockingAssignment 
-                            { LHS = prefixNetLVal nba.LHS
+                            { LHS = prefixVarLVal nba.LHS
                               RHS = prefixExpression nba.RHS }
                     | SeqBlock sb -> SeqBlock (List.map prefixNonOptStmt sb)
                 Some <| prefixNonOptStmt statement
