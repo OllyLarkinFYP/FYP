@@ -11,54 +11,21 @@ module private Operators =
         | Ok a -> Ok (f a)
         | Error e -> Error e 
 
-module ResList =
-    open Operators
+module List =
+    let chooseFold f (acc: 'State) (lst: List<'T>) : 'State * List<'Result> =
+        ((acc, []), lst)
+        ||> List.fold (fun (acc', selected) item ->
+            match f acc' item with
+            | acc'', Some e -> acc'', e::selected
+            | acc'', None -> acc'', selected)
 
-    let rec map f =
-        function
-        | [] -> Ok []
+    let rec existsFold f (acc: 'State) (lst: List<'T>) : 'State * bool =
+        match lst with
+        | [] -> acc, false
         | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match map f tl with
-                | Error e -> Error e
-                | Ok processedTl -> Ok (res :: processedTl)
-                
-    let collect f lst =
-        let rec reduce =
-            function
-            | [] -> []
-            | hd::tl -> hd @ (reduce tl)
-        map f lst ?>> reduce
-
-    let rec choose f =
-        function
-        | [] -> Ok []
-        | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match choose f tl with
-                | Error e -> Error e
-                | Ok processedTl ->
-                    match res with
-                    | Some a -> Ok (a::processedTl)
-                    | None -> Ok processedTl
-                    
-    let rec fold folder state =
-        function
-        | [] -> Ok state
-        | hd::tl ->
-            match folder state hd with
-            | Error e -> Error e
-            | Ok acc -> fold folder acc tl
-
-    let ignore _ = Ok()
-
-    let tupleFold folder (state, items) =
-        fold folder state items
-        ?>> fun s -> (s, items)
+            match f acc hd with
+            | acc', true -> acc', true
+            | acc', false -> existsFold f acc' tl
 
 
 module Util =
