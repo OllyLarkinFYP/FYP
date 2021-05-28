@@ -6,23 +6,30 @@ open CommonHelpers
 open Compiler.Netlist
 open AST
 
-module private Internal =
+module private rec Internal =
     let runInitial (initial: InitItem list) (state: SimState) =
         (state, initial)
         ||> List.fold (fun s initItem -> 
             SimState.addReg s initItem.lhs.varName initItem.lhs.range initItem.rhs)
 
-    let rec evalExpression (varMap: VarMap) (state: SimState) (exp: ExpressionT) : SimState * VNum =
+    let evalExpression (varMap: VarMap) (state: SimState) (exp: ExpContent) : SimState * VNum =
         raise <| NotImplementedException()
 
     let evalVar (varMap: VarMap) (state: SimState) (iden: IdentifierT) (range: Range) : SimState * VNum =
         // TODO: if in state return that value
         // TODO: if not in state, find relevant drivers from var map and eval them
         // TODO: return new state and value
-        raise <| NotImplementedException()
-
-    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState =
-        raise <| NotImplementedException()
+        if SimState.contains state iden range
+        then state, SimState.get state iden range
+        else
+            let drivers = varMap.[iden].var.getDriversFor range
+            let state' =
+                (state, drivers)
+                ||> List.fold (fun s driver ->
+                    let (s', expVal) = evalExpression varMap s driver.exp
+                    let addVal = expVal.getRange driver.expRange
+                    SimState.addWire s' varMap iden driver.drivenRange addVal)
+            state', SimState.get state' iden range
 
     let evalEventControl (varMap: VarMap) (prevState: SimState) (currState: SimState) (eventControl: EventControlContent) : SimState * bool =
         (currState, eventControl.ec)
@@ -36,7 +43,10 @@ module private Internal =
                 | Negedge -> prevVal.getRange (Single 0u) = VNum 1 && currVal.getRange (Single 0u) = VNum 0
             state', trigger)
 
-    let rec simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) =
+    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState =
+        raise <| NotImplementedException()
+
+    let simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) =
         let (state, triggeringAlways) =
             (currState, netlist.alwaysBlocks)
             ||> List.chooseFold (fun state alwaysBlock ->

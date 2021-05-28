@@ -41,6 +41,12 @@ type SimVarType =
     | SimStateReg
     | SimStateInput
     | SimStateWire of Range list
+    with
+        member this.ranges =
+            match this with
+            | SimStateReg -> []
+            | SimStateInput -> []
+            | SimStateWire rl -> rl
 
 type SimStateContent =
     { simType: SimVarType
@@ -82,9 +88,21 @@ module SimState =
             | SimStateWire rl -> List.exists (fun (r: Range) -> r.hasSubRange range) rl
         else false 
 
+    let get (state: SimState) iden range = state.[iden].value.getRange range
+
     let addReg (state: SimState) iden range value =
         let currVal = state.[iden].value
         let cont =
             { simType = SimStateReg
+              value = currVal.setRange range value }
+        state.Add(iden, cont)
+
+    let addWire (state: SimState) (varMap: VarMap) iden range value =
+        let (currVal, currRanges) =
+            if contains state iden range
+            then state.[iden].value, state.[iden].simType.ranges
+            else VNum.unknown varMap.[iden].range.size, []
+        let cont =
+            { simType = SimStateWire (range::currRanges)
               value = currVal.setRange range value }
         state.Add(iden, cont)

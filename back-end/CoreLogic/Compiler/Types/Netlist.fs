@@ -22,6 +22,14 @@ module Netlist =
         | Input
         | Reg
         | Wire of Driver list
+        with
+            member this.getDriversFor range =
+                match this with
+                | Wire dl ->
+                    dl
+                    |> List.filter (fun driver ->
+                        Range.overlap driver.drivenRange range)
+                | _ -> []
 
     type Variable =
         { var: VarElem
