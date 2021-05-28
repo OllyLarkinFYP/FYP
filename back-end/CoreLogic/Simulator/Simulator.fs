@@ -13,12 +13,19 @@ module private rec Internal =
             SimState.addReg s initItem.lhs.varName initItem.lhs.range initItem.rhs)
 
     let evalExpression (varMap: VarMap) (state: SimState) (exp: ExpContent) : SimState * VNum =
-        raise <| NotImplementedException()
+        let (state', valMap) =
+            (state, exp.reqVars)
+            ||> List.mapFold (fun s (iden, range) ->
+                let (s', value) = evalVar varMap s iden range
+                // shifted value is required as evalVar will ground the requested range, which we don't want here
+                let shiftedVal = VNum.(<<<) (value, VNum range.lower)
+                (iden, shiftedVal), s')
+            |> function
+            | valueLst, s -> s, Map.ofList valueLst
+        let constExpr = Util.expToConstExpr valMap exp.expression
+        state', ConstExprEval.evalConstExpr constExpr
 
     let evalVar (varMap: VarMap) (state: SimState) (iden: IdentifierT) (range: Range) : SimState * VNum =
-        // TODO: if in state return that value
-        // TODO: if not in state, find relevant drivers from var map and eval them
-        // TODO: return new state and value
         if SimState.contains state iden range
         then state, SimState.get state iden range
         else
@@ -44,7 +51,7 @@ module private rec Internal =
             state', trigger)
 
     let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState =
-        raise <| NotImplementedException()
+        raise <| NotImplementedException() // TODO: this
 
     let simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) =
         let (state, triggeringAlways) =
