@@ -56,7 +56,7 @@ module private rec Internal =
     let simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) =
         let (state, triggeringAlways) =
             (currState, netlist.alwaysBlocks)
-            ||> List.chooseFold (fun state alwaysBlock ->
+            ||> List.chooseFold (fun state (_, alwaysBlock) ->
                 match evalEventControl netlist.varMap prevState state alwaysBlock.eventControl with
                 | state', true -> state', Some alwaysBlock
                 | state', false -> state', None)
