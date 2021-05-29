@@ -283,7 +283,7 @@ module private Helpers =
                                 varName = prefix + initItem.lhs.varName |}})
         let prefixedAlwaysBlocks = 
             netlist.alwaysBlocks
-            |> List.map (fun alwaysBlock ->
+            |> List.map (fun (i, alwaysBlock) ->
                 let prefixedEventControl =
                     let prefixedEC =
                         alwaysBlock.eventControl.ec
@@ -293,8 +293,9 @@ module private Helpers =
                 let prefixedStatement =
                     { s = prefixStatement alwaysBlock.statement.s
                       reqVars = prefixReqVars alwaysBlock.statement.reqVars }
-                { eventControl = prefixedEventControl
-                  statement = prefixedStatement })
+                (i, 
+                    { eventControl = prefixedEventControl
+                      statement = prefixedStatement }))
 
         { netlist with
             varMap = prefixedVarMap
@@ -437,7 +438,7 @@ module private Internal =
                       statement =
                         { s = ac.Statement
                           reqVars = statementVars }}
-                { netlist with alwaysBlocks = alwaysBlock::netlist.alwaysBlocks }
+                { netlist with alwaysBlocks = (netlist.alwaysBlocks.Length, alwaysBlock)::netlist.alwaysBlocks }
         | _ -> Succ netlist
 
     let rec processModuleInstances (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
@@ -456,7 +457,10 @@ module private Internal =
                     ?>> Helpers.applyPrefix prefix
                     ?> fun subNetlist ->
                         let newInitial = netlist.initial @ subNetlist.initial
-                        let newAlwaysBlocks = netlist.alwaysBlocks @ subNetlist.alwaysBlocks
+                        let newAlwaysBlocks = 
+                            netlist.alwaysBlocks @ subNetlist.alwaysBlocks
+                            |> List.indexed
+                            |> List.map (fun (i, (_, a)) -> (i, a))
                         let processPD (pd: PortDeclarationT) = pd.name, pd.dir
                         Helpers.getPortsAndItems processPD id modAST.info
                         ?> fun (ports, _) ->

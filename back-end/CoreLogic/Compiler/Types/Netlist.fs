@@ -90,7 +90,7 @@ module Netlist =
     type Netlist =
         { varMap: VarMap
           initial: InitItem list
-          alwaysBlocks: AlwaysBlock list
+          alwaysBlocks: (int * AlwaysBlock) list
           modInstNames: IdentifierT list }
         with
             override this.ToString() =

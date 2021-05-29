@@ -217,8 +217,11 @@ module mod1(a,b,c);
     input a;
     input b;
     output [1:0] c;
+    reg d;
 
     mod2 test(.a(a),.b(b),.c(c));
+
+    always @(c) d = d + 1;
 endmodule
 "
 
@@ -226,9 +229,9 @@ let mod2 = @"
 module mod2(a,b,c);
     input a;
     input b;
-    output [1:0] c;
+    output reg [1:0] c;
     
-    assign c = a + b;
+    always @* c = a + 1;
 endmodule
 "
 
