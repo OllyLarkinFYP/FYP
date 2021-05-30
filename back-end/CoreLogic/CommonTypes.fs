@@ -174,19 +174,24 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         VNum(newVal ||| oldVal, this.size, newUnknowns).trim()
 
     member this.getRange (range: Range) =
-        let unknowns = this.unknownBits |> List.map (fun bit -> bit - range.lower)
-        let value = this.value >>> int range.lower
+        let unknowns = 
+            this.unknownBits |> List.map (fun bit -> bit - range.lower)
+        let value = 
+            this.value >>> int range.lower
         VNum(value, range.size, unknownBits).trim()
 
     /// Masks out anything above the size of the number as well as unknown bits
     member this.trim () = 
-        let m = 
-            ((1UL <<< (int this.size)), 1UL)
-            ||> FSharp.Core.Operators.(-)
-        let ub =
-            this.unknownBits
-            |> List.filter (fun i -> i < this.size)
-        VNum(this.value &&& m, this.size, ub).maskDown()
+        if this.size >= 64u
+        then this
+        else
+            let m = 
+                ((1UL <<< (int this.size)), 1UL)
+                ||> FSharp.Core.Operators.(-)
+            let ub =
+                this.unknownBits
+                |> List.filter (fun i -> i < this.size)
+            VNum(this.value &&& m, this.size, ub).maskDown()
 
     member this.toBool () =
         if this.trim().value = 0UL || this.isUnknown

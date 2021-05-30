@@ -114,9 +114,8 @@ module Simulate =
             then reqVar
             else raise <| ArgumentException(sprintf "The requested variable %A was not present in the netlist." reqVar))
         |> ignore
-        ([SimState.init netlist inputs], [0u .. cycles-1u])
-        ||> List.fold (fun prevStateLst cycle ->
-            let prevState = List.head prevStateLst
+        (([], SimState.init netlist inputs), [0u .. cycles-1u])
+        ||> List.fold (fun (prevStateLst, prevState) cycle ->
             let inp = SimInputs.getCycle allInputs cycle inputs
             let newState =
                 let s = SimState.nextState prevState inp
@@ -124,6 +123,7 @@ module Simulate =
                 then Internal.runInitial netlist.initial s
                 else s
                 |> Internal.simNetlist netlist prevState 
-            newState::prevStateLst)
+            (newState::prevStateLst), newState)
+        |> fst
         |> Internal.getReqVars netlist.varMap reqVars
         
