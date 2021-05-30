@@ -2,6 +2,7 @@ open System
 open Parser
 open FParsec
 open CommonTypes
+open Simulator
 
 let program1 = @"
 module UART_TX(
@@ -214,24 +215,21 @@ endmodule
 
 let mod1 = @"
 module mod1(a,b,c);
-    input a;
-    input b;
-    output [1:0] c;
-    reg d;
+    input [7:0] a;
+    input [7:0] b;
+    output [7:0] c;
 
     mod2 test(.a(a),.b(b),.c(c));
-
-    always @(c) d = d + 1;
 endmodule
 "
 
 let mod2 = @"
 module mod2(a,b,c);
-    input a;
-    input b;
-    output reg [1:0] c;
+    input [7:0] a;
+    input [7:0] b;
+    output [7:0] c;
     
-    always @* c = a + 1;
+    assign c = a + b;
 endmodule
 "
 
@@ -248,6 +246,12 @@ let main _ =
         printfn "[%s] elapsed (ms): %i" label stopwatch.ElapsedMilliseconds
         a
 
+    let inputs =
+        [("a", Once [VNum 3])
+         ("b", Repeating [VNum 4])]
+        |> Map.ofList
+    let numberOfCycles = 1u
+
     let parser = LangConstructs.pSourceText
     [mod1;mod2]
     |> List.map (fun modStr ->
@@ -262,9 +266,17 @@ let main _ =
     |> Compiler.Compile.project "mod1"
     |> stopTiming "COM"
     |> function
-    | Compiler.CompResult.Fail _ as r -> printfn "%A" r
-    | Compiler.CompResult.Succ s -> printfn "SUCC:\n %s" <| s.ToString()
+    | Compiler.CompResult.Fail _ as r -> failwithf "%A" r
+    | Compiler.CompResult.Succ s -> 
+        // printfn "SUCC:\n %s" <| s.ToString()
+        s
     | Compiler.CompResult.Warn (s, w) ->
-        printfn "WARN:\n %s" <| s.ToString()
+        // printfn "WARN:\n %s" <| s.ToString()
         printfn "WARNINGS:\n %A" w
+        s
+    |> startTiming
+    |> function
+    | netlist -> Simulate.runSimulation netlist inputs ["a";"b";"c"] numberOfCycles
+    |> stopTiming "SIM"
+    |> printfn "%A"
     0 // return an integer exit code

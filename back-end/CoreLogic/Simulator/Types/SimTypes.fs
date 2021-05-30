@@ -74,7 +74,7 @@ module SimState =
         ||> List.fold (fun state (iden, value) ->
             state.Add(iden, { simType = SimStateInput; value = value }))
 
-    let newState (prevState: SimState) (inputs: Map<IdentifierT, VNum>) =
+    let nextState (prevState: SimState) (inputs: Map<IdentifierT, VNum>) =
         let initReg = Map.filter (fun _ cont -> cont.simType = SimStateReg) prevState
         (initReg, Map.toList inputs)
         ||> List.fold (fun state (inpName, inpValue) ->
@@ -88,7 +88,8 @@ module SimState =
             | SimStateWire rl -> List.exists (fun (r: Range) -> r.hasSubRange range) rl
         else false 
 
-    let get (state: SimState) iden range = state.[iden].value.getRange range
+    let get (state: SimState) iden range = 
+        state.[iden].value.getRange range
 
     let addReg (state: SimState) iden range value =
         let currVal = state.[iden].value

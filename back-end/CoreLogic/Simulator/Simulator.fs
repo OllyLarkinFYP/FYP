@@ -7,7 +7,7 @@ open Compiler.Netlist
 open AST
 
 module private rec Internal =
-    let runInitial (initial: InitItem list) (state: SimState) =
+    let runInitial (initial: AssignItem list) (state: SimState) =
         (state, initial)
         ||> List.fold (fun s initItem -> 
             SimState.addReg s initItem.lhs.varName initItem.lhs.range initItem.rhs)
@@ -50,37 +50,80 @@ module private rec Internal =
                 | Negedge -> prevVal.getRange (Single 0u) = VNum 1 && currVal.getRange (Single 0u) = VNum 0
             state', trigger)
 
-    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState =
+    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState * AssignItem list =
         raise <| NotImplementedException() // TODO: this
 
-    let simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) =
-        let (state, triggeringAlways) =
-            (currState, netlist.alwaysBlocks)
-            ||> List.chooseFold (fun state (_, alwaysBlock) ->
-                match evalEventControl netlist.varMap prevState state alwaysBlock.eventControl with
-                | state', true -> state', Some alwaysBlock
-                | state', false -> state', None)
-        if triggeringAlways.Length = 0
-        then state
-        else 
-            (state, triggeringAlways)
-            ||> List.fold (fun s always -> simAlwaysStatement netlist.varMap s always.statement)
-            |> simNetlist netlist state
+    let triggeringAlwaysBlocks (netlist: Netlist) (prevState: SimState) (currState: SimState) : IndexedAlwaysBlocks =
+        (currState, netlist.alwaysBlocks)
+        ||> List.chooseFold (fun state (i,alwaysBlock) ->
+            match evalEventControl netlist.varMap prevState state alwaysBlock.eventControl with
+            | state', true -> state', Some (i, alwaysBlock)
+            | state', false -> state', None)
+        |> snd  // do not want the wire vals in the state outside of this evaluation chain
 
+    let runAlwaysBlocks (netlist: Netlist) (currState: SimState) (blocks: IndexedAlwaysBlocks) : SimState * AssignItem list * IndexedAlwaysBlocks =
+        ((currState, [], []), blocks)
+        ||> List.fold (fun (state, nonBlockAssigns, triggering) (_, block) ->
+            let (state', nba) = simAlwaysStatement netlist.varMap state block.statement
+            let trig = triggeringAlwaysBlocks netlist state state'
+            state', nba @ nonBlockAssigns, trig @ triggering)
+        |> function
+        | state, nba, triggering -> state, nba, List.distinctBy fst triggering
+
+    let runNBA (state: SimState) (nba: AssignItem list) : SimState =
+        (state, nba)
+        ||> List.fold (fun state' nbAssign ->
+            SimState.addReg state' nbAssign.lhs.varName nbAssign.lhs.range nbAssign.rhs)
+
+    let simNetlist (netlist: Netlist) (prevState: SimState) (currState: SimState) : SimState =
+        let rec runInternal (currState: SimState) (nba: AssignItem list) (triggered: IndexedAlwaysBlocks) =
+            if triggered.Length = 0
+            then currState, nba
+            else
+                runAlwaysBlocks netlist currState triggered
+                |||> runInternal
+                |> function
+                | state, nba' -> state, nba' @ nba
+        
+        let rec run prevState currState =
+            let (state, nba) =
+                triggeringAlwaysBlocks netlist prevState currState
+                |> runInternal currState []
+            if nba.Length = 0
+            then state
+            else run state (runNBA state nba)
+
+        run prevState currState
+
+    let getReqVars (varMap: VarMap) (reqVars: IdentifierT list) (states: SimState list) =
+        states
+        |> List.map (fun state ->
+            (state, reqVars)
+            ||> List.fold (fun state' reqVar ->
+                evalVar varMap state' reqVar Range.max |> fst))
 
 module Simulate =
-    let runSimulation (netlist: Netlist) (inputs: SimInputs) (cycles: uint) =
+    let runSimulation (netlist: Netlist) (inputs: SimInputs) (reqVars: IdentifierT list) (cycles: uint) =
         let allInputs =
             VarMap.inputs netlist.varMap
             |> Map.toList
             |> List.map (fun (name, variable) -> name, variable.range)
-        (SimState.init netlist inputs, [0u .. cycles])
-        ||> List.fold (fun prevState cycle ->
+        reqVars
+        |> List.map (fun reqVar ->
+            if netlist.varMap.ContainsKey reqVar
+            then reqVar
+            else raise <| ArgumentException(sprintf "The requested variable %A was not present in the netlist." reqVar))
+        |> ignore
+        ([SimState.init netlist inputs], [0u .. cycles-1u])
+        ||> List.fold (fun prevStateLst cycle ->
+            let prevState = List.head prevStateLst
             let inp = SimInputs.getCycle allInputs cycle inputs
-            let currState =
-                let s = SimState.newState prevState inp
+            let newState =
+                let s = SimState.nextState prevState inp
                 if cycle = 0u
                 then Internal.runInitial netlist.initial s
                 else s
-            Internal.simNetlist netlist prevState currState)
+                |> Internal.simNetlist netlist prevState 
+            newState::prevStateLst)
+        |> Internal.getReqVars netlist.varMap reqVars
         

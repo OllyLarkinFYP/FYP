@@ -77,7 +77,7 @@ module Netlist =
                 | _ -> Errors.ProcessContAssign.canOnlyDriveWire name
             else Errors.General.varDoesNotExist name
 
-    type InitItem =
+    type AssignItem =
         { lhs: {| varName: IdentifierT; range: Range |}
           rhs: VNum }
 
@@ -95,10 +95,12 @@ module Netlist =
         { eventControl: EventControlContent
           statement: StatementContent }
 
+    type IndexedAlwaysBlocks = (int * AlwaysBlock) list
+
     type Netlist =
         { varMap: VarMap
-          initial: InitItem list
-          alwaysBlocks: (int * AlwaysBlock) list
+          initial: AssignItem list
+          alwaysBlocks: IndexedAlwaysBlocks
           modInstNames: IdentifierT list }
         with
             override this.ToString() =
