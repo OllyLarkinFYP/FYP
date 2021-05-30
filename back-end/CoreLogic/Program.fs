@@ -214,22 +214,20 @@ endmodule
 "
 
 let mod1 = @"
-module mod1(a,b,c);
+module mod1(a,b);
     input [7:0] a;
-    input [7:0] b;
-    output [7:0] c;
+    output [7:0] b;
 
-    mod2 test(.a(a),.b(b),.c(c));
+    mod2 test(.a(a),.b(b));
 endmodule
 "
 
 let mod2 = @"
-module mod2(a,b,c);
+module mod2(a,b);
     input [7:0] a;
-    input [7:0] b;
-    output [7:0] c;
+    output [7:0] b;
     
-    assign c = a + b;
+    assign b = a[1:0] + a[7:6];
 endmodule
 "
 
@@ -247,10 +245,10 @@ let main _ =
         a
 
     let inputs =
-        [("a", Once [VNum 3])
-         ("b", Repeating [VNum 4])]
+        [("a", Once [VNum.bin "11111111"; VNum.bin "11000011"; VNum.bin "10111101";])]
         |> Map.ofList
-    let numberOfCycles = 1u
+    let numberOfCycles = 3u
+    let reqVars = ["a";"b"]
 
     let parser = LangConstructs.pSourceText
     [mod1;mod2]
@@ -276,7 +274,7 @@ let main _ =
         s
     |> startTiming
     |> function
-    | netlist -> Simulate.runSimulation netlist inputs ["a";"b";"c"] numberOfCycles
+    | netlist -> Simulate.runSimulation netlist inputs reqVars numberOfCycles
     |> stopTiming "SIM"
     |> printfn "%A"
     0 // return an integer exit code

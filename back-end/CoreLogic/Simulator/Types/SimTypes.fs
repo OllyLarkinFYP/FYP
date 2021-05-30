@@ -72,13 +72,13 @@ module SimState =
                 | _ -> state, inpLst)
         (initRegState, Map.toList <| SimInputs.getCycle inpLst 0u inputs)
         ||> List.fold (fun state (iden, value) ->
-            state.Add(iden, { simType = SimStateInput; value = value }))
+            state.Add(iden, { simType = SimStateInput; value = value.getRange netlist.varMap.[iden].range }))
 
-    let nextState (prevState: SimState) (inputs: Map<IdentifierT, VNum>) =
+    let nextState (varMap: VarMap) (prevState: SimState) (inputs: Map<IdentifierT, VNum>) =
         let initReg = Map.filter (fun _ cont -> cont.simType = SimStateReg) prevState
         (initReg, Map.toList inputs)
         ||> List.fold (fun state (inpName, inpValue) ->
-            state.Add(inpName, { simType = SimStateInput; value = inpValue }))
+            state.Add(inpName, { simType = SimStateInput; value = inpValue.getRange varMap.[inpName].range }))
 
     let contains (state: SimState) iden range =
         if state.ContainsKey iden
@@ -98,7 +98,7 @@ module SimState =
               value = currVal.setRange range value }
         state.Add(iden, cont)
 
-    let addWire (state: SimState) (varMap: VarMap) iden range value =
+    let addWire (varMap: VarMap) (state: SimState) iden range value =
         let (currVal, currRanges) =
             if contains state iden range
             then state.[iden].value, state.[iden].simType.ranges

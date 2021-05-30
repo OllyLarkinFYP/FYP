@@ -62,32 +62,3 @@ module Util =
     let printAndContinue a = 
         printfn "\n%A\n" a
         a
-
-    let expToConstExpr (inputMap: Map<IdentifierT, VNum>) exp =
-        let rec toConstExprRec exp =
-            let toConstPrimary = 
-                function
-                | PrimaryT.Number v -> ConstantPrimaryT.Number v
-                | PrimaryT.Ranged r ->
-                    let range = optRangeTToRange r.range
-                    let value = inputMap.[r.name].getRange range
-                    ConstantPrimaryT.Number value
-                | PrimaryT.Concat c -> ConstantPrimaryT.Concat <| List.map toConstExprRec c
-                | PrimaryT.Brackets b -> ConstantPrimaryT.Brackets <| toConstExprRec b
-            match exp with
-            | Primary p -> ConstantExpressionT.Primary <| toConstPrimary p
-            | UniExpression u ->
-                ConstantExpressionT.UniExpression
-                    {| Operator = u.Operator
-                       Expression = toConstExprRec u.Expression |}
-            | BinaryExpression b -> 
-                ConstantExpressionT.BinaryExpression
-                    {| LHS = toConstExprRec b.LHS
-                       BinOperator = b.BinOperator
-                       RHS = toConstExprRec b.RHS |}
-            | CondExpression c ->
-                ConstantExpressionT.CondExpression
-                    {| Condition = toConstExprRec c.Condition
-                       TrueVal = toConstExprRec c.TrueVal
-                       FalseVal = toConstExprRec c.FalseVal |}
-        toConstExprRec exp

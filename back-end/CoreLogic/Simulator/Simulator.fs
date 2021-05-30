@@ -7,6 +7,35 @@ open Compiler.Netlist
 open AST
 
 module private rec Internal =
+    let expToConstExpr (varMap: VarMap) (inputMap: Map<IdentifierT, VNum>) exp =
+        let rec toConstExprRec exp =
+            let toConstPrimary = 
+                function
+                | PrimaryT.Number v -> ConstantPrimaryT.Number v
+                | PrimaryT.Ranged r ->
+                    let range = Util.optRangeTToRangeDefault varMap.[r.name].range r.range
+                    let value = inputMap.[r.name].getRange range
+                    ConstantPrimaryT.Number value
+                | PrimaryT.Concat c -> ConstantPrimaryT.Concat <| List.map toConstExprRec c
+                | PrimaryT.Brackets b -> ConstantPrimaryT.Brackets <| toConstExprRec b
+            match exp with
+            | Primary p -> ConstantExpressionT.Primary <| toConstPrimary p
+            | UniExpression u ->
+                ConstantExpressionT.UniExpression
+                    {| Operator = u.Operator
+                       Expression = toConstExprRec u.Expression |}
+            | BinaryExpression b -> 
+                ConstantExpressionT.BinaryExpression
+                    {| LHS = toConstExprRec b.LHS
+                       BinOperator = b.BinOperator
+                       RHS = toConstExprRec b.RHS |}
+            | CondExpression c ->
+                ConstantExpressionT.CondExpression
+                    {| Condition = toConstExprRec c.Condition
+                       TrueVal = toConstExprRec c.TrueVal
+                       FalseVal = toConstExprRec c.FalseVal |}
+        toConstExprRec exp
+
     let runInitial (initial: AssignItem list) (state: SimState) =
         (state, initial)
         ||> List.fold (fun s initItem -> 
@@ -22,12 +51,13 @@ module private rec Internal =
                 (iden, shiftedVal), s')
             |> function
             | valueLst, s -> s, Map.ofList valueLst
-        let constExpr = Util.expToConstExpr valMap exp.expression
+        let constExpr = expToConstExpr varMap valMap exp.expression
         state', ConstExprEval.evalConstExpr constExpr
 
     let evalVar (varMap: VarMap) (state: SimState) (iden: IdentifierT) (range: Range) : SimState * VNum =
         if SimState.contains state iden range
-        then state, SimState.get state iden range
+        then 
+            state, SimState.get state iden range
         else
             let drivers = varMap.[iden].var.getDriversFor range
             let state' =
@@ -35,7 +65,7 @@ module private rec Internal =
                 ||> List.fold (fun s driver ->
                     let (s', expVal) = evalExpression varMap s driver.exp
                     let addVal = expVal.getRange driver.expRange
-                    SimState.addWire s' varMap iden driver.drivenRange addVal)
+                    SimState.addWire varMap s' iden driver.drivenRange addVal)
             state', SimState.get state' iden range
 
     let evalEventControl (varMap: VarMap) (prevState: SimState) (currState: SimState) (eventControl: EventControlContent) : SimState * bool =
@@ -100,7 +130,9 @@ module private rec Internal =
         |> List.map (fun state ->
             (state, reqVars)
             ||> List.fold (fun state' reqVar ->
-                evalVar varMap state' reqVar Range.max |> fst))
+                evalVar varMap state' reqVar Range.max |> fst)
+            |> Map.filter (fun iden _ -> List.contains iden reqVars)
+            |> Map.map (fun _ ssc -> ssc.value))
 
 module Simulate =
     let runSimulation (netlist: Netlist) (inputs: SimInputs) (reqVars: IdentifierT list) (cycles: uint) =
@@ -118,7 +150,7 @@ module Simulate =
         ||> List.fold (fun (prevStateLst, prevState) cycle ->
             let inp = SimInputs.getCycle allInputs cycle inputs
             let newState =
-                let s = SimState.nextState prevState inp
+                let s = SimState.nextState netlist.varMap prevState inp
                 if cycle = 0u
                 then Internal.runInitial netlist.initial s
                 else s
