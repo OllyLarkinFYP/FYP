@@ -252,7 +252,7 @@ module LangConstructs =
         modDec1 <|> modDec2
 
     let pSourceText = 
-        spaces >>. pModuleDeclaration .>> eof
+        Utils.skipWhiteSpaceAndComments >>. pModuleDeclaration .>> eof
 
     do pStatementImpl := 
         choice [
