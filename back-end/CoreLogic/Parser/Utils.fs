@@ -4,16 +4,10 @@ open FParsec
 open AST
 
 module Utils =
-    let pComment: Parser<unit, unit> =
-        let singleLine = skipString "//" .>> skipRestOfLine true
-        let multiLine = skipString "/*" .>> skipCharsTillString "*/" true 100000
-        (singleLine <|> multiLine) .>> spaces
 
-    let skipWhiteSpaceAndComments = spaces .>> opt pComment
+    let skipStrWs s = skipString s .>> spaces
 
-    let skipStrWs s = skipString s .>> skipWhiteSpaceAndComments
-
-    let skipCharWs c = skipChar c .>> skipWhiteSpaceAndComments
+    let skipCharWs c = skipChar c .>> spaces
 
     let stringReturnWs s r = skipStrWs s >>% r
 
