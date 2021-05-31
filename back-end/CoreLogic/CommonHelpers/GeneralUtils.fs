@@ -11,55 +11,6 @@ module private Operators =
         | Ok a -> Ok (f a)
         | Error e -> Error e 
 
-module ResList =
-    open Operators
-
-    let rec map f =
-        function
-        | [] -> Ok []
-        | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match map f tl with
-                | Error e -> Error e
-                | Ok processedTl -> Ok (res :: processedTl)
-                
-    let collect f lst =
-        let rec reduce =
-            function
-            | [] -> []
-            | hd::tl -> hd @ (reduce tl)
-        map f lst ?>> reduce
-
-    let rec choose f =
-        function
-        | [] -> Ok []
-        | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match choose f tl with
-                | Error e -> Error e
-                | Ok processedTl ->
-                    match res with
-                    | Some a -> Ok (a::processedTl)
-                    | None -> Ok processedTl
-                    
-    let rec fold folder state =
-        function
-        | [] -> Ok state
-        | hd::tl ->
-            match folder state hd with
-            | Error e -> Error e
-            | Ok acc -> fold folder acc tl
-
-    let ignore _ = Ok()
-
-    let tupleFold folder (state, items) =
-        fold folder state items
-        ?>> fun s -> (s, items)
-
 
 module Util =
     let rangeTToRange (r: RangeT) : Range =
