@@ -71,30 +71,6 @@ module private Validate =
             else Errors.VarLValueE.doesNotExist rv.name
         | VarLValueT.Concat c -> List.compResMap (varLValueOnlyWritesReg varMap) c ?>> ignore
 
-    let rec statementOnlyWritesReg varMap statement =
-        match statement with
-        | None -> Succ ()
-        | Some stmt ->
-            let rec stmtCheckRec s = 
-                match s with
-                | BlockingAssignment ba -> varLValueOnlyWritesReg varMap ba.LHS
-                | NonblockingAssignment nba -> varLValueOnlyWritesReg varMap nba.LHS
-                | SeqBlock sb -> List.compResMap stmtCheckRec sb ?>> ignore
-                | Case cs ->
-                    cs.Items
-                    |> List.compResMap (fun item ->
-                        match item with
-                        | Item i -> statementOnlyWritesReg varMap i.Body
-                        | Default s -> statementOnlyWritesReg varMap s)
-                    ?>> ignore
-                | Conditional cs ->
-                    statementOnlyWritesReg varMap cs.Body
-                    ?> fun _ ->
-                        cs.ElseIf
-                        |> List.compResMap (fun elseIf -> statementOnlyWritesReg varMap elseIf.Body)
-                    ?> fun _ -> statementOnlyWritesReg varMap cs.ElseBody
-            stmtCheckRec stmt
-
 
 module private Helpers =
     let netLValToRangeList (varMap: VarMap) (netLVal: NetLValueT) =
@@ -115,6 +91,25 @@ module private Helpers =
                 ||> List.compResFold toRangeListRec
         // Returns result of list of (name, idenRange, valueRange)
         toRangeListRec (0u,[]) netLVal ?>> snd
+
+    let varLValToRangeList (varMap: VarMap) (varLVal: VarLValueT) =
+        let rec toRangeListRec (offset, currLst) =
+            function
+            | VarLValueT.Ranged rangedNLV ->
+                if varMap.ContainsKey rangedNLV.name
+                then
+                    match varMap.[rangedNLV.name].var with
+                    | Reg -> 
+                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name].range rangedNLV.range
+                        let entry = (rangedNLV.name, range, range.ground().offset offset)
+                        Succ (offset + range.size, entry::currLst)
+                    | _ -> Errors.VarLValueE.shouldBeReg rangedNLV.name
+                else Errors.VarLValueE.doesNotExist rangedNLV.name
+            | VarLValueT.Concat c ->
+                (List.rev c, (offset, currLst))
+                ||> List.compResFold toRangeListRec
+        // Returns result of list of (name, idenRange, valueRange)
+        toRangeListRec (0u,[]) varLVal ?>> snd
 
     let squashIdenRangeList (idenRangeLst: (IdentifierT * Range) list) =
         idenRangeLst
@@ -166,10 +161,10 @@ module private Helpers =
                     | None -> []
                     | Some s -> varsRec s
                 match statement with
-                | BlockingAssignment ba -> getExprVars ba.RHS
-                | NonblockingAssignment nba -> getExprVars nba.RHS
-                | SeqBlock sb -> List.collect varsRec sb
-                | Case c -> 
+                | StatementT.BlockingAssignment ba -> getExprVars ba.RHS
+                | StatementT.NonblockingAssignment nba -> getExprVars nba.RHS
+                | StatementT.SeqBlock sb -> List.collect varsRec sb
+                | StatementT.Case c -> 
                     let caseExprVars = getExprVars c.CaseExpr
                     let itemVars =
                         c.Items
@@ -181,7 +176,7 @@ module private Helpers =
                                 let bodyVars = optStatementVars i.Body
                                 expVars @ bodyVars)
                     caseExprVars @ itemVars
-                | Conditional c ->
+                | StatementT.Conditional c ->
                     let condVars = getExprVars c.Condition
                     let bodyVars = optStatementVars c.Body
                     let elseBodyVars = optStatementVars c.ElseBody
@@ -216,48 +211,43 @@ module private Helpers =
                        TrueVal = prefixExpression ce.TrueVal
                        FalseVal = prefixExpression ce.FalseVal |}
         let prefixReqVars = List.map (fun (iden, range) -> prefix + iden, range)
+        let prefixExpCont (expCont: ExpContent) =
+            { expression = prefixExpression expCont.expression
+              reqVars = prefixReqVars expCont.reqVars }
         let rec prefixVarLVal = 
             function
             | VarLValueT.Ranged rv -> VarLValueT.Ranged { rv with name = prefix + rv.name }
             | VarLValueT.Concat c -> VarLValueT.Concat (List.map prefixVarLVal c)
         let rec prefixStatement stmt = 
             match stmt with
-            | None -> stmt
-            | Some statement ->
-                let rec prefixNonOptStmt s =
-                    match s with
-                    | BlockingAssignment ba ->
-                        BlockingAssignment 
-                            { LHS = prefixVarLVal ba.LHS 
-                              RHS = prefixExpression ba.RHS }
-                    | Case cs ->
-                        let prefixCaseItem =
-                            function
-                            | Item i ->
-                                let prefixedElems = List.map prefixExpression i.Elems
-                                let prefixedBody = prefixStatement i.Body
-                                Item
-                                    {| Elems = prefixedElems
-                                       Body = prefixedBody |}
-                            | Default s -> Default <| prefixStatement s
-                        Case
-                            { CaseExpr = prefixExpression cs.CaseExpr
-                              Items = List.map prefixCaseItem cs.Items }
-                    | Conditional cs ->
-                        let prefixElseIf (elseIf: {| Condition: ExpressionT; Body: StatementOrNullT |}) =
-                            {| Condition = prefixExpression elseIf.Condition
-                               Body = prefixStatement elseIf.Body |}
-                        Conditional
-                            { Condition = prefixExpression cs.Condition
-                              Body = prefixStatement cs.Body
-                              ElseIf = List.map prefixElseIf cs.ElseIf
-                              ElseBody = prefixStatement cs.ElseBody }
-                    | NonblockingAssignment nba -> 
-                        NonblockingAssignment 
-                            { LHS = prefixVarLVal nba.LHS
-                              RHS = prefixExpression nba.RHS }
-                    | SeqBlock sb -> SeqBlock (List.map prefixNonOptStmt sb)
-                Some <| prefixNonOptStmt statement
+            | Null -> Null
+            | BlockingAssignment ba ->
+                ba
+                |> List.map (fun assignment ->
+                    { assignment with name = prefix + assignment.name })
+                |> BlockingAssignment
+            | NonblockingAssignment nba -> 
+                nba
+                |> List.map (fun assignment ->
+                    { assignment with name = prefix + assignment.name })
+                |> NonblockingAssignment
+            | Case cs -> 
+                let prefixCaseItem (ci: CaseItem) = 
+                    { conditions = List.map prefixExpCont ci.conditions
+                      body = prefixStatement ci.body }
+                Case
+                    { caseExpr = prefixExpCont cs.caseExpr
+                      items = List.map prefixCaseItem cs.items
+                      defaultCase = prefixStatement cs.defaultCase }
+            | Conditional cs ->
+                Conditional
+                    { condition = prefixExpCont cs.condition
+                      trueBody = prefixStatement cs.trueBody
+                      falseBody = prefixStatement cs.falseBody }
+            | SeqBlock sb ->
+                sb
+                |> List.map prefixStatement
+                |> SeqBlock
         let prefixedVarMap =
             netlist.varMap
             |> Map.toList
@@ -290,9 +280,7 @@ module private Helpers =
                         |> List.map (fun (ect, iden, range) -> ect, prefix + iden, range)
                     { ec = prefixedEC
                       reqVars = prefixReqVars alwaysBlock.eventControl.reqVars }
-                let prefixedStatement =
-                    { s = prefixStatement alwaysBlock.statement.s
-                      reqVars = prefixReqVars alwaysBlock.statement.reqVars }
+                let prefixedStatement = prefixStatement alwaysBlock.statement 
                 (i, 
                     { eventControl = prefixedEventControl
                       statement = prefixedStatement }))
@@ -359,6 +347,106 @@ module private Helpers =
                               reqVars = expVars }}
                     VarMap.addDriver vMap' name driver))
 
+    let rec statementTToStatement (varMap: VarMap) (statementOrNull: StatementOrNullT) : CompRes<Statement> =
+        match statementOrNull with
+        | None -> Succ Null
+        | Some s ->
+            let rec toStatementRec statement =
+                match statement with
+                | StatementT.BlockingAssignment ba ->
+                    let expCont =
+                        { expression = ba.RHS
+                          reqVars = getExprVars ba.RHS }
+                    varLValToRangeList varMap ba.LHS
+                    ?>> List.map (fun (name, drivenRange, expRange) ->
+                        { name = name
+                          driver =
+                            { drivenRange = drivenRange
+                              expRange = expRange
+                              exp = expCont } })
+                    ?>> Statement.BlockingAssignment
+
+                | StatementT.NonblockingAssignment nba -> 
+                    let expCont =
+                        { expression = nba.RHS
+                          reqVars = getExprVars nba.RHS }
+                    varLValToRangeList varMap nba.LHS
+                    ?>> List.map (fun (name, drivenRange, expRange) ->
+                        { name = name
+                          driver =
+                            { drivenRange = drivenRange
+                              expRange = expRange
+                              exp = expCont } })
+                    ?>> Statement.NonblockingAssignment
+
+                | StatementT.SeqBlock sb ->
+                    sb
+                    |> List.compResMap toStatementRec
+                    ?>> Statement.SeqBlock
+
+                | StatementT.Case cs -> 
+                    let caseExpr =
+                        { expression = cs.CaseExpr
+                          reqVars = getExprVars cs.CaseExpr }
+                    cs.Items
+                    |> List.tryFind (fun item ->
+                        match item with
+                        | Default _ -> true
+                        | _ -> false)
+                    |> function
+                    | Some (Default s) -> statementTToStatement varMap s
+                    | _ -> Succ Null
+                    ?> fun defaultCase ->
+                        cs.Items
+                        |> List.compResChoose (fun item ->
+                            match item with
+                            | Default _ -> None
+                            | Item i -> 
+                                statementTToStatement varMap i.Body
+                                ?>> fun body ->
+                                    let conditions =
+                                        i.Elems
+                                        |> List.map (fun exp ->
+                                            { expression = exp
+                                              reqVars = getExprVars exp })
+                                    { conditions = conditions
+                                      body = body }
+                                |> Some)
+                        ?>> fun items ->
+                            Statement.Case   
+                                { caseExpr = caseExpr
+                                  items = items
+                                  defaultCase = defaultCase }
+                     
+                | StatementT.Conditional cs -> 
+                    let rec processElseIfs (elseIfs: {| Condition: ExpressionT; Body: StatementOrNullT |} List) finalElse =
+                        match elseIfs with
+                        | [] -> statementTToStatement varMap finalElse
+                        | hd::tl ->
+                            let cond =
+                                { expression = hd.Condition
+                                  reqVars = getExprVars hd.Condition }
+                            statementTToStatement varMap hd.Body
+                            ?> fun trueBody ->
+                                processElseIfs tl finalElse
+                                ?>> fun falseBody ->
+                                    Statement.Conditional
+                                        { condition = cond
+                                          trueBody = trueBody
+                                          falseBody = falseBody }
+                    statementTToStatement varMap cs.Body
+                    ?> fun trueBody ->
+                        processElseIfs cs.ElseIf cs.ElseBody
+                        ?>> fun falseBody ->
+                            Statement.Conditional
+                                { condition =
+                                    { expression = cs.Condition
+                                      reqVars = getExprVars cs.Condition }
+                                  trueBody = trueBody
+                                  falseBody = falseBody }
+
+            toStatementRec s
+
 
 module private Internal =
 
@@ -417,28 +505,26 @@ module private Internal =
         | AlwaysConstruct ac ->
             let statementVars = Helpers.getStatementVars ac.Statement
             let eventControlVars = Helpers.getEventControlVars statementVars ac.Control
-            Validate.statementOnlyWritesReg netlist.varMap ac.Statement
-            ?> fun _ -> Validate.varsExist netlist.varMap statementVars
-            ?> fun _ -> Validate.varsExist netlist.varMap eventControlVars
-            ?>> fun _ ->
-                let alwaysBlock = 
-                    let eventList = 
-                        match ac.Control with
-                        | EventList el -> 
-                            el
-                            |> List.map (fun (ect, rangedVar) ->
-                                let range = Util.optRangeTToRangeDefault Range.max rangedVar.range
-                                ect, rangedVar.name, range)
-                        | Star ->
-                            eventControlVars
-                            |> List.map (fun (var, range) -> Neither, var, range)
+            Validate.varsExist netlist.varMap eventControlVars
+            ?> fun _ ->
+                let eventList = 
+                    match ac.Control with
+                    | EventList el -> 
+                        el
+                        |> List.map (fun (ect, rangedVar) ->
+                            let range = Util.optRangeTToRangeDefault Range.max rangedVar.range
+                            ect, rangedVar.name, range)
+                    | Star ->
+                        eventControlVars
+                        |> List.map (fun (var, range) -> Neither, var, range)
+                Helpers.statementTToStatement netlist.varMap ac.Statement
+                ?>> (fun stmt -> 
                     { eventControl =
                         { ec = eventList
                           reqVars = eventControlVars }
-                      statement =
-                        { s = ac.Statement
-                          reqVars = statementVars }}
-                { netlist with alwaysBlocks = (netlist.alwaysBlocks.Length, alwaysBlock)::netlist.alwaysBlocks }
+                      statement = stmt})
+                ?>> fun alwaysBlock ->
+                    { netlist with alwaysBlocks = (netlist.alwaysBlocks.Length, alwaysBlock)::netlist.alwaysBlocks }
         | _ -> Succ netlist
 
     let rec processModuleInstances (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =

@@ -77,6 +77,32 @@ module Netlist =
                 | _ -> Errors.ProcessContAssign.canOnlyDriveWire name
             else Errors.General.varDoesNotExist name
 
+    type Assignment =
+        { name: IdentifierT
+          driver: Driver }
+
+    type ConditionalStatement =
+        { condition: ExpContent
+          trueBody: Statement
+          falseBody: Statement }
+
+    and CaseItem =
+        { conditions: ExpContent list
+          body: Statement }
+
+    and CaseStatement =
+        { caseExpr: ExpContent
+          items: CaseItem list
+          defaultCase: Statement }
+
+    and Statement =
+        | Null
+        | BlockingAssignment of Assignment list 
+        | NonblockingAssignment of Assignment list
+        | Case of CaseStatement
+        | Conditional of ConditionalStatement
+        | SeqBlock of Statement list 
+
     type AssignItem =
         { lhs: {| varName: IdentifierT; range: Range |}
           rhs: VNum }
@@ -87,13 +113,9 @@ module Netlist =
         { ec: AlwaysEventControl
           reqVars: ReqVarList }
 
-    type StatementContent =
-        { s: StatementOrNullT
-          reqVars: ReqVarList }
-
     type AlwaysBlock = 
         { eventControl: EventControlContent
-          statement: StatementContent }
+          statement: Statement }
 
     type IndexedAlwaysBlocks = (int * AlwaysBlock) list
 

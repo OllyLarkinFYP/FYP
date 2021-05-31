@@ -51,3 +51,10 @@ module Utils =
                         | _ -> Fail e
                     | _ as r -> r ?> foldRec tl
             foldRec list state
+
+        static member compResChoose chooser list =
+            (list, [])
+            ||> List.compResFold (fun out elem ->
+                match chooser elem with
+                | Some e -> e ?>> fun e' -> e'::out
+                | None -> Succ out)
