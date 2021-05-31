@@ -353,8 +353,8 @@ let main _ =
         printfn "[%s] elapsed (ms): %i" label stopwatch.ElapsedMilliseconds
         a
         
-    let modules = [mod1]
-    let topLevel = "d_ff"
+    let modules = [fifo]
+    let topLevel = "FIFO"
     let inputs =
         [ "clk", Repeating [VNum 0; VNum 1]
           "resetn", Once [VNum 0; VNum 0; VNum 0; VNum 1]
