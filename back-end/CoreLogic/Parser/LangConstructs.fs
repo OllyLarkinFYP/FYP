@@ -142,7 +142,7 @@ module LangConstructs =
         | msb, lsb -> { RangeT.MSB = msb; LSB = lsb}
 
     let pListOfIdentifiers =
-        sepBy1 pIdentifier Symbol.pComma
+        sepBy1 pIdentifier (attempt (Symbol.pComma .>> notFollowedBy (Keyword.pInput <|> Keyword.pOutput)))
 
     let pNetDeclaration =
         Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
