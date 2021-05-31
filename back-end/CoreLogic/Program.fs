@@ -214,10 +214,7 @@ endmodule
 "
 
 let mod1 = @"
-module d_ff(clk, d, q, q_bar);
-    input clk, d;
-    output reg q, q_bar;
-    
+module d_ff(input clk, input d, output reg q, output reg q_bar);
     always @(posedge clk) begin
         q <= d;
         q_bar <= !d;
@@ -237,6 +234,112 @@ module d_ff(clk, d, q, q_bar);
 endmodule
 "
 
+let fifo = @"
+module FIFO
+(
+  input wire clk,
+  input wire resetn,
+  input wire rd,
+  input wire wr,
+  input wire w_data,
+  
+  output wire empty,
+  output wire full,
+  output wire r_data
+);
+
+//Internal Signal declarations
+
+  reg [7:0] array_reg;
+  reg [2:0] w_ptr_reg;
+  reg [2:0] w_ptr_next;
+  reg [2:0] w_ptr_succ;
+  reg [2:0] r_ptr_reg;
+  reg [2:0] r_ptr_next;
+  reg [2:0] r_ptr_succ;
+
+  reg full_reg;
+  reg empty_reg;
+  reg full_next;
+  reg empty_next;
+
+  wire w_en;
+
+  always @ (posedge clk)
+    if(w_en)
+    begin
+      array_reg[w_ptr_reg] <= w_data;
+    end
+
+  assign r_data = array_reg[r_ptr_reg];   
+
+  assign w_en = wr & ~full_reg;           
+
+  //State Machine
+  always @ (posedge clk, negedge resetn)
+  begin
+    if(!resetn)
+      begin
+        w_ptr_reg <= 0;
+        r_ptr_reg <= 0;
+        full_reg <= 1'b0;
+        empty_reg <= 1'b1;
+      end
+    else
+      begin
+        w_ptr_reg <= w_ptr_next;
+        r_ptr_reg <= r_ptr_next;
+        full_reg <= full_next;
+        empty_reg <= empty_next;
+      end
+  end
+
+
+  //Next State Logic
+  always @*
+  begin
+    w_ptr_succ = w_ptr_reg + 1;
+    r_ptr_succ = r_ptr_reg + 1;
+    
+    w_ptr_next = w_ptr_reg;
+    r_ptr_next = r_ptr_reg;
+    full_next = full_reg;
+    empty_next = empty_reg;
+    
+    case({w_en,rd})
+      //2'b00: nop
+      2'b01:
+        if(~empty_reg)
+          begin
+            r_ptr_next = r_ptr_succ;
+            full_next = 1'b0;
+            if (r_ptr_succ == w_ptr_reg)
+              empty_next = 1'b1;
+          end
+      2'b10:
+        if(~full_reg)
+          begin
+            w_ptr_next = w_ptr_succ;
+            empty_next = 1'b0;
+            if (w_ptr_succ == r_ptr_reg)
+              full_next = 1'b1;
+          end
+      2'b11:
+        begin
+          w_ptr_next = w_ptr_succ;
+          r_ptr_next = r_ptr_succ;
+        end
+    endcase
+  end
+
+  //Set Full and Empty
+
+  assign full = full_reg;
+  assign empty = empty_reg;
+  
+endmodule
+"
+
 let print str = printfn "%A" str
 
 [<EntryPoint>]
@@ -249,16 +352,21 @@ let main _ =
         stopwatch.Stop()
         printfn "[%s] elapsed (ms): %i" label stopwatch.ElapsedMilliseconds
         a
-
+        
+    let modules = [mod1]
+    let topLevel = "d_ff"
     let inputs =
-        [("clk", Repeating [VNum 0; VNum 1])
-         ("d", Once [VNum 0; VNum 0; VNum 1; VNum 1; VNum 0])]
+        [ "clk", Repeating [VNum 0; VNum 1]
+          "resetn", Once [VNum 0; VNum 0; VNum 0; VNum 1]
+          "rd", Once []
+          "wr", Once []
+          "w_data", Once [] ]
         |> Map.ofList
-    let numberOfCycles = 5u
-    let reqVars = ["clk";"d";"q";"q_bar"]
+    let numberOfCycles = 10u
+    let reqVars = [ "clk"; "resetn"; "rd"; "wr"; "w_data"; "empty"; "full"; "r_data" ]
 
     let parser = LangConstructs.pSourceText
-    [mod1]
+    modules
     |> List.map (fun modStr ->
         modStr
         |> startTiming
@@ -268,7 +376,7 @@ let main _ =
         | Success (ast, _, _) -> ast
         | Failure (msg, _, _) -> failwith msg)
     |> startTiming
-    |> Compiler.Compile.project "d_ff"
+    |> Compiler.Compile.project topLevel
     |> stopTiming "COM"
     |> function
     | Compiler.CompResult.Fail _ as r -> failwithf "%A" r
