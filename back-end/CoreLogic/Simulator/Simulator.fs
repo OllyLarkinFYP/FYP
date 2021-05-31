@@ -74,6 +74,7 @@ module private rec Internal =
             let (_, prevVal) = evalVar varMap prevState iden range
             let (state', currVal) = evalVar varMap state iden range
             let trigger =
+                // TODO: conditions on posedge and negedge may have to change for x values - investigate
                 match ect with
                 | Neither -> prevVal <> currVal
                 | Posedge -> prevVal.getRange (Single 0u) = VNum 0 && currVal.getRange (Single 0u) = VNum 1
@@ -83,19 +84,20 @@ module private rec Internal =
     let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState * AssignItem list =
         raise <| NotImplementedException() // TODO: this
 
-    let triggeringAlwaysBlocks (netlist: Netlist) (prevState: SimState) (currState: SimState) : IndexedAlwaysBlocks =
+    let triggeringAlwaysBlocks (netlist: Netlist) (prevState: SimState) (currState: SimState) (blackList: int list) : IndexedAlwaysBlocks =
         (currState, netlist.alwaysBlocks)
         ||> List.chooseFold (fun state (i,alwaysBlock) ->
             match evalEventControl netlist.varMap prevState state alwaysBlock.eventControl with
-            | state', true -> state', Some (i, alwaysBlock)
-            | state', false -> state', None)
+            | state', true when not (List.contains i blackList) -> state', Some (i, alwaysBlock)
+            | state', _ -> state', None)
         |> snd  // do not want the wire vals in the state outside of this evaluation chain
 
     let runAlwaysBlocks (netlist: Netlist) (currState: SimState) (blocks: IndexedAlwaysBlocks) : SimState * AssignItem list * IndexedAlwaysBlocks =
+        let blockIDs = List.map fst blocks
         ((currState, [], []), blocks)
         ||> List.fold (fun (state, nonBlockAssigns, triggering) (_, block) ->
             let (state', nba) = simAlwaysStatement netlist.varMap state block.statement
-            let trig = triggeringAlwaysBlocks netlist state state'
+            let trig = triggeringAlwaysBlocks netlist state state' blockIDs
             state', nba @ nonBlockAssigns, trig @ triggering)
         |> function
         | state, nba, triggering -> state, nba, List.distinctBy fst triggering
@@ -117,7 +119,7 @@ module private rec Internal =
         
         let rec run prevState currState =
             let (state, nba) =
-                triggeringAlwaysBlocks netlist prevState currState
+                triggeringAlwaysBlocks netlist prevState currState []
                 |> runInternal currState []
             if nba.Length = 0
             then state
