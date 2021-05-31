@@ -3,8 +3,8 @@ namespace Simulator
 open System
 open CommonTypes
 open CommonHelpers
-open Compiler.Netlist
 open AST
+open Compiler.Netlist
 
 module private rec Internal =
     let expToConstExpr (varMap: VarMap) (inputMap: Map<IdentifierT, VNum>) exp =
@@ -54,6 +54,16 @@ module private rec Internal =
         let constExpr = expToConstExpr varMap valMap exp.expression
         state', ConstExprEval.evalConstExpr constExpr
 
+    let evalWireDriver (varMap: VarMap) (iden: IdentifierT) (state: SimState) (driver: Driver) =
+        let (state', expVal) = evalExpression varMap state driver.exp
+        let addVal = expVal.getRange driver.expRange
+        SimState.addWire varMap state' iden driver.drivenRange addVal
+
+    let evalRegDriver (varMap: VarMap) (iden: IdentifierT) (state: SimState) (driver: Driver) =
+        let (_, expVal) = evalExpression varMap state driver.exp
+        let addVal = expVal.getRange driver.expRange
+        SimState.addReg state iden driver.drivenRange addVal
+
     let evalVar (varMap: VarMap) (state: SimState) (iden: IdentifierT) (range: Range) : SimState * VNum =
         if SimState.contains state iden range
         then 
@@ -62,10 +72,7 @@ module private rec Internal =
             let drivers = varMap.[iden].var.getDriversFor range
             let state' =
                 (state, drivers)
-                ||> List.fold (fun s driver ->
-                    let (s', expVal) = evalExpression varMap s driver.exp
-                    let addVal = expVal.getRange driver.expRange
-                    SimState.addWire varMap s' iden driver.drivenRange addVal)
+                ||> List.fold (evalWireDriver varMap iden) 
             state', SimState.get state' iden range
 
     let evalEventControl (varMap: VarMap) (prevState: SimState) (currState: SimState) (eventControl: EventControlContent) : SimState * bool =
@@ -77,13 +84,57 @@ module private rec Internal =
                 // TODO: This should work as x -> 0 is negedge and x -> 1 is posedge
                 // TODO: slight issue that the initial x -> initVal should not trigger negedge/posedge apparently
                 match ect with
-                | Neither -> prevVal <> currVal
+                | Neither -> not (VNum.exactComp prevVal currVal)
                 | Posedge -> prevVal.getRange (Single 0u) = VNum 0 && currVal.getRange (Single 0u) = VNum 1
                 | Negedge -> prevVal.getRange (Single 0u) = VNum 1 && currVal.getRange (Single 0u) = VNum 0
             state', trigger)
 
-    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: StatementContent) : SimState * AssignItem list =
-        raise <| NotImplementedException() // TODO: this
+    let simAlwaysStatement (varMap: VarMap) (state: SimState) (statement: Statement) : SimState * AssignItem list =
+        match statement with
+        | Null -> state, []
+        | BlockingAssignment ba ->
+            let state' =
+                (state, ba)
+                ||> List.fold (fun state' assignment ->
+                    evalRegDriver varMap assignment.name state' assignment.driver)
+            state', []    
+        | NonblockingAssignment nba -> 
+            let delayedAssign =
+                nba
+                |> List.map (fun assignment ->
+                    let state' = evalRegDriver varMap assignment.name state assignment.driver
+                    let value = SimState.get state' assignment.name assignment.driver.expRange
+                    { AssignItem.lhs = 
+                        {| varName = assignment.name
+                           range = assignment.driver.drivenRange |}
+                      rhs = value })
+            state, delayedAssign
+        | Case cs -> 
+            let (_, caseCond) = evalExpression varMap state cs.caseExpr
+            ((state, []), cs.items)
+            ||> List.foldUntil (fun (item: CaseItem) ->
+                item.conditions
+                |> List.exists (fun cond ->
+                    let (_, value) = evalExpression varMap state cond
+                    caseCond = value)
+                |> function
+                | true -> Some <| simAlwaysStatement varMap state item.body
+                | false -> None)
+            |> function
+            | Some (s, d) -> s, d
+            | None -> simAlwaysStatement varMap state cs.defaultCase
+        | Conditional cs ->
+            let (_, condition) = evalExpression varMap state cs.condition
+            // should stay this way round so that x evals to false
+            if condition = VNum 0
+            then simAlwaysStatement varMap state cs.falseBody
+            else simAlwaysStatement varMap state cs.trueBody
+        | SeqBlock sb ->
+            ((state, []), sb)
+            ||> List.fold (fun (state', currDefered) stmt ->
+                simAlwaysStatement varMap state' stmt
+                |> function
+                | state'', def -> state'', currDefered @ def)
 
     let triggeringAlwaysBlocks (netlist: Netlist) (prevState: SimState) (currState: SimState) (blackList: int list) : IndexedAlwaysBlocks =
         (currState, netlist.alwaysBlocks)

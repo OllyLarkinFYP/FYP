@@ -225,9 +225,11 @@ endmodule
 let mod2 = @"
 module mod2(a,b);
     input [7:0] a;
-    output [7:0] b;
+    output reg [7:0] b;
+
+    initial b = 0;
     
-    assign b = a[1:0] + a[7:6];
+    always @(a) b = b + 1;
 endmodule
 "
 
@@ -245,9 +247,9 @@ let main _ =
         a
 
     let inputs =
-        [("a", Once [VNum.bin "11111111"; VNum.bin "11000011"; VNum.bin "10111101";])]
+        [("a", Once [VNum.unknown 1u; VNum 1; VNum 2; VNum 3])]
         |> Map.ofList
-    let numberOfCycles = 3u
+    let numberOfCycles = 4u
     let reqVars = ["a";"b"]
 
     let parser = LangConstructs.pSourceText

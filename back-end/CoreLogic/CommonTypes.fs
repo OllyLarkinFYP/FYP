@@ -261,6 +261,10 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
                 (this.trim().mask(Down,num.unknownBits).value :> IComparable<_>).CompareTo (num.trim().mask(Down,this.unknownBits).value)
             | _ -> -1
 
+    static member exactComp (v1: VNum) (v2: VNum) =
+        (v1 = v2) &&
+            (List.sort v1.unknownBits = List.sort v2.unknownBits) 
+
     // *********** UNARY OPS ***********
     static member (~-) (num: VNum) = 
         ~~~num + VNum(1UL,num.size)

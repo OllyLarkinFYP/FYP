@@ -27,6 +27,14 @@ module List =
             | acc', true -> acc', true
             | acc', false -> existsFold f acc' tl
 
+    let rec foldUntil folder (state: 'State) (lst: List<'T>) : 'State option =
+        match lst with
+        | [] -> None
+        | hd::tl ->
+            match folder hd with
+            | Some state' -> Some state'
+            | None -> foldUntil folder state tl
+
 
 module Util =
     let rangeTToRange (r: RangeT) : Range =
