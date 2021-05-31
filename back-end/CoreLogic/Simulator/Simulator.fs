@@ -74,7 +74,8 @@ module private rec Internal =
             let (_, prevVal) = evalVar varMap prevState iden range
             let (state', currVal) = evalVar varMap state iden range
             let trigger =
-                // TODO: conditions on posedge and negedge may have to change for x values - investigate
+                // TODO: This should work as x -> 0 is negedge and x -> 1 is posedge
+                // TODO: slight issue that the initial x -> initVal should not trigger negedge/posedge apparently
                 match ect with
                 | Neither -> prevVal <> currVal
                 | Posedge -> prevVal.getRange (Single 0u) = VNum 0 && currVal.getRange (Single 0u) = VNum 1
