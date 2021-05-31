@@ -167,10 +167,10 @@ module LangConstructs =
         ]
 
     let pInputDeclaration =
-        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pIdentifier
+        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers
         |>> function
-        | range, iden -> 
-            { name = iden
+        | range, idens -> 
+            { names = idens
               range = range
               dir = Input }
 
@@ -180,10 +180,10 @@ module LangConstructs =
                 Keyword.pReg >>% Reg
                 opt Keyword.pWire >>% Wire
             ]
-        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pListOfIdentifiers
         |>> function
-        | (portType, range), iden -> 
-            { name = iden
+        | (portType, range), idens -> 
+            { names = idens
               range = range
               dir = Output portType }
 

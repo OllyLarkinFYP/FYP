@@ -17,7 +17,7 @@ type ASTT =
 // ######### A.1.3 Module Parameters And Ports #########
 
 type PortDeclarationT = 
-    { name: IdentifierT
+    { names: IdentifierT list
       range: RangeT option
       dir: PortDirAndType }
 
