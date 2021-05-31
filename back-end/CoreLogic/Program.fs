@@ -214,22 +214,26 @@ endmodule
 "
 
 let mod1 = @"
-module mod1(a,b);
-    input [7:0] a;
-    output [7:0] b;
-
-    mod2 test(.a(a),.b(b));
+module d_ff(clk, d, q, q_bar);
+    input clk, d;
+    output reg q, q_bar;
+    
+    always @(posedge clk) begin
+        q <= d;
+        q_bar <= !d;
+    end
 endmodule
 "
 
 let mod2 = @"
-module mod2(a,b);
-    input [7:0] a;
-    output reg [7:0] b;
-
-    initial b = 0;
+module d_ff(clk, d, q, q_bar);
+    input clk, d;
+    output reg q, q_bar;
     
-    always @(a) b = b + 1;
+    always @(posedge clk) begin
+        q <= d;
+        q_bar <= !d;
+    end
 endmodule
 "
 
@@ -247,13 +251,14 @@ let main _ =
         a
 
     let inputs =
-        [("a", Once [VNum.unknown 1u; VNum 1; VNum 2; VNum 3])]
+        [("clk", Repeating [VNum 0; VNum 1])
+         ("d", Once [VNum 0; VNum 0; VNum 1; VNum 1; VNum 0])]
         |> Map.ofList
-    let numberOfCycles = 4u
-    let reqVars = ["a";"b"]
+    let numberOfCycles = 5u
+    let reqVars = ["clk";"d";"q";"q_bar"]
 
     let parser = LangConstructs.pSourceText
-    [mod1;mod2]
+    [mod1]
     |> List.map (fun modStr ->
         modStr
         |> startTiming
@@ -263,7 +268,7 @@ let main _ =
         | Success (ast, _, _) -> ast
         | Failure (msg, _, _) -> failwith msg)
     |> startTiming
-    |> Compiler.Compile.project "mod1"
+    |> Compiler.Compile.project "d_ff"
     |> stopTiming "COM"
     |> function
     | Compiler.CompResult.Fail _ as r -> failwithf "%A" r
