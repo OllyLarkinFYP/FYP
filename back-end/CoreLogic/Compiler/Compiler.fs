@@ -316,7 +316,7 @@ module private Helpers =
                 ||> List.fold (fun (ports, items) modItem ->
                     match modItem with
                     | NonPortModuleItem item -> (ports, item::items)
-                    | PortDeclaration pd -> ((fPort pd)::ports, items))
+                    | PortDeclaration pd -> ((fPort pd) @ ports, items))
             Validate.portsMatchDecs md1.ports ports
             ?> fun _ -> Validate.uniquePorts ports
             ?>> fun _ -> 
@@ -326,7 +326,7 @@ module private Helpers =
                     |> fPost
                 (processedPorts, items)
         | ModDec2 md2 ->
-            let ports = List.map fPort md2.ports
+            let ports = List.collect fPort md2.ports
             Validate.uniquePorts ports
             ?>> fun _ -> (fPost ports, md2.body)
 
@@ -454,9 +454,18 @@ module private Internal =
         let processPD (pd: PortDeclarationT) =
             let range = Util.optRangeTToRange pd.range
             match pd.dir with
-            | PortDirAndType.Input -> (pd.name, { var = Input; range = range })
-            | PortDirAndType.Output PortType.Wire -> (pd.name, { var = Wire []; range = range })
-            | PortDirAndType.Output PortType.Reg -> (pd.name, { var = Reg; range = range })
+            | PortDirAndType.Input -> 
+                pd.names
+                |> List.map (fun name ->
+                    (name, { var = Input; range = range }))
+            | PortDirAndType.Output PortType.Wire -> 
+                pd.names
+                |> List.map (fun name ->
+                    (name, { var = Wire []; range = range }))
+            | PortDirAndType.Output PortType.Reg -> 
+                pd.names
+                |> List.map (fun name ->
+                    (name, { var = Reg; range = range }))
         Helpers.getPortsAndItems processPD Map.ofList astInfo
 
     let processModuleVariable (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
@@ -547,7 +556,9 @@ module private Internal =
                             netlist.alwaysBlocks @ subNetlist.alwaysBlocks
                             |> List.indexed
                             |> List.map (fun (i, (_, a)) -> (i, a))
-                        let processPD (pd: PortDeclarationT) = pd.name, pd.dir
+                        let processPD (pd: PortDeclarationT) =
+                            pd.names
+                            |> List.map (fun name -> name, pd.dir)
                         Helpers.getPortsAndItems processPD id modAST.info
                         ?> fun (ports, _) ->
                             let prefixedPorts = ports |> List.map (fun (iden, pt) -> prefix + iden, pt)
