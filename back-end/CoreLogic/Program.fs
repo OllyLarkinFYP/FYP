@@ -428,13 +428,14 @@ module alu
                 ALU_Result = (A>B)?8'd1:8'd0 ;
             4'b1111: // Equal comparison   
               ALU_Result = (A==B)?8'd1:8'd0 ;
-            default: ALU_Result = A + B ; 
+            // default: ALU_Result = A + B ; 
         endcase
     end
 endmodule
 "
 
-let print str = printfn "%A" str
+// TODO: fix default thing in case
+// TODO: check alu outputs are correct
 
 [<EntryPoint>]
 let main _ =
@@ -457,12 +458,11 @@ let main _ =
     let numberOfCycles = 16u
     let reqVars = [ "A"; "B"; "ALU_Sel"; "ALU_Out"; "CarryOut" ]
 
-    let parser = LangConstructs.pSourceText
     modules
     |> List.map (fun modStr ->
         modStr
         |> startTiming
-        |> run parser
+        |> Parse.sourceText
         |> stopTiming "PAR"
         |> function
         | Success (ast, _, _) -> ast

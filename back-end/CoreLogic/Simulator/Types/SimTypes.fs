@@ -62,17 +62,13 @@ type SimState = Map<IdentifierT,SimStateContent>
 module SimState =
     let empty : SimState = Map.empty
 
-    let init (netlist: Netlist) (inputs: SimInputs) =
-        let (initRegState, inpLst) =
-            ((empty, []), Map.toList netlist.varMap)
-            ||> List.fold (fun (state, inpLst) (iden, variable) ->
-                match variable.var with
-                | Reg -> state.Add(iden, { simType = SimStateReg; value = VNum.unknown variable.range.size }), inpLst
-                | Input -> state, (iden, variable.range)::inpLst
-                | _ -> state, inpLst)
-        (initRegState, Map.toList <| SimInputs.getCycle inpLst 0u inputs)
-        ||> List.fold (fun state (iden, value) ->
-            state.Add(iden, { simType = SimStateInput; value = value.getRange netlist.varMap.[iden].range }))
+    let init (netlist: Netlist) =
+        (empty, Map.toList netlist.varMap)
+        ||> List.fold (fun state (iden, variable) ->
+            match variable.var with
+            | Reg -> state.Add(iden, { simType = SimStateReg; value = VNum.unknown variable.range.size })
+            | Input -> state.Add(iden, { simType = SimStateReg; value = VNum.unknown variable.range.size })
+            | _ -> state)
 
     let nextState (varMap: VarMap) (prevState: SimState) (inputs: Map<IdentifierT, VNum>) =
         let initReg = Map.filter (fun _ cont -> cont.simType = SimStateReg) prevState
