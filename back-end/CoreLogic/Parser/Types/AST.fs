@@ -111,12 +111,11 @@ type EventControlType =
 
 // ######### A.6.6 Conditional Statements #########
 
-type ConditionalStatementT = {
-    Condition: ExpressionT
-    Body: StatementOrNullT
-    ElseIf: {| Condition: ExpressionT; Body: StatementOrNullT |} List
-    ElseBody: StatementOrNullT
-}
+type ConditionalStatementT = 
+    { Condition: ExpressionT
+      Body: StatementOrNullT
+      ElseIf: {| Condition: ExpressionT; Body: StatementOrNullT |} List
+      ElseBody: StatementOrNullT }
 
 
 // ######### A.6.7 Case Statements #########

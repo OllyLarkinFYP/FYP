@@ -6,7 +6,11 @@
   <ItemGroup>
     <Compile Include="CommonTypes.fs" />
     <Compile Include="Parser/Types/AST.fs" />
+    <Compile Include="Compiler/Types/CompResult.fs" />
+    <Compile Include="Compiler/Errors.fs" />
+    <Compile Include="Compiler/Utils.fs" />
     <Compile Include="Compiler/Types/Netlist.fs" />
+    <Compile Include="Simulator/Types/SimTypes.fs" />
     <Compile Include="CommonHelpers/ConstExprEval.fs" />
     <Compile Include="CommonHelpers/GeneralUtils.fs" />
     <Compile Include="Parser/Utils.fs" />
@@ -15,6 +19,7 @@
     <Compile Include="Parser/LangConstructs.fs" />
     <Compile Include="Parser/Parser.fs" />
     <Compile Include="Compiler/Compiler.fs" />
+    <Compile Include="Simulator/Simulator.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
