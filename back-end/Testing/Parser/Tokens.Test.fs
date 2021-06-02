@@ -4,6 +4,7 @@ open System
 open Expecto
 open Helper
 open Parser.Token
+open Parser.Utils
 open CommonTypes
 
 module TokenTests = 
@@ -211,10 +212,22 @@ module TokenTests =
                     VNum.bin "1011"
         ]
 
+    let whiteSpaceTests =
+        parserSuccTests "Testing ignoring of white space" [
+            "skipStrWs removes spaces after token",
+                skipStrWs "test",
+                    "test    "
+
+            "skipCharWs removes spaces after token",
+                skipCharWs 'a',
+                    "a   "
+        ]
+
     let allTests =
         testList "All Token Parsing Tests" [ 
             kewordTests
             symbolTests
             identifierTests
             numberTests
+            whiteSpaceTests
         ]
