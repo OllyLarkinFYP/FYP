@@ -24,6 +24,15 @@ type SimInput =
                     then vs.[vs.Length - 1]
                     else vs.[cInt]
                 | Repeating vs -> vs.[cInt % vs.Length]
+        static member private getValueList (inp: (VNum * int) list) =
+            let rec createList (value, occ) =
+                if occ <= 1
+                then [ value ]
+                else value::(createList (value, occ-1))
+            inp
+            |> List.collect createList
+        static member onceWithLengths = SimInput.getValueList >> Once
+        static member repeatWithLengths = SimInput.getValueList >> Repeating
 
 type SimInputs = Map<IdentifierT, SimInput> 
 

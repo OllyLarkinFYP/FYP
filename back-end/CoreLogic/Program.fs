@@ -413,9 +413,9 @@ module alu
             4'b0111: // Rotate right
                 ALU_Result = {A[0],A[7:1]};
             4'b1000: //  Logical and 
-                ALU_Result = A && B;
+                ALU_Result = A & B;
             4'b1001: //  Logical or
-                ALU_Result = A || B;
+                ALU_Result = A | B;
             4'b1010: //  Bitwise xor 
                 ALU_Result = A ^ B;
             4'b1011: //  Logical nor
@@ -450,11 +450,11 @@ let main _ =
     let modules = [alu]
     let topLevel = "alu"
     let inputs =
-        [ "A", Once [ VNum 11 ]
-          "B", Once [ VNum 10 ]
-          "ALU_Sel", Once [ VNum 0; VNum 1; VNum 2; VNum 3; VNum 4; VNum 5; VNum 6; VNum 7; VNum 8; VNum 9; VNum 10; VNum 11; VNum 12; VNum 13; VNum 14; VNum 15 ] ]
+        [ "A", SimInput.onceWithLengths [ VNum 10, 16; VNum 246, 1 ]
+          "B", SimInput.onceWithLengths [ VNum 2, 16; VNum 10, 1 ]
+          "ALU_Sel", Once [ VNum 0; VNum 1; VNum 2; VNum 3; VNum 4; VNum 5; VNum 6; VNum 7; VNum 8; VNum 9; VNum 10; VNum 11; VNum 12; VNum 13; VNum 14; VNum 15; VNum 0 ] ]
         |> Map.ofList
-    let numberOfCycles = 16u
+    let numberOfCycles = 17u
     let reqVars = [ "A"; "B"; "ALU_Sel"; "ALU_Out"; "CarryOut" ]
 
     modules
