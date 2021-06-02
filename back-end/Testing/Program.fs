@@ -8,6 +8,7 @@ let tests =
         ConstExprTests.allTests
         VNumTests.allTests
         TokenTests.allTests
+        ExpressionsTests.allTests
     ] 
 
 [<EntryPoint>] 

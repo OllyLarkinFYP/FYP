@@ -20,6 +20,7 @@
     <Compile Include="ConstExprEval.Test.fs" />
     <Compile Include="VNum.Test.fs" />
     <Compile Include="Parser/Tokens.Test.fs" />
+    <Compile Include="Parser/Expressions.Test.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
