@@ -54,10 +54,15 @@ module LangConstructs =
         |>> function
         | expr, items -> { CaseStatementT.CaseExpr = expr; Items = items }
 
+    let pRangedVar: Parser<RangedVarT,unit> =
+        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+            { name = iden; range = range }
+
     let pEventExpression =
         choice [
-            Keyword.pPosedge >>. pExpression |>> EventExpressionT.Posedge
-            Keyword.pNegedge >>. pExpression |>> EventExpressionT.Negedge
+            Keyword.pPosedge >>. pRangedVar |>> fun rv -> (Posedge, rv)
+            Keyword.pNegedge >>. pRangedVar |>> fun rv -> (Negedge, rv)
+            pRangedVar |>> fun rv -> (Neither, rv)
         ]
 
     let pEventExpressionList =
@@ -75,17 +80,6 @@ module LangConstructs =
         |>> function
         | eControl, statement -> { ProceduralTimingControlStatementT.Control = eControl; Statement = statement }
 
-    // // This parser is self recursive so needs a forward reference
-    // // The implementation is defined underneath
-    // let pVariableLValue, pVariableLValueImpl : Parser<VariableLValueT,unit> * Parser<VariableLValueT,unit> ref = createParserForwardedToRef()
-
-    // do pVariableLValueImpl := 
-    //     choice [
-    //         Symbol.pOpenCBrac >>. sepBy1 pVariableLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VariableLValueT.Concat
-    //         pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-    //             VariableLValueT.Ranged {| Name = iden; Range = range |}
-    //     ]
-
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
     let pNetLValue, pNetLValueImpl : Parser<NetLValueT,unit> * Parser<NetLValueT,unit> ref = createParserForwardedToRef()
@@ -93,17 +87,26 @@ module LangConstructs =
     do pNetLValueImpl := 
         choice [
             Symbol.pOpenCBrac >>. sepBy1 pNetLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> NetLValueT.Concat
-            pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
-                NetLValueT.Ranged {| Name = iden; Range = range |}
+            pRangedVar |>> NetLValueT.Ranged
+        ]
+
+    // This parser is self recursive so needs a forward reference
+    // The implementation is defined underneath
+    let pVarLValue, pVarLValueImpl : Parser<VarLValueT,unit> * Parser<VarLValueT,unit> ref = createParserForwardedToRef()
+
+    do pVarLValueImpl := 
+        choice [
+            Symbol.pOpenCBrac >>. sepBy1 pVarLValue Symbol.pComma .>> Symbol.pCloseCBrac |>> VarLValueT.Concat
+            pRangedVar |>> VarLValueT.Ranged
         ]
 
     let pBlockingAssignment =
-        pNetLValue .>>? Symbol.pAssign .>>. pExpression
+        pVarLValue .>>? Symbol.pAssign .>>. pExpression
         |>> function
         | lval, exp -> { BlockingAssignmentT.LHS = lval; RHS = exp }
 
     let pNonBlockingAssignment =
-        pNetLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
+        pVarLValue .>>? Symbol.pNonBlockAssign .>>. pExpression
         |>> function
         | lval, exp -> { NonblockingAssignmentT.LHS = lval; RHS = exp }
 
@@ -114,14 +117,14 @@ module LangConstructs =
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
     let pInitialConstruct: Parser<InitialConstructT,unit> = 
-        let pConstantAssignment =
-            pNetLValue .>>? Symbol.pAssign .>>. pConstantExpression
+        let pRangedConstAssignment =
+            pRangedVar .>>? Symbol.pAssign .>>. pConstantExpression
             |>> function
-            | lval, exp -> { ConstantAssignmentT.LHS = lval; RHS = exp }
+            | lval, exp -> { RangedConstAssignT.LHS = lval; RHS = exp }
         let initialBody =
             choice [
-                pConstantAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
-                Keyword.pBegin >>. many (pConstantAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
+                pRangedConstAssignment .>> Symbol.pSemiColon |>> fun a -> [a]
+                Keyword.pBegin >>. many (pRangedConstAssignment .>> Symbol.pSemiColon) .>> Keyword.pEnd
             ]
         Keyword.pInitial >>. initialBody
 
@@ -139,7 +142,7 @@ module LangConstructs =
         | msb, lsb -> { RangeT.MSB = msb; LSB = lsb}
 
     let pListOfIdentifiers =
-        sepBy1 pIdentifier Symbol.pComma
+        sepBy1 pIdentifier (attempt (Symbol.pComma .>> notFollowedBy (Keyword.pInput <|> Keyword.pOutput)))
 
     let pNetDeclaration =
         Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
@@ -164,10 +167,10 @@ module LangConstructs =
         ]
 
     let pInputDeclaration =
-        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pIdentifier
+        Keyword.pInput >>. opt Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers
         |>> function
-        | range, iden -> 
-            { name = iden
+        | range, idens -> 
+            { names = idens
               range = range
               dir = Input }
 
@@ -177,10 +180,10 @@ module LangConstructs =
                 Keyword.pReg >>% Reg
                 opt Keyword.pWire >>% Wire
             ]
-        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pIdentifier
+        Keyword.pOutput >>. regOrWire .>>. opt pRange .>>. pListOfIdentifiers
         |>> function
-        | (portType, range), iden -> 
-            { name = iden
+        | (portType, range), idens -> 
+            { names = idens
               range = range
               dir = Output portType }
 

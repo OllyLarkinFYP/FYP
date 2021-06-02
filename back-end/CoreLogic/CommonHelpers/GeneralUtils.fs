@@ -2,64 +2,38 @@ namespace CommonHelpers
 
 open System
 open AST
-open Netlist
 open CommonTypes
 
-module Operators =
+module private Operators =
     let (?>) r f = Result.bind f r
     let (?>>) r f =
         match r with
         | Ok a -> Ok (f a)
         | Error e -> Error e 
 
-module ResList =
-    open Operators
+module List =
+    let chooseFold f (acc: 'State) (lst: List<'T>) : 'State * List<'Result> =
+        ((acc, []), lst)
+        ||> List.fold (fun (acc', selected) item ->
+            match f acc' item with
+            | acc'', Some e -> acc'', e::selected
+            | acc'', None -> acc'', selected)
 
-    let rec map f =
-        function
-        | [] -> Ok []
+    let rec existsFold f (acc: 'State) (lst: List<'T>) : 'State * bool =
+        match lst with
+        | [] -> acc, false
         | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match map f tl with
-                | Error e -> Error e
-                | Ok processedTl -> Ok (res :: processedTl)
-                
-    let collect f lst =
-        let rec reduce =
-            function
-            | [] -> []
-            | hd::tl -> hd @ (reduce tl)
-        map f lst ?>> reduce
+            match f acc hd with
+            | acc', true -> acc', true
+            | acc', false -> existsFold f acc' tl
 
-    let rec choose f =
-        function
-        | [] -> Ok []
+    let rec foldUntil folder (state: 'State) (lst: List<'T>) : 'State option =
+        match lst with
+        | [] -> None
         | hd::tl ->
-            match f hd with
-            | Error e -> Error e
-            | Ok res ->
-                match choose f tl with
-                | Error e -> Error e
-                | Ok processedTl ->
-                    match res with
-                    | Some a -> Ok (a::processedTl)
-                    | None -> Ok processedTl
-                    
-    let rec fold folder state =
-        function
-        | [] -> Ok state
-        | hd::tl ->
-            match folder state hd with
-            | Error e -> Error e
-            | Ok acc -> fold folder acc tl
-
-    let ignore _ = Ok()
-
-    let tupleFold folder (state, items) =
-        fold folder state items
-        ?>> fun s -> (s, items)
+            match folder hd with
+            | Some state' -> Some state'
+            | None -> foldUntil folder state tl
 
 
 module Util =
@@ -75,21 +49,6 @@ module Util =
         | Some range -> rangeTToRange range
         | None -> Single 0u
 
-    // let optRangeTToRangeWithNodes (nodes: MutMap<IdentifierT,Node>) (name: string) (r: RangeT option) =
-    //     match r with
-    //     | Some range -> Ok <| rangeTToRange range
-    //     | None -> 
-    //         match nodes.TryFind name with
-    //         | None -> Error <| sprintf "Could not find range of %A. Cannot be found in node map." name
-    //         | Some node -> 
-    //             match node.comp with
-    //             | InputComp r -> Ok r
-    //             | OutputReg c -> Ok c.range
-    //             | OutputWire r -> Ok r
-    //             | RegComp c -> Ok c.range
-    //             | WireComp r -> Ok r
-    //             | _ -> Error <| sprintf "Cannot find range of non-input/output/reg/wire. Unable to get range for %A" name
-
     let optRangeTToRangeDefault (defaultVal: Range) (r: RangeT option) =
         match r with
         | Some range -> rangeTToRange range
@@ -104,3 +63,10 @@ module Util =
             else None)
 
     let tuple a b = a,b
+
+    let unreachableCode () =
+        failwithf "Unreachable code reached."
+
+    let printAndContinue a = 
+        printfn "\n%A\n" a
+        a

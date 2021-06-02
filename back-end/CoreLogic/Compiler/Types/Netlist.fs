@@ -1,94 +1,153 @@
-namespace Netlist
+namespace Compiler
 
 open AST
 open CommonTypes
+open Compiler.Utils
+open Compiler.CompResult
 
-type ModuleDeclaration =
-    { name: IdentifierT
-      ports: (IdentifierT * PortDirAndType * Range) list }
+module Netlist =
 
-type ModuleOutputContent =
-    { instanceName: IdentifierT
-      portName: IdentifierT
-      range: Range }
+    type ReqVarList = (IdentifierT * Range) list
 
-// The range here represents the range of the output from the expression used
-type ExpressionOutputContent =
-    { expression: ExpressionT
-      vars: (IdentifierT * Range) list
-      range: Range }
+    type ExpContent =
+        { expression: ExpressionT
+          reqVars: ReqVarList }
 
-type RegDriverType =
-    | RegExpressionOutput of ExpressionOutputContent
-    | RegModuleOutput of ModuleOutputContent
-    | RegAlwaysOutput of uint
+    type Driver =
+        { drivenRange: Range
+          expRange: Range
+          exp: ExpContent }
 
-type RegDriver = Range * RegDriverType
+    type VarElem =
+        | Input
+        | Reg
+        | Wire of Driver list
+        with
+            member this.getDriversFor range =
+                match this with
+                | Wire dl ->
+                    dl
+                    |> List.filter (fun driver ->
+                        Range.overlap driver.drivenRange range)
+                | _ -> []
 
-type RegContent =
-    { range: Range
-      mutable initVal: VNum
-      mutable drivers: RegDriver list }
+    type Variable =
+        { var: VarElem
+          range: Range }
+        with
+            override this.ToString() =
+                sprintf "{ var = %s; range = %s }" (this.var.ToString()) (this.range.ToString())
 
-type WireDriverType =
-    | WireExpressionOutput of ExpressionOutputContent
-    | WireModuleOutput of ModuleOutputContent
+    type VarMap = Map<IdentifierT, Variable>
 
-// The range here represents the range of the wire that is driven
-type WireDriver = Range * WireDriverType
+    module VarMap =
+        let inputs (vm: VarMap) =
+            vm
+            |> Map.filter (fun _ v ->
+                match v.var with
+                | Input -> true
+                | _ -> false)
+        let wires (vm: VarMap) =
+            vm
+            |> Map.filter (fun _ v ->
+                match v.var with
+                | Wire _ -> true
+                | _ -> false)
+        let regs (vm: VarMap) =
+            vm
+            |> Map.filter (fun _ v ->
+                match v.var with
+                | Reg -> true
+                | _ -> false)
+                
+        let addDriver (vm: VarMap) (name: IdentifierT) (driver: Driver) =
+            if vm.ContainsKey name
+            then
+                match vm.[name].var with
+                | Wire currDrivers ->
+                    currDrivers
+                    |> List.compResMap (fun d ->
+                        if Range.overlap d.drivenRange driver.drivenRange
+                        then Errors.ProcessContAssign.multiDrivenRanges name d.drivenRange driver.drivenRange
+                        else Succ ())
+                    ?>> fun _ ->
+                        let newDrivers = driver::currDrivers
+                        let newComp = { vm.[name] with var = Wire newDrivers }
+                        vm.Add(name, newComp)
+                | _ -> Errors.ProcessContAssign.canOnlyDriveWire name
+            else Errors.General.varDoesNotExist name
 
-type WireContent =
-    // The range here represents the ramge of the wire
-    { range: Range
-      mutable drivers: WireDriver list }
+    type Assignment =
+        { name: IdentifierT
+          driver: Driver }
 
-type VariableComp =
-    | InputComp of Range
-    | RegComp of RegContent
-    | WireComp of WireContent
-    with 
-        member this.range =
-            match this with
-            | InputComp r -> r
-            | RegComp rc -> rc.range
-            | WireComp wc -> wc.range
-        static member getRange (vc: VariableComp) = vc.range
+    type ConditionalStatement =
+        { condition: ExpContent
+          trueBody: Statement
+          falseBody: Statement }
 
-// The IdentifierT refers to the port name
-type ModuleInputDriver = IdentifierT * Range * ExpressionOutputContent
+    and CaseItem =
+        { conditions: ExpContent list
+          body: Statement }
 
-type ModuleInstanceComp =
-    { moduleName: IdentifierT
-      drivers: ModuleInputDriver list }
+    and CaseStatement =
+        { caseExpr: ExpContent
+          items: CaseItem list
+          defaultCase: Statement }
 
-type AlwaysComp =
-    { eventControl: EventControlT
-      statement: StatementOrNullT
-      inputs: (IdentifierT * Range) list }
+    and Statement =
+        | Null
+        | BlockingAssignment of Assignment list 
+        | NonblockingAssignment of Assignment list
+        | Case of CaseStatement
+        | Conditional of ConditionalStatement
+        | SeqBlock of Statement list 
 
-type Netlist = 
-    { moduleDeclaration: ModuleDeclaration
-      variables: Map<IdentifierT,VariableComp> // includes input/wire/reg
-      moduleInstances: Map<IdentifierT,ModuleInstanceComp>
-      alwaysBlocks: Map<uint,AlwaysComp> }
-    with
-        override this.ToString () =
-            let displayMap (m: Map<'a,'b>) =
-                m
-                |> Map.toList
-                |> List.map (fun elem -> "\t" + elem.ToString() + "\n")
-                |> function
-                | [] -> ""
-                | a -> List.reduce (+) a
-            let title = "Netlist:\n"
-            let modDec = sprintf "ModuleDeclaration: \n\t%A\n" this.moduleDeclaration
-            let variables = "Variables: \n" + displayMap this.variables
-            let moduleInstances = "Module Instances: \n" + displayMap this.moduleInstances
-            let alwaysBlocks = "Always Blocks: \n" + displayMap this.alwaysBlocks
-            title + modDec + variables + moduleInstances + alwaysBlocks
-            
+    type AssignItem =
+        { lhs: {| varName: IdentifierT; range: Range |}
+          rhs: VNum }
 
-/// Different modules listed with their names as the key
-type NetlistCollection = 
-    { netlists: Map<IdentifierT,Netlist>
-      topLevelMods: IdentifierT list }
+    type AlwaysEventControl = (EventControlType * IdentifierT * Range) List
+
+    type EventControlContent =
+        { ec: AlwaysEventControl
+          reqVars: ReqVarList }
+
+    type AlwaysBlock = 
+        { eventControl: EventControlContent
+          statement: Statement }
+
+    type IndexedAlwaysBlocks = (int * AlwaysBlock) list
+
+    type Netlist =
+        { varMap: VarMap
+          initial: AssignItem list
+          alwaysBlocks: IndexedAlwaysBlocks
+          modInstNames: IdentifierT list }
+        with
+            override this.ToString() =
+                let vm =
+                    this.varMap
+                    |> Map.toList
+                    |> List.map (fun (key, value) -> sprintf "\t[%s, %s]\n" (key.ToString()) (value.ToString()))
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                let i =
+                    this.initial
+                    |> List.map (fun item -> sprintf "\t%A\n" item)
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                let a =
+                    this.alwaysBlocks
+                    |> List.map (fun item -> sprintf "\t%A\n" item)
+                    |> fun lst ->
+                        if lst.Length <> 0
+                        then List.reduce (+) lst 
+                        else ""
+                sprintf " varMap =\n%s\n initial =\n%s\n alwaysBlocks =\n%s\n" vm i a
+
+        
