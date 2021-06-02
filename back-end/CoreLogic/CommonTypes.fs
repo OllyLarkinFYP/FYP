@@ -270,7 +270,7 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         ~~~num + VNum(1UL,num.size)
 
     static member (~~~) (num: VNum) = 
-        VNum(FSharp.Core.Operators.(~~~) num.value, num.size, num.unknownBits)
+        VNum(FSharp.Core.Operators.(~~~) num.value, num.size, num.unknownBits).trim()
 
     // *********** BINARY OPS ***********
     /// Unchecked used explicityly to make behaviour the same as Verilog numbers

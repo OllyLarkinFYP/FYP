@@ -413,28 +413,27 @@ module alu
             4'b0111: // Rotate right
                 ALU_Result = {A[0],A[7:1]};
             4'b1000: //  Logical and 
-                ALU_Result = A & B;
+                ALU_Result = A && B;
             4'b1001: //  Logical or
-                ALU_Result = A | B;
-            4'b1010: //  Logical xor 
+                ALU_Result = A || B;
+            4'b1010: //  Bitwise xor 
                 ALU_Result = A ^ B;
             4'b1011: //  Logical nor
-                ALU_Result = ~(A | B);
+                ALU_Result = ~(A || B);
             4'b1100: // Logical nand 
-                ALU_Result = ~(A & B);
-            4'b1101: // Logical xnor
+                ALU_Result = ~(A && B);
+            4'b1101: // Bitwise xnor
                 ALU_Result = ~(A ^ B);
             4'b1110: // Greater comparison
                 ALU_Result = (A>B)?8'd1:8'd0 ;
             4'b1111: // Equal comparison   
               ALU_Result = (A==B)?8'd1:8'd0 ;
-            // default: ALU_Result = A + B ; 
+            default: ALU_Result = A + B ; 
         endcase
     end
 endmodule
 "
 
-// TODO: fix default thing in case
 // TODO: check alu outputs are correct
 
 [<EntryPoint>]
@@ -451,7 +450,7 @@ let main _ =
     let modules = [alu]
     let topLevel = "alu"
     let inputs =
-        [ "A", Once [ VNum 5 ]
+        [ "A", Once [ VNum 11 ]
           "B", Once [ VNum 10 ]
           "ALU_Sel", Once [ VNum 0; VNum 1; VNum 2; VNum 3; VNum 4; VNum 5; VNum 6; VNum 7; VNum 8; VNum 9; VNum 10; VNum 11; VNum 12; VNum 13; VNum 14; VNum 15 ] ]
         |> Map.ofList
