@@ -11,6 +11,30 @@ module private Operators =
         | Ok a -> Ok (f a)
         | Error e -> Error e 
 
+module List =
+    let chooseFold f (acc: 'State) (lst: List<'T>) : 'State * List<'Result> =
+        ((acc, []), lst)
+        ||> List.fold (fun (acc', selected) item ->
+            match f acc' item with
+            | acc'', Some e -> acc'', e::selected
+            | acc'', None -> acc'', selected)
+
+    let rec existsFold f (acc: 'State) (lst: List<'T>) : 'State * bool =
+        match lst with
+        | [] -> acc, false
+        | hd::tl ->
+            match f acc hd with
+            | acc', true -> acc', true
+            | acc', false -> existsFold f acc' tl
+
+    let rec foldUntil folder (state: 'State) (lst: List<'T>) : 'State option =
+        match lst with
+        | [] -> None
+        | hd::tl ->
+            match folder hd with
+            | Some state' -> Some state'
+            | None -> foldUntil folder state tl
+
 
 module Util =
     let rangeTToRange (r: RangeT) : Range =
@@ -46,32 +70,3 @@ module Util =
     let printAndContinue a = 
         printfn "\n%A\n" a
         a
-
-    let expToConstExpr (inputMap: Map<IdentifierT, VNum>) exp =
-        let rec toConstExprRec exp =
-            let toConstPrimary = 
-                function
-                | PrimaryT.Number v -> ConstantPrimaryT.Number v
-                | PrimaryT.Ranged r ->
-                    let range = optRangeTToRange r.range
-                    let value = inputMap.[r.name].getRange range
-                    ConstantPrimaryT.Number value
-                | PrimaryT.Concat c -> ConstantPrimaryT.Concat <| List.map toConstExprRec c
-                | PrimaryT.Brackets b -> ConstantPrimaryT.Brackets <| toConstExprRec b
-            match exp with
-            | Primary p -> ConstantExpressionT.Primary <| toConstPrimary p
-            | UniExpression u ->
-                ConstantExpressionT.UniExpression
-                    {| Operator = u.Operator
-                       Expression = toConstExprRec u.Expression |}
-            | BinaryExpression b -> 
-                ConstantExpressionT.BinaryExpression
-                    {| LHS = toConstExprRec b.LHS
-                       BinOperator = b.BinOperator
-                       RHS = toConstExprRec b.RHS |}
-            | CondExpression c ->
-                ConstantExpressionT.CondExpression
-                    {| Condition = toConstExprRec c.Condition
-                       TrueVal = toConstExprRec c.TrueVal
-                       FalseVal = toConstExprRec c.FalseVal |}
-        toConstExprRec exp

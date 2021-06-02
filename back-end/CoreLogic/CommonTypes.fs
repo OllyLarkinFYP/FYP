@@ -174,19 +174,24 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         VNum(newVal ||| oldVal, this.size, newUnknowns).trim()
 
     member this.getRange (range: Range) =
-        let unknowns = this.unknownBits |> List.map (fun bit -> bit - range.lower)
-        let value = this.value >>> int range.lower
+        let unknowns = 
+            this.unknownBits |> List.map (fun bit -> bit - range.lower)
+        let value = 
+            this.value >>> int range.lower
         VNum(value, range.size, unknownBits).trim()
 
     /// Masks out anything above the size of the number as well as unknown bits
     member this.trim () = 
-        let m = 
-            ((1UL <<< (int this.size)), 1UL)
-            ||> FSharp.Core.Operators.(-)
-        let ub =
-            this.unknownBits
-            |> List.filter (fun i -> i < this.size)
-        VNum(this.value &&& m, this.size, ub).maskDown()
+        if this.size >= 64u
+        then this
+        else
+            let m = 
+                ((1UL <<< (int this.size)), 1UL)
+                ||> FSharp.Core.Operators.(-)
+            let ub =
+                this.unknownBits
+                |> List.filter (fun i -> i < this.size)
+            VNum(this.value &&& m, this.size, ub).maskDown()
 
     member this.toBool () =
         if this.trim().value = 0UL || this.isUnknown
@@ -256,12 +261,16 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
                 (this.trim().mask(Down,num.unknownBits).value :> IComparable<_>).CompareTo (num.trim().mask(Down,this.unknownBits).value)
             | _ -> -1
 
+    static member exactComp (v1: VNum) (v2: VNum) =
+        (v1 = v2) &&
+            (List.sort v1.unknownBits = List.sort v2.unknownBits) 
+
     // *********** UNARY OPS ***********
     static member (~-) (num: VNum) = 
         ~~~num + VNum(1UL,num.size)
 
     static member (~~~) (num: VNum) = 
-        VNum(FSharp.Core.Operators.(~~~) num.value, num.size, num.unknownBits)
+        VNum(FSharp.Core.Operators.(~~~) num.value, num.size, num.unknownBits).trim()
 
     // *********** BINARY OPS ***********
     /// Unchecked used explicityly to make behaviour the same as Verilog numbers

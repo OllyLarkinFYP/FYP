@@ -22,6 +22,14 @@ module Netlist =
         | Input
         | Reg
         | Wire of Driver list
+        with
+            member this.getDriversFor range =
+                match this with
+                | Wire dl ->
+                    dl
+                    |> List.filter (fun driver ->
+                        Range.overlap driver.drivenRange range)
+                | _ -> []
 
     type Variable =
         { var: VarElem
@@ -95,7 +103,7 @@ module Netlist =
         | Conditional of ConditionalStatement
         | SeqBlock of Statement list 
 
-    type InitItem =
+    type AssignItem =
         { lhs: {| varName: IdentifierT; range: Range |}
           rhs: VNum }
 
@@ -109,10 +117,12 @@ module Netlist =
         { eventControl: EventControlContent
           statement: Statement }
 
+    type IndexedAlwaysBlocks = (int * AlwaysBlock) list
+
     type Netlist =
         { varMap: VarMap
-          initial: InitItem list
-          alwaysBlocks: (int * AlwaysBlock) list
+          initial: AssignItem list
+          alwaysBlocks: IndexedAlwaysBlocks
           modInstNames: IdentifierT list }
         with
             override this.ToString() =
