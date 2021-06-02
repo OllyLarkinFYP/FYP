@@ -7,6 +7,7 @@ let tests =
     testList "All Tests" [ 
         ConstExprTests.allTests
         VNumTests.allTests
+        TokenTests.allTests
     ] 
 
 [<EntryPoint>] 

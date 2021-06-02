@@ -20,14 +20,12 @@ module Token =
         let pIf: Parser<unit, unit> = skipStrWs "if"
         let pInitial: Parser<unit, unit> = skipStrWs "initial"
         let pInput: Parser<unit, unit> = skipStrWs "input"
-        let pLogic: Parser<unit, unit> = skipStrWs "logic"
         let pModule: Parser<unit, unit> = skipStrWs "module"
         let pNegedge: Parser<unit, unit> = skipStrWs "negedge"
         let pOr: Parser<unit, unit> = skipStrWs "or"
         let pOutput: Parser<unit, unit> = skipStrWs "output"
         let pPosedge: Parser<unit, unit> = skipStrWs "posedge"
         let pReg: Parser<unit, unit> = skipStrWs "reg"
-        let pSigned: Parser<unit, unit> = skipStrWs "signed"
         let pWire: Parser<unit, unit> = skipStrWs "wire"
 
     module Symbol =
