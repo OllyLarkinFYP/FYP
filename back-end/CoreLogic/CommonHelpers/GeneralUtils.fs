@@ -35,6 +35,30 @@ module List =
             | Some state' -> Some state'
             | None -> foldUntil folder state tl
 
+    let rec resMap mapper lst =
+        match lst with
+        | [] -> Ok []
+        | hd::tl ->
+            match mapper hd with
+            | Ok okHd ->
+                match resMap mapper tl with
+                | Ok okTl -> Ok (okHd::okTl)
+                | Error errTl -> Error errTl
+            | Error errHd ->
+                match resMap mapper tl with
+                | Ok _ -> Error [ errHd ]
+                | Error errTl -> Error (errHd::errTl)
+
+
+module Array =
+    let resMap mapper arr =
+        arr
+        |> List.ofArray
+        |> List.resMap mapper
+        |> function
+        | Ok out -> Ok <| Array.ofList out
+        | Error e -> Error <| Array.ofList e
+
 
 module Util =
     let rangeTToRange (r: RangeT) : Range =
