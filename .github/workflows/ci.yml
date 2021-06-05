@@ -78,5 +78,5 @@ jobs:
                   dotnet build
             - name: Test
               run: |
-                  cd back-end
-                  dotnet test
+                  cd back-end/Testing
+                  dotnet run
