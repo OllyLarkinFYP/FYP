@@ -4,8 +4,7 @@ open StdComm
 
 [<EntryPoint>]
 let main _ =
-    printfn "%s" <| MethodDispatcher.GetSerializedExternalDeclaration()
-    
     let io = IO(Console.OpenStandardInput(), Console.OpenStandardOutput())
+    io.send(MethodDispatcher.GetSerializedExternalDeclaration())
     MethodDispatcher(io.receive, io.send).Start()
     0
