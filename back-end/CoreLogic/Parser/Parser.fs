@@ -5,6 +5,8 @@ open FParsec
 open Parser
 
 module private Helpers =
+    // TODO: this really really needs to be made better
+    // TODO: use an enum instead of 3 bools
     let removeComments text =
         let pairedChars =
             text + " "
