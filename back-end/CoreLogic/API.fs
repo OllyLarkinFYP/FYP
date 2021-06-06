@@ -119,13 +119,12 @@ let compileFromPrevious (topLevel: string) =
 type APISimInp =
     { variable: string
       repeating: bool
-      values: uint64 array }
+      values: string array }
 
 [<ExposeType>]
 type SimulatorOutput =
     { name: string
-      // TODO: this effectively limits output bus width to 32 bits
-      values: int array }
+      values: string array }
 
 [<ExposeType>]
 type SimulatorReturnType =
@@ -144,28 +143,57 @@ let simulateFromPrevious (inputs: APISimInp array) (reqVars: string array) (cycl
           errors = [||]
           warnings = [||] }
     | Some netlist ->
-        let simInputs = raise <| NotImplementedException()
-        let simReqVars = raise <| NotImplementedException()
-        let simOut =
-            (Map.empty, Simulate.runSimulation netlist simInputs simReqVars cycles)
-            ||> List.fold (fun accMap cycleMap ->
-                (accMap, cycleMap)
-                ||> Map.fold (fun accMap' name value ->
-                    if accMap'.ContainsKey name
-                    then accMap'.Add(name, (value::accMap'.[name]))
-                    else accMap'.Add(name, [ value ])))
-            |> Map.toArray
-            |> Array.map (fun (name, values) ->
-                let newVals =
-                    values
-                    |> Array.ofList
-                    |> Array.map (fun vnum -> vnum.toInt())
-                { name = name
-                  values = newVals })
-        { status = retSuccess
-          output = simOut
-          errors = [||]
-          warnings = [||] }
+        let simInputs =
+            inputs
+            |> Array.map (fun inp ->
+                let valLst =
+                    inp.values
+                    |> List.ofArray
+                    |> List.map (fun str -> VNum.bin str)
+                let simInput = 
+                    if inp.repeating
+                    then Repeating valLst
+                    else Once valLst
+                inp.variable, simInput)
+            |> Map.ofArray
+        let validateReqVar reqVar =
+            if netlist.varMap.ContainsKey reqVar
+            then Result.Ok reqVar
+            else 
+                Result.Error
+                    { file = ""
+                      line = 0L
+                      column = 0L
+                      message = sprintf "The requested variable '%s' could not be found in the netlist." reqVar }
+        reqVars
+        |> Array.resMap validateReqVar
+        |> function
+        | Result.Error errs ->
+            { status = retFailure
+              output = [||]
+              errors = errs
+              warnings = [||] }
+        | Result.Ok simReqVars ->
+            let simOut =
+                (Map.empty, Simulate.runSimulation netlist simInputs (List.ofArray simReqVars) cycles)
+                ||> List.fold (fun accMap cycleMap ->
+                    (accMap, cycleMap)
+                    ||> Map.fold (fun accMap' name value ->
+                        if accMap'.ContainsKey name
+                        then accMap'.Add(name, (value::accMap'.[name]))
+                        else accMap'.Add(name, [ value ])))
+                |> Map.toArray
+                |> Array.map (fun (name, values) ->
+                    let newVals =
+                        values
+                        |> Array.ofList
+                        |> Array.map (fun vnum -> vnum.toBinString())
+                    { name = name
+                      values = newVals })
+            { status = retSuccess
+              output = simOut
+              errors = [||]
+              warnings = [||] }
 
 [<ExposeMethod>]
 let simulate (files: VerilogFile array) (topLevel: string) (inputs: APISimInp array) (reqVars: string array) (cycles: uint) =
