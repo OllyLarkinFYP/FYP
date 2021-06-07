@@ -1,0 +1,1 @@
+{"rule":"EN_QUOTES","sentence":"^\\QAll notable changes to the \"vide\" extension will be documented in this file.\\E$"}
