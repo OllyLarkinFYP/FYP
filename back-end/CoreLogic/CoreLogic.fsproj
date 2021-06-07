@@ -26,6 +26,6 @@
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="MethodDispatch" Version="1.0.3" />
-    <PackageReference Include="StdInStdOutComm" Version="1.0.3" />
+    <PackageReference Include="StdInStdOutComm" Version="1.0.4" />
   </ItemGroup>
 </Project>
