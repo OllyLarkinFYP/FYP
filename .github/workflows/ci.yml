@@ -54,12 +54,12 @@ jobs:
                   dotnet-version: "5.0.x"
             - name: Build
               run: |
-                  cd front-end
+                  cd front-end/vide
                   npm i
                   npm run build
             - name: Test
               run: |
-                  cd front-end
+                  cd front-end/vide
                   npm run test
 
     build-and-test-back-end:
