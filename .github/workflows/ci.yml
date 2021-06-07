@@ -17,9 +17,9 @@ jobs:
                   node-version: 14
             - name: Build
               run: |
-                  cd front-end
+                  cd front-end/vide
                   npm i
-                  npm run build
+                  npm run compile
 
     build-back-end:
         strategy:
@@ -56,7 +56,7 @@ jobs:
               run: |
                   cd front-end/vide
                   npm i
-                  npm run build
+                  npm run compile
             - name: Test
               run: |
                   cd front-end/vide
