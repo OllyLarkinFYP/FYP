@@ -20,9 +20,12 @@
     <Compile Include="Parser/Parser.fs" />
     <Compile Include="Compiler/Compiler.fs" />
     <Compile Include="Simulator/Simulator.fs" />
+    <Compile Include="API.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="MethodDispatch" Version="1.0.2" />
+    <PackageReference Include="StdInStdOutComm" Version="1.0.3" />
   </ItemGroup>
 </Project>

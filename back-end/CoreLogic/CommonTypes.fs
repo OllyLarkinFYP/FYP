@@ -203,6 +203,20 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         then -1
         else this.trim().value |> int
 
+    member this.toBinString () =
+        let mutable value = this.trim().value
+        let mutable outStr = ""
+        for i in [0u..this.size-1u] do
+            if List.contains i this.unknownBits
+            then outStr <- "x" + outStr
+            else
+                let dig = value &&& 1UL
+                if dig = 1UL
+                then outStr <- "1" + outStr
+                else outStr <- "0" + outStr
+            value <- value >>> 1
+        outStr
+
     override this.ToString() =
         this.size.ToString() + "'d" + this.trim().value.ToString() + (sprintf " with unknown bits: %A" this.unknownBits)
 
