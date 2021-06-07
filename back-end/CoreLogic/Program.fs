@@ -4,6 +4,14 @@ open System.Net.Sockets
 open MethodDispatcher
 open StdComm
 
+let log (str: string) =
+    if str.Length > 0
+    then
+        str.Split([|'\n'|])
+        |> Array.map (fun line -> "[CORE] " + line + "\n")
+        |> Array.reduce (+)
+        |> printf "%s"
+
 [<EntryPoint>]
 let main argv =
     if argv.Length > 0
@@ -15,11 +23,11 @@ let main argv =
         let s = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
         s.Bind(endPoint)
         s.Listen()
-        printfn "Listening on port %i..." port
+        log <| sprintf "Listening on port %i..." port
 
         let handler = s.Accept()
         let stream = new NetworkStream(handler)
-        printfn "Connected. Writable: %b, Readable: %b" stream.CanWrite stream.CanRead
+        log "Connected."
 
         let io = IO(stream, stream)
         io.send(MethodDispatcher.GetSerializedExternalDeclaration())
