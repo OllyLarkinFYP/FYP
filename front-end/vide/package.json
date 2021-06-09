@@ -17,14 +17,17 @@
         "commands": [
             {
                 "command": "vide.helloWorld",
+                "category": "VIDE",
                 "title": "Hello World"
             }
         ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "precompile": "ts-node build-backend.ts",
+        "build-backend": "ts-node build-backend.ts",
+        "precompile": "npm run build-backend",
         "compile": "tsc -p ./",
+        "prewatch": "npm run build-backend",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts"
