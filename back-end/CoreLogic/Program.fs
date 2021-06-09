@@ -12,6 +12,15 @@ let log (str: string) =
         |> Array.reduce (+)
         |> printf "%s"
 
+let help = """
+The CLI was used incorrectly, either by not providing arguments or providing invalid arguments.
+Help is provided below:
+
+arguments:
+    -d            : Use to print the exposed module declarations to stdout in JSON format
+    -p <port_num> : Use to start the backend server on port <port_num>
+"""
+
 [<EntryPoint>]
 let main argv =
     if argv.Length >= 1 && argv.[0] = "-d"
@@ -34,4 +43,5 @@ let main argv =
 
             let io = IO(stream, stream)
             MethodDispatcher(io.receive, io.send).Start()
+        else printfn "%s" help 
     0
