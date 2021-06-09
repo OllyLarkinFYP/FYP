@@ -18,7 +18,9 @@ Help is provided below:
 
 arguments:
     -d            : Use to print the exposed module declarations to stdout in JSON format
-    -p <port_num> : Use to start the backend server on port <port_num>
+    -p <port_num> : Use to start the backend server on port <port_num> (this typically would
+                    not be used when running the CLI by hand as it will be communicating via
+                    sockets on localhost)
 """
 
 [<EntryPoint>]
