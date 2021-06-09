@@ -14,10 +14,10 @@ let log (str: string) =
 
 [<EntryPoint>]
 let main argv =
-    if argv.Length = 1 && argv.[0] = "-c"
+    if argv.Length >= 1 && argv.[0] = "-d"
     then printfn "%s" <| MethodDispatcher.GetSerializedExternalDeclaration()
     else 
-        if argv.Length = 2 && argv.[0] = "-p"
+        if argv.Length >= 2 && argv.[0] = "-p"
         then
             let port = int argv.[1]
             let ipAddress = IPAddress.Loopback
