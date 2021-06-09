@@ -9,18 +9,42 @@ export class CommChannelClosedError extends Error {
     }
 }
 
+export class CommChannelInvalidJobError extends Error {
+    constructor(message?: string) {
+        super(message);
+        this.name = "CommChannelInvalidJobError";
+    }
+}
+
 export type CommChannelCloseReason =
     | "read stream closed"
     | "write stream closed"
-    | "protocol mismatch";
+    | "protocol mismatch"
+    | "could not write job"
+    | "reply has invalid JSON format";
+
+export type OutgoingJob = {
+    id: number;
+    methodName: string;
+    parameters: any[];
+};
+
+export type IncomingReply = {
+    id?: number;
+    reply?: any;
+};
 
 interface CommChannelEvents {
-    close: (reason?: CommChannelCloseReason) => void;
+    close: (reason?: CommChannelCloseReason, value?: any) => void;
 }
 
-export default class CommChannel extends TypedEmitter<CommChannelEvents> {
+const headerSize = 4;
+
+export class CommChannel extends TypedEmitter<CommChannelEvents> {
     readStream: Readable;
     writeStream: Writable;
+
+    replyCallBacks = new Map<number, (reply: any) => void>();
 
     private closed = false;
 
@@ -38,42 +62,88 @@ export default class CommChannel extends TypedEmitter<CommChannelEvents> {
         });
 
         this.readStream.on("readable", () => {
-            const headerSize = 4;
-            let sizeBuff: Buffer | null = this.readStream.read(headerSize);
-            if (sizeBuff === null) {
-                this.close("protocol mismatch");
-                console.error(
-                    "When trying to receive the size of the incoming message, null was returned. This may indicate that not enough information was sent. The communication channel has been closed as the protocol is now likely out of sync."
-                );
-                return;
-            }
-            let messageSize = sizeBuff.reduce((tot, curr, i) => {
-                return tot + (curr << (i * 8));
-            });
+            while (true) {
+                const sizeBuff: Buffer | null =
+                    this.readStream.read(headerSize);
+                if (sizeBuff === null) {
+                    break;
+                }
+                const messageSize = sizeBuff.readInt32LE();
 
-            let messageBuff: Buffer | null = this.readStream.read(messageSize);
-            if (messageBuff === null) {
-                this.close("protocol mismatch");
-                console.error(
-                    `When trying to receive ${messageSize} bytes from the input stream, null was returned. This may indicate that the protocol is out of sync and the channel has been closed.`
-                );
-                return;
+                const messageBuff: Buffer | null =
+                    this.readStream.read(messageSize);
+                if (messageBuff === null) {
+                    this.close("protocol mismatch", messageSize);
+                    console.error(
+                        `When trying to receive ${messageSize} bytes from the input stream, null was returned. This may indicate that the protocol is out of sync and the channel has been closed.`
+                    );
+                    return;
+                }
+                const messageStr = messageBuff.toString("utf-8");
+
+                let response: IncomingReply = {};
+
+                try {
+                    response = JSON.parse(messageStr);
+                } catch (err) {
+                    console.error(
+                        `Could not parse the returned message as it is not valid JSON: ${messageStr}`
+                    );
+                    this.close("reply has invalid JSON format");
+                }
+
+                if (response.id && this.replyCallBacks.has(response.id)) {
+                    let callBack = this.replyCallBacks.get(response.id);
+                    if (callBack) {
+                        callBack(response.reply);
+                    }
+                    this.replyCallBacks.delete(response.id);
+                }
             }
         });
     }
 
-    processJob(job: { id: any }): Promise<{ id: any }> {
+    processJob(job: OutgoingJob, replyCallBack: (reply: any) => void) {
         if (this.closed) {
             throw new CommChannelClosedError();
         }
+        if (this.replyCallBacks.has(job.id)) {
+            throw new CommChannelInvalidJobError(
+                `A job with ID ${job.id} has already been registered.`
+            );
+        }
 
-        throw new NotImplementedError(); // TODO: implement
+        this.replyCallBacks.set(job.id, replyCallBack);
+
+        let sJob = JSON.stringify(job);
+
+        const jobBuff = Buffer.from(sJob);
+        const jobSize = jobBuff.byteLength;
+        const sizeBuff = Buffer.alloc(headerSize).map((_unused, i) => {
+            return (jobSize >> (i * 8)) & 255;
+        });
+        const messageBuff = Buffer.concat([sizeBuff, jobBuff]);
+
+        if (!this.writeStream.write(messageBuff)) {
+            this.close("could not write job", messageBuff);
+        }
     }
 
-    close(reason?: CommChannelCloseReason) {
+    cancelJob(id: number) {
+        this.replyCallBacks.delete(id);
+    }
+
+    close(reason?: CommChannelCloseReason, value?: any) {
         this.closed = true;
         this.readStream.removeAllListeners();
         this.writeStream.removeAllListeners();
-        this.emit("close", reason);
+        console.error(
+            reason
+                ? value
+                    ? `CommChannel closed because ${reason} with value ${value}`
+                    : `CommChannel closed because ${reason}`
+                : "CommChannel closed"
+        );
+        this.emit("close", reason, value);
     }
 }
