@@ -6,12 +6,11 @@ import ExtensionComponents from "./extension-components";
 const backendPath = path.join(__dirname, "../resources/back-end/CoreLogic.dll");
 
 export type OutgoingJob = {
-    id: number;
     methodName: string;
     parameters: any[];
 };
 
-export type IncomingReply = {
+type IncomingReply = {
     id?: number;
     reply?: any;
 };
@@ -22,7 +21,9 @@ export const executeJob = (
 ) => {
     console.log("Executing job:", job);
     exec(
-        `dotnet ${backendPath} -j ${JSON.stringify(JSON.stringify(job))}`,
+        `dotnet ${backendPath} -j ${JSON.stringify(
+            JSON.stringify({ ...job, id: 0 })
+        )}`,
         (err, stdout, stderr) => {
             if (!err) {
                 if (stderr) {
