@@ -29,12 +29,16 @@ export default class Extension {
     static initDiagnostics(diagCollection: vscode.DiagnosticCollection) {
         this.diagnosticsCollection = diagCollection;
     }
-    static setDiagnostics(
-        diagnostics: { uri: vscode.Uri; diags: vscode.Diagnostic[] }[]
-    ) {
+    static setDiagnostics(diagnostics: [vscode.Uri, vscode.Diagnostic[]][]) {
         this.diagnosticsCollection?.clear();
-        diagnostics.forEach(({ uri, diags }) => {
+        diagnostics.forEach(([uri, diags]) => {
             this.diagnosticsCollection?.set(uri, diags);
         });
+    }
+    static clearDiagnostics() {
+        this.diagnosticsCollection?.clear();
+    }
+    static deleteFromDiagnostics(uri: vscode.Uri) {
+        this.diagnosticsCollection?.delete(uri);
     }
 }
