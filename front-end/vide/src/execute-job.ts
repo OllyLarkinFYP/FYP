@@ -2,6 +2,7 @@ import { exec } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
 import ExtensionComponents from "./extension-components";
+import { indentString } from "./utils/indent-string";
 
 const backendPath = path.join(__dirname, "../resources/back-end/CoreLogic.dll");
 
@@ -24,18 +25,20 @@ export const executeJob = (
     exec(`dotnet ${backendPath} -j ${jobString}`, (err, stdout, stderr) => {
         if (!err) {
             if (stderr) {
+                const indentedStdErr = indentString(stderr);
                 ExtensionComponents.sendErrorToOutputChannel(
                     "Backend produced errors while trying to process the request",
-                    `Backend produced errors while trying to process the request:\n${stderr}`
+                    `Backend produced errors while trying to process the request:\n${indentedStdErr}`
                 );
             } else if (stdout) {
                 let response: IncomingReply = {};
                 try {
                     response = JSON.parse(stdout);
                 } catch (jsonErr) {
+                    const indentedStdOut = indentString(stdout);
                     ExtensionComponents.sendErrorToOutputChannel(
                         "Backend did not return the result in a valid JSON format.",
-                        `Backend did not return the result in a valid JSON format. Returned string:\n${stdout}`
+                        `Backend did not return the result in a valid JSON format. Returned string:\n${indentedStdOut}`
                     );
                 }
                 if (response.id !== undefined && response.reply !== undefined) {
@@ -44,13 +47,16 @@ export const executeJob = (
                         replyCallBack(response.reply);
                     }
                 } else {
+                    const indentedStdOut = indentString(stdout);
                     ExtensionComponents.sendErrorToOutputChannel(
                         "Backend did not return the result in a valid format.",
-                        `Backend did not return the result in a valid format. Returned string:\n${stdout}`
+                        `Backend did not return the result in a valid format. Returned string:\n${indentedStdOut}`
                     );
                 }
             } else {
-                console.error("Execution of job produced no output");
+                vscode.window.showErrorMessage(
+                    "Backend did not produce any output."
+                );
             }
         } else {
             ExtensionComponents.sendErrorToOutputChannel(
