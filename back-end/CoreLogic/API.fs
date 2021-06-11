@@ -104,16 +104,13 @@ let compile (files: VerilogFile array) (topLevel: string) : CompilerReturnType =
         { status = retFailure
           errors = errs
           warnings = [||] }
-    | Result.Ok asts -> compileFromASTs (List.ofArray asts) topLevel
-
-[<ExposeMethod>]
-let compileFromPrevious (topLevel: string) =
-    match lastASTs with
-    | None ->
-        { status = retInvalid
-          errors = [||]
-          warnings = [||] }
-    | Some asts -> compileFromASTs asts topLevel
+    | Result.Ok asts ->
+        if topLevel = ""
+        then 
+            asts.[0].name
+            |> compileFromASTs (List.ofArray asts)
+        else
+            compileFromASTs (List.ofArray asts) topLevel
 
 [<ExposeType>]
 type APISimInp =
