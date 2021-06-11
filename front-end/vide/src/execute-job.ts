@@ -21,7 +21,6 @@ export const executeJob = (
     replyCallBack?: (reply: any) => void
 ) => {
     console.log("Executing job:", job);
-    console.time("Execution Time");
     const jobString = JSON.stringify({ ...job, id: 0 }).replace(/"/g, '\\"');
     exec(`dotnet ${backendPath} -j "${jobString}"`, (err, stdout, stderr) => {
         if (!err) {
@@ -65,6 +64,5 @@ export const executeJob = (
                 `Backend threw an exception while trying to process the request:\n${err.name}:\n${err.message}`
             );
         }
-        console.timeEnd("Execution Time");
     });
 };

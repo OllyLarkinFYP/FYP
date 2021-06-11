@@ -11,14 +11,6 @@ export const initialiseErrorChecking = (context: vscode.ExtensionContext) => {
     }
 
     context.subscriptions.push(
-        vscode.workspace.onDidSaveTextDocument((doc) => {
-            if (doc.languageId === "verilog") {
-                compile(doc);
-            }
-        })
-    );
-
-    context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument((docChanges) => {
             if (docChanges.document.languageId === "verilog") {
                 compile(docChanges.document);
