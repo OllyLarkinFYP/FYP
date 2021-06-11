@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
-import ExtensionComponents from "./extension-components";
+import Extension from "./extension-components";
 import { indentString } from "./utils/indent-string";
 
 const backendPath = path.join(__dirname, "../resources/back-end/CoreLogic.dll");
@@ -26,7 +26,7 @@ export const executeJob = (
         if (!err) {
             if (stderr) {
                 const indentedStdErr = indentString(stderr);
-                ExtensionComponents.sendErrorToOutputChannel(
+                Extension.sendErrorToOutputChannel(
                     "Backend produced errors while trying to process the request",
                     `Backend produced errors while trying to process the request:\n${indentedStdErr}`
                 );
@@ -36,7 +36,7 @@ export const executeJob = (
                     response = JSON.parse(stdout);
                 } catch (jsonErr) {
                     const indentedStdOut = indentString(stdout);
-                    ExtensionComponents.sendErrorToOutputChannel(
+                    Extension.sendErrorToOutputChannel(
                         "Backend did not return the result in a valid JSON format.",
                         `Backend did not return the result in a valid JSON format. Returned string:\n${indentedStdOut}`
                     );
@@ -48,7 +48,7 @@ export const executeJob = (
                     }
                 } else {
                     const indentedStdOut = indentString(stdout);
-                    ExtensionComponents.sendErrorToOutputChannel(
+                    Extension.sendErrorToOutputChannel(
                         "Backend did not return the result in a valid format.",
                         `Backend did not return the result in a valid format. Returned string:\n${indentedStdOut}`
                     );
@@ -59,7 +59,7 @@ export const executeJob = (
                 );
             }
         } else {
-            ExtensionComponents.sendErrorToOutputChannel(
+            Extension.sendErrorToOutputChannel(
                 "Backend threw an exception while trying to process the request",
                 `Backend threw an exception while trying to process the request:\n${err.name}:\n${err.message}`
             );

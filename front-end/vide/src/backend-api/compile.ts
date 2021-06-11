@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { executeJob, OutgoingJob } from "../execute-job";
-import ExtensionComponents from "../extension-components";
+import Extension from "../extension-components";
 import { indentString } from "../utils/indent-string";
 
 type ErrorMsg = {
@@ -93,7 +93,7 @@ export const compile = async () => {
                         );
                         break;
                     case "warnings":
-                        ExtensionComponents.sendWarningToOutputChannel(
+                        Extension.sendWarningToOutputChannel(
                             "Compiled with warnings.",
                             `Compiled with warnings:\n${getErrorMessageString(
                                 reply.warnings
@@ -101,7 +101,7 @@ export const compile = async () => {
                         );
                         break;
                     case "failure":
-                        ExtensionComponents.sendErrorToOutputChannel(
+                        Extension.sendErrorToOutputChannel(
                             "Compilation failed with errors.",
                             `Compilation failed with errors:\n${getErrorMessageString(
                                 reply.errors

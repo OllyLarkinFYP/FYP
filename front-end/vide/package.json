@@ -10,23 +10,10 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:vide.helloWorld",
-        "onCommand:vide.compile"
+        "workspaceContains:**/*.v"
     ],
     "main": "./out/extension.js",
     "contributes": {
-        "commands": [
-            {
-                "command": "vide.helloWorld",
-                "category": "VIDE",
-                "title": "Hello World"
-            },
-            {
-                "command": "vide.compile",
-                "category": "VIDE",
-                "title": "Compile"
-            }
-        ],
         "languages": [
             {
                 "id": "verilog",
