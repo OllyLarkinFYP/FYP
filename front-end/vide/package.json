@@ -32,14 +32,15 @@
                 "id": "verilog",
                 "extensions": [
                     ".v"
-                ]
+                ],
+                "configuration": "./syntaxes/verilog/verilog.language-configuration.json"
             }
         ],
         "grammars": [
             {
                 "language": "verilog",
                 "scopeName": "source.verilog",
-                "path": "./syntaxes/verilog.tmLanguage.xml"
+                "path": "./syntaxes/verilog/verilog.tmLanguage.xml"
             }
         ]
     },
