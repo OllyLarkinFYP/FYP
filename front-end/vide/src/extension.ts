@@ -1,20 +1,19 @@
 import * as vscode from "vscode";
-import { compile } from "./backend-api/compile";
+import Extension from "./extension-components";
+import { initialiseErrorChecking } from "./error-checking";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("VIDE is now active");
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vide.helloWorld", () => {
-            vscode.window.showInformationMessage("Hello from VIDE!");
-        })
-    );
+    const diagnosticsCollection = vscode.languages.createDiagnosticCollection();
+    context.subscriptions.push(diagnosticsCollection);
+    Extension.initDiagnostics(diagnosticsCollection);
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vide.compile", () => {
-            compile();
-        })
-    );
+    const outputChannel = vscode.window.createOutputChannel("VIDE");
+    context.subscriptions.push(outputChannel);
+    Extension.initOutputChannel(outputChannel);
+
+    initialiseErrorChecking(context);
 }
 
 export function deactivate() {}
