@@ -42,6 +42,12 @@
                 "scopeName": "source.verilog",
                 "path": "./syntaxes/verilog/verilog.tmLanguage.xml"
             }
+        ],
+        "snippets": [
+            {
+                "language": "verilog",
+                "path": "./snippets/verilog.snippets.json"
+            }
         ]
     },
     "scripts": {
