@@ -26,6 +26,21 @@
                 "category": "VIDE",
                 "title": "Compile"
             }
+        ],
+        "languages": [
+            {
+                "id": "verilog",
+                "extensions": [
+                    ".v"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "verilog",
+                "scopeName": "source.verilog",
+                "path": "./syntaxes/verilog.tmLanguage.xml"
+            }
         ]
     },
     "scripts": {
