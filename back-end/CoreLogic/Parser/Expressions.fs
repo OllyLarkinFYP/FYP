@@ -4,16 +4,18 @@ open System
 open FParsec
 open AST
 open Token
+open CommonTypes
+open Utils
 
 module ConstantExpression =
-    let private opp = new OperatorPrecedenceParser<ConstantExpressionT, unit, unit>()
+    let private opp = new OperatorPrecedenceParser<ConstantExpressionT, unit, UserState>()
 
-    let pConstantExpression: Parser<ConstantExpressionT, unit> = opp.ExpressionParser
+    let pConstantExpression: Parser<ConstantExpressionT, UserState> = opp.ExpressionParser
 
-    let pConstantConcatenation: Parser<ConstantConcatenationT, unit> =
+    let pConstantConcatenation: Parser<ConstantConcatenationT, UserState> =
         Symbol.pOpenCBrac >>. sepBy1 pConstantExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
-    let pConstantRangeExpression: Parser<RangeT, unit> =
+    let pConstantRangeExpression: Parser<RangeT, UserState> =
         pConstantExpression .>>. opt (Symbol.pColon >>. pConstantExpression)
         |>> function
         | (a, Some b) -> { MSB = a; LSB = b }
@@ -77,14 +79,14 @@ module ConstantExpression =
 
 
 module Expression =
-    let private opp = new OperatorPrecedenceParser<ExpressionT, unit, unit>()
+    let private opp = new OperatorPrecedenceParser<ExpressionT, unit, UserState>()
 
-    let pExpression: Parser<ExpressionT, unit> = opp.ExpressionParser
+    let pExpression: Parser<ExpressionT, UserState> = opp.ExpressionParser
 
-    let pConcatenation: Parser<ConcatenationT, unit> =
+    let pConcatenation: Parser<ConcatenationT, UserState> =
         Symbol.pOpenCBrac >>. sepBy1 pExpression Symbol.pComma .>> Symbol.pCloseCBrac
 
-    // let pRangeExpression: Parser<RangeExpressionT, unit> =
+    // let pRangeExpression: Parser<RangeExpressionT, UserState> =
     //     pExpression .>>. opt (Symbol.pColon >>. pExpression)
     //     |>> function
     //     | (a, Some b) -> Range {| LHS = a; RHS = b |}
@@ -95,7 +97,7 @@ module Expression =
         pNumber |>> Number
         Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac |>> Brackets
         pConcatenation |>> PrimaryT.Concat
-        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. ConstantExpression.pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+        withPos pIdentifier .>>. opt (Symbol.pOpenSBrac >>. ConstantExpression.pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
             PrimaryT.Ranged { name = iden; range = range }
     ] |>> Primary
 

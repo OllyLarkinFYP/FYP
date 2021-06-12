@@ -37,7 +37,8 @@ module private Helpers =
         | s, _, _, _ -> s
 
 module Parse =
-    let sourceText source =
-        source
-        |> Helpers.removeComments
-        |> run LangConstructs.pSourceText
+    let sourceText file source =
+        let srcTxt = 
+            source
+            |> Helpers.removeComments
+        runParserOnString LangConstructs.pSourceText file "" srcTxt 

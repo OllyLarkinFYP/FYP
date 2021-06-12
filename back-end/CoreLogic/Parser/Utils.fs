@@ -1,9 +1,18 @@
 namespace Parser
 
 open FParsec
+open CommonTypes
 open AST
 
 module Utils =
+
+    let withPos (p: Parser<'T,UserState>) : Parser<WithPos<'T>,UserState> =
+        pipe4 getUserState getPosition p getPosition
+        <| fun file sPos value fPos ->
+            { file = file
+              start = sPos
+              finish = fPos
+              value = value }
 
     let skipStrWs s = skipString s .>> spaces
 
@@ -31,4 +40,3 @@ module Utils =
     let printParser str (chrStream: CharStream<'a>) : Reply<unit> =
         printfn str
         preturn () chrStream
-        

@@ -13,8 +13,8 @@ module private rec Internal =
                 function
                 | PrimaryT.Number v -> ConstantPrimaryT.Number v
                 | PrimaryT.Ranged r ->
-                    let range = Util.optRangeTToRangeDefault varMap.[r.name].range r.range
-                    let value = inputMap.[r.name].getRange range
+                    let range = Util.optRangeTToRangeDefault varMap.[r.name.value].range r.range
+                    let value = inputMap.[r.name.value].getRange range
                     ConstantPrimaryT.Number value
                 | PrimaryT.Concat c -> ConstantPrimaryT.Concat <| List.map toConstExprRec c
                 | PrimaryT.Brackets b -> ConstantPrimaryT.Brackets <| toConstExprRec b

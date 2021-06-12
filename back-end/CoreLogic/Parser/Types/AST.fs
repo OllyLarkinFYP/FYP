@@ -6,7 +6,7 @@ open CommonTypes
 // ######### A.1.2 Verilog Source Text #########
 
 type ModuleDeclarationInfo =
-    | ModDec1 of {| ports: IdentifierT List; body: ModuleItemT List |}
+    | ModDec1 of {| ports: WithPos<IdentifierT> List; body: ModuleItemT List |}
     | ModDec2 of {| ports: PortDeclarationT List; body: NonPortModuleItemT List |}
 
 type ASTT =
@@ -17,7 +17,7 @@ type ASTT =
 // ######### A.1.3 Module Parameters And Ports #########
 
 type PortDeclarationT = 
-    { names: IdentifierT list
+    { names: WithPos<IdentifierT> list
       range: RangeT option
       dir: PortDirAndType }
 
@@ -31,12 +31,12 @@ type ModuleItemT =
 type NonPortModuleItemT =
     | ModuleItemDeclaration of ModuleOrGenerateItemDeclarationT
     | ContinuousAssign of ContinuousAssignT
-    | ModuleInstantiation of ModuleInstantiationT
+    | ModuleInstantiation of WithPos<ModuleInstantiationT>
     | InitialConstruct of InitialConstructT
     | AlwaysConstruct of AlwaysConstructT
 
 type ModuleOrGenerateItemDeclarationT =
-    { names: IdentifierT list
+    { names: WithPos<IdentifierT> list
       range: RangeT option
       decType: PortType }
 
@@ -48,13 +48,13 @@ type RangeT = { MSB: ConstantExpressionT; LSB: ConstantExpressionT }
 
 // ######### A.4.1 Module Instantiation #########
 
-type ModuleInstantiationT = { Name: IdentifierT; Module: ModuleInstanceT }
+type ModuleInstantiationT = { Name: WithPos<IdentifierT>; Module: ModuleInstanceT }
 
-type ModuleInstanceT = { Name: IdentifierT; PortConnections: PortConnectionT }
+type ModuleInstanceT = { Name: WithPos<IdentifierT>; PortConnections: PortConnectionT }
 
 type PortConnectionT =
-    | Unnamed of ExpressionT list
-    | Named of {| Name: IdentifierT; Value: ExpressionT option |} list
+    | Unnamed of WithPos<ExpressionT> list
+    | Named of {| Name: WithPos<IdentifierT>; Value: WithPos<ExpressionT> option |} list
 
 
 // ######### A.6.1 Continuous Assignment Statements #########
@@ -167,7 +167,7 @@ type PrimaryT =
 // ######### A.8.5 Expression Left-Side Values #########
 
 type RangedVarT = 
-    { name: IdentifierT
+    { name: WithPos<IdentifierT>
       range: RangeT option }
 
 type VarLValueT =

@@ -8,46 +8,46 @@ open CommonTypes
 
 module Token =
     module Keyword =
-        let pAlways: Parser<unit, unit> = skipStrWs "always"
-        let pAssign: Parser<unit, unit> = skipStrWs "assign"
-        let pBegin: Parser<unit, unit> = skipStrWs "begin"
-        let pCase: Parser<unit, unit> = skipStrWs "case"
-        let pDefault: Parser<unit, unit> = skipStrWs "default"
-        let pElse: Parser<unit, unit> = skipStrWs "else"
-        let pEnd: Parser<unit, unit> = skipStrWs "end"
-        let pEndCase: Parser<unit, unit> = skipStrWs "endcase"
-        let pEndModule: Parser<unit, unit> = skipStrWs "endmodule"
-        let pIf: Parser<unit, unit> = skipStrWs "if"
-        let pInitial: Parser<unit, unit> = skipStrWs "initial"
-        let pInput: Parser<unit, unit> = skipStrWs "input"
-        let pLogic: Parser<unit, unit> = skipStrWs "logic"
-        let pModule: Parser<unit, unit> = skipStrWs "module"
-        let pNegedge: Parser<unit, unit> = skipStrWs "negedge"
-        let pOr: Parser<unit, unit> = skipStrWs "or"
-        let pOutput: Parser<unit, unit> = skipStrWs "output"
-        let pPosedge: Parser<unit, unit> = skipStrWs "posedge"
-        let pReg: Parser<unit, unit> = skipStrWs "reg"
-        let pSigned: Parser<unit, unit> = skipStrWs "signed"
-        let pWire: Parser<unit, unit> = skipStrWs "wire"
+        let pAlways: Parser<unit, UserState> = skipStrWs "always"
+        let pAssign: Parser<unit, UserState> = skipStrWs "assign"
+        let pBegin: Parser<unit, UserState> = skipStrWs "begin"
+        let pCase: Parser<unit, UserState> = skipStrWs "case"
+        let pDefault: Parser<unit, UserState> = skipStrWs "default"
+        let pElse: Parser<unit, UserState> = skipStrWs "else"
+        let pEnd: Parser<unit, UserState> = skipStrWs "end"
+        let pEndCase: Parser<unit, UserState> = skipStrWs "endcase"
+        let pEndModule: Parser<unit, UserState> = skipStrWs "endmodule"
+        let pIf: Parser<unit, UserState> = skipStrWs "if"
+        let pInitial: Parser<unit, UserState> = skipStrWs "initial"
+        let pInput: Parser<unit, UserState> = skipStrWs "input"
+        let pLogic: Parser<unit, UserState> = skipStrWs "logic"
+        let pModule: Parser<unit, UserState> = skipStrWs "module"
+        let pNegedge: Parser<unit, UserState> = skipStrWs "negedge"
+        let pOr: Parser<unit, UserState> = skipStrWs "or"
+        let pOutput: Parser<unit, UserState> = skipStrWs "output"
+        let pPosedge: Parser<unit, UserState> = skipStrWs "posedge"
+        let pReg: Parser<unit, UserState> = skipStrWs "reg"
+        let pSigned: Parser<unit, UserState> = skipStrWs "signed"
+        let pWire: Parser<unit, UserState> = skipStrWs "wire"
 
     module Symbol =
-        let pSemiColon: Parser<unit, unit> = skipCharWs ';'
-        let pColon: Parser<unit, unit> = skipCharWs ':'
-        let pComma: Parser<unit, unit> = skipCharWs ','
-        let pPeriod: Parser<unit, unit> = skipCharWs '.'
-        let pAssign: Parser<unit, unit> = skipCharWs '='
-        let pNonBlockAssign: Parser<unit, unit> = skipStrWs "<="
-        let pAt: Parser<unit, unit> = skipCharWs '@'
-        let pStar: Parser<unit, unit> = skipCharWs '*'
-        let pQMark: Parser<unit, unit> = skipCharWs '?'
-        let pOpenRBrac: Parser<unit, unit> = skipCharWs '('
-        let pCloseRBrac: Parser<unit, unit> = skipCharWs ')'
-        let pOpenSBrac: Parser<unit, unit> = skipCharWs '['
-        let pCloseSBrac: Parser<unit, unit> = skipCharWs ']'
-        let pOpenCBrac: Parser<unit, unit> = skipCharWs '{'
-        let pCloseCBrac: Parser<unit, unit> = skipCharWs '}'
+        let pSemiColon: Parser<unit, UserState> = skipCharWs ';'
+        let pColon: Parser<unit, UserState> = skipCharWs ':'
+        let pComma: Parser<unit, UserState> = skipCharWs ','
+        let pPeriod: Parser<unit, UserState> = skipCharWs '.'
+        let pAssign: Parser<unit, UserState> = skipCharWs '='
+        let pNonBlockAssign: Parser<unit, UserState> = skipStrWs "<="
+        let pAt: Parser<unit, UserState> = skipCharWs '@'
+        let pStar: Parser<unit, UserState> = skipCharWs '*'
+        let pQMark: Parser<unit, UserState> = skipCharWs '?'
+        let pOpenRBrac: Parser<unit, UserState> = skipCharWs '('
+        let pCloseRBrac: Parser<unit, UserState> = skipCharWs ')'
+        let pOpenSBrac: Parser<unit, UserState> = skipCharWs '['
+        let pCloseSBrac: Parser<unit, UserState> = skipCharWs ']'
+        let pOpenCBrac: Parser<unit, UserState> = skipCharWs '{'
+        let pCloseCBrac: Parser<unit, UserState> = skipCharWs '}'
 
-    let pIdentifier: Parser<string, unit> =
+    let pIdentifier: Parser<string, UserState> =
         let isAsciiIdStart c =
             isAsciiLetter c || c = '_'
         let isAsciiIdContinue c =
@@ -56,7 +56,7 @@ module Token =
         |> identifier
         .>> spaces
 
-    let pNumber : Parser<VNum, unit> =
+    let pNumber : Parser<VNum, UserState> =
         let upperAndLower c =
             if isLower c
             then [c; Char.ToUpper c]

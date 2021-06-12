@@ -1,10 +1,12 @@
 namespace Compiler
 
+open CommonTypes
+
 module CompResult =
 
-    type CompErrors = string list
+    type CompErrors = WithPos<string> list
 
-    type CompWarnings = string list
+    type CompWarnings = WithPos<string> list
 
     type CompRes<'Result> =
         | Succ of 'Result
