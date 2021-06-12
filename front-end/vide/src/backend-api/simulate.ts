@@ -2,19 +2,89 @@ import * as vscode from "vscode";
 import { executeJob, OutgoingJob } from "../utils/execute-job";
 import Extension from "../extension-components";
 import { getFilesStartingWith } from "../utils/get-files";
-import * as path from "path";
 import { generateConfig } from "./generate-simconfig";
+import { SimConfig, validateSimConfig } from "../simconfig";
+import { ErrorMsg } from "../utils/error-msg";
 
+type SimulatorReturn = {
+    status: string;
+    output: {
+        name: string;
+        values: string[];
+    }[];
+    errors: ErrorMsg[];
+    warnings: ErrorMsg[];
+};
+
+const validateSimulatorReturn = (simRet: SimulatorReturn) => {
+    return (
+        simRet.status !== undefined &&
+        simRet.output &&
+        simRet.output.every(({ name, values }) => name !== undefined && values)
+    );
+};
+
+// API:
+//      methodName: "simulate"
+//      parameters:
+//          files:
+//              array
+//                  name: string
+//                  contents: string
+//          topLevel: string
+//          inputs:
+//              array
+//                  name: string
+//                  repeating: boolean
+//                  values: string[]
+//          reqVars: array: string
+//          cycles: uint
 const simulate = async (
     topLevelDoc: vscode.TextDocument,
     configDoc: vscode.TextDocument
 ) => {
-    // TODO: check if input json already exists
-    // TODO: if not create template, open template, notify user, and exit
-    // TODO: if so, make a call to simulate
-    console.log("simulate");
-    console.log("module:", topLevelDoc.uri.toString());
-    console.log("config:", configDoc.uri.toString());
+    let config: SimConfig;
+    try {
+        config = JSON.parse(configDoc.getText());
+        if (!validateSimConfig(config)) {
+            throw new Error();
+        }
+    } catch {
+        console.error("Failed to read simconfig file: ", configDoc.fileName);
+        vscode.window.showErrorMessage(
+            `Failed to read simconfig file: ${configDoc.fileName}`
+        );
+        return;
+    }
+
+    const files = await getFilesStartingWith(topLevelDoc);
+    const job: OutgoingJob = {
+        methodName: "simulate",
+        parameters: [
+            files,
+            "", // this should be blank so that it uses the first file
+            config.inputs,
+            config["requested vars"],
+            config.cycles,
+        ],
+    };
+
+    executeJob(job, (reply: SimulatorReturn) => {
+        if (validateSimulatorReturn(reply)) {
+            const output = reply.output
+                .map(
+                    ({ name, values }) =>
+                        `Variable: ${name}\n` + `\t${values}\n`
+                )
+                .reduce((prev, curr) => prev + "\n" + curr);
+            Extension.sendInfoToOutputChannel(output);
+        } else {
+            console.error("Backend did not return the expected format.");
+            vscode.window.showErrorMessage(
+                "Backend simulation did not return the expected format."
+            );
+        }
+    });
 };
 
 export const simulateFromModule = (topLevelDoc: vscode.TextDocument) => {

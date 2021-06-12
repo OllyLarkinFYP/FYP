@@ -114,7 +114,7 @@ let compile (files: VerilogFile array) (topLevel: string) : CompilerReturnType =
 
 [<ExposeType>]
 type APISimInp =
-    { variable: string
+    { name: string
       repeating: bool
       values: string array }
 
@@ -151,7 +151,7 @@ let simulateFromPrevious (inputs: APISimInp array) (reqVars: string array) (cycl
                     if inp.repeating
                     then Repeating valLst
                     else Once valLst
-                inp.variable, simInput)
+                inp.name, simInput)
             |> Map.ofArray
         let validateReqVar reqVar =
             if netlist.varMap.ContainsKey reqVar

@@ -24,6 +24,12 @@ export default class Extension {
         );
         console.warn(message);
     }
+    static sendInfoToOutputChannel(info: string) {
+        this.outChannel?.clear();
+        this.outChannel?.appendLine(info);
+        this.outChannel?.show();
+        console.log(info);
+    }
 
     private static diagnosticsCollection?: vscode.DiagnosticCollection;
     static initDiagnostics(diagCollection: vscode.DiagnosticCollection) {

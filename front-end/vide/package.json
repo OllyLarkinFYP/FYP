@@ -43,6 +43,14 @@
                 }
             ]
         },
+        "keybindings": [
+            {
+                "command": "vide.simulate",
+                "key": "ctrl+r",
+                "mac": "cmd+r",
+                "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+            }
+        ],
         "languages": [
             {
                 "id": "verilog",
