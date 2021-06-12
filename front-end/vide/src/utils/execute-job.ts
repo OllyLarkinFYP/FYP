@@ -24,7 +24,12 @@ export const executeJob = (
     replyCallBack?: (reply: any) => void
 ) => {
     console.log("Executing job:", job);
-    const jobString = JSON.stringify({ ...job, id: 0 }).replace(/"/g, '\\"');
+    const jobString = JSON.stringify({ ...job, id: 0 })
+        .replace(/\^/g, "^^")
+        .replace(/"/g, '\\"')
+        .replace(/</g, "^<")
+        .replace(/>/g, "^>")
+        .replace(/\|/g, "^|");
     exec(`dotnet ${backendPath} -j "${jobString}"`, (err, stdout, stderr) => {
         if (!err) {
             if (stderr) {

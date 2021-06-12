@@ -9,7 +9,7 @@ export default class Extension {
     static sendErrorToOutputChannel(error: string, message: string) {
         this.outChannel?.clear();
         this.outChannel?.appendLine(message);
-        this.outChannel?.show();
+        // this.outChannel?.show();
         vscode.window.showErrorMessage(
             `${error}. Check 'VIDE' output log for more details.`
         );
@@ -18,7 +18,7 @@ export default class Extension {
     static sendWarningToOutputChannel(warning: string, message: string) {
         this.outChannel?.clear();
         this.outChannel?.appendLine(message);
-        this.outChannel?.show();
+        // this.outChannel?.show();
         vscode.window.showWarningMessage(
             `${warning}. Check 'VIDE' output log for more details.`
         );
