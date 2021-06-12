@@ -25,9 +25,24 @@
                 "command": "vide.simulate",
                 "title": "Simulate",
                 "category": "VIDE",
-                "icon": "./resources/media/play.svg"
+                "icon": "$(debug-start)"
             }
         ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "vide.simulate",
+                    "when": "editorLangId == verilog"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "vide.simulate",
+                    "when": "editorLangId == verilog",
+                    "group": "navigation"
+                }
+            ]
+        },
         "languages": [
             {
                 "id": "verilog",
