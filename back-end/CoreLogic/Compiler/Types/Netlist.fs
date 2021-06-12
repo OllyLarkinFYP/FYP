@@ -60,10 +60,10 @@ module Netlist =
                 | Reg -> true
                 | _ -> false)
                 
-        let addDriver (vm: VarMap) (name: IdentifierT) (driver: Driver) =
-            if vm.ContainsKey name
+        let addDriver (vm: VarMap) (name: WithPos<IdentifierT>) (driver: Driver) =
+            if vm.ContainsKey name.value
             then
-                match vm.[name].var with
+                match vm.[name.value].var with
                 | Wire currDrivers ->
                     currDrivers
                     |> List.compResMap (fun d ->
@@ -72,8 +72,8 @@ module Netlist =
                         else Succ ())
                     ?>> fun _ ->
                         let newDrivers = driver::currDrivers
-                        let newComp = { vm.[name] with var = Wire newDrivers }
-                        vm.Add(name, newComp)
+                        let newComp = { vm.[name.value] with var = Wire newDrivers }
+                        vm.Add(name.value, newComp)
                 | _ -> Errors.ProcessContAssign.canOnlyDriveWire name
             else Errors.General.varDoesNotExist name
 
