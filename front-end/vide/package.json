@@ -14,12 +14,18 @@
     ],
     "main": "./out/extension.js",
     "contributes": {
+        "jsonValidation": [
+            {
+                "fileMatch": "*.simconfig.json",
+                "url": "./syntaxes/json-schema/simconfig.schema.json"
+            }
+        ],
         "commands": [
             {
                 "command": "vide.simulate",
                 "title": "Simulate",
                 "category": "VIDE",
-                "icon": "resources/media/play.svg"
+                "icon": "./resources/media/play.svg"
             }
         ],
         "languages": [

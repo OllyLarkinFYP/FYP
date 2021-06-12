@@ -1,10 +1,13 @@
 import { exec } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
-import Extension from "./extension-components";
-import { indentString } from "./utils/indent-string";
+import Extension from "../extension-components";
+import { indentString } from "./indent-string";
 
-const backendPath = path.join(__dirname, "../resources/back-end/CoreLogic.dll");
+const backendPath = path.join(
+    __dirname,
+    "../../resources/back-end/CoreLogic.dll"
+);
 
 export type OutgoingJob = {
     methodName: string;
