@@ -11,11 +11,7 @@ type CompilerReturn = {
 };
 
 const checkReturnType = (reply: CompilerReturn) => {
-    return (
-        reply.status !== undefined &&
-        reply.errors !== undefined &&
-        reply.warnings !== undefined
-    );
+    return reply.status !== undefined && reply.errors && reply.warnings;
 };
 
 // API:

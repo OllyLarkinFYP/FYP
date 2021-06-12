@@ -18,10 +18,15 @@ type VerilogFile =
       contents: string }
 
 [<ExposeType>]
+type ErrorPosition =
+    { line: int64
+      column: int64 }
+
+[<ExposeType>]
 type ErrorMsg =
     { file: string
-      line: int64
-      column: int64
+      start: ErrorPosition
+      finish: ErrorPosition
       message: string }
 
 [<ExposeType>]
@@ -63,8 +68,12 @@ let private compileFromASTs (asts: ASTT list) (topLevel: string) : CompilerRetur
             w
             |> List.map (fun warning -> 
                 { file = warning.file
-                  line = warning.start.Line
-                  column = warning.start.Column
+                  start =
+                    { line = warning.start.Line
+                      column = warning.start.Column }
+                  finish =
+                    { line = warning.finish.Line
+                      column = warning.finish.Column }
                   message = warning.value })
             |> Array.ofList
         { status = retWarnings
@@ -77,8 +86,12 @@ let private compileFromASTs (asts: ASTT list) (topLevel: string) : CompilerRetur
             errs
             |> List.map (fun err ->
                 { file = err.file
-                  line = err.start.Line
-                  column = err.start.Column
+                  start =
+                    { line = err.start.Line
+                      column = err.start.Column }
+                  finish =
+                    { line = err.finish.Line
+                      column = err.finish.Column }
                   message = err.value })
             |> Array.ofList
         { status = retFailure
@@ -90,13 +103,17 @@ let compile (files: VerilogFile array) (topLevel: string) : CompilerReturnType =
     files
     |> Array.resMap (fun file ->
         match Parse.sourceText file.name file.contents with
-        | Success (res, _, _) -> Result.Ok res
-        | Failure (msg, err, _) -> 
+        | Result.Ok res -> Result.Ok res
+        | Result.Error errorMsg -> 
             Result.Error
-                { file = file.name
-                  line = err.Position.Line
-                  column = err.Position.Column
-                  message =  msg})
+                { file = errorMsg.file
+                  start =
+                    { line = errorMsg.start.Line
+                      column = errorMsg.start.Column }
+                  finish =
+                    { line = errorMsg.finish.Line
+                      column = errorMsg.finish.Column }
+                  message = errorMsg.value })
     |> function
     | Result.Error errs ->
         lastASTs <- None
@@ -159,8 +176,12 @@ let simulateFromPrevious (inputs: APISimInp array) (reqVars: string array) (cycl
             else 
                 Result.Error
                     { file = ""
-                      line = 0L
-                      column = 0L
+                      start =
+                        { line = 0L
+                          column = 0L }
+                      finish =
+                        { line = 0L
+                          column = 0L }
                       message = sprintf "The requested variable '%s' could not be found in the netlist." reqVar }
         reqVars
         |> Array.resMap validateReqVar
@@ -221,10 +242,10 @@ type APIPort =
 [<ExposeMethod>]
 let getPortNames (file: VerilogFile) : APIPort array =
     match Parse.sourceText file.name file.contents with
-    | Failure _ -> [||]
-    | Success (ast, _, _) ->
+    | Result.Ok ast ->
         Compile.getASTPorts ast
         |> List.map (fun port ->
             { name = port.name
               input = port.pType = PortDirAndType.Input })
         |> Array.ofList
+    | _ -> [||]

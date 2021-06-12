@@ -3,10 +3,15 @@ import * as vscode from "vscode";
 import Extension from "../extension-components";
 import { indentString } from "./indent-string";
 
-export type ErrorMsg = {
-    file: string;
+export type ErrorPosition = {
     line: number;
     column: number;
+};
+
+export type ErrorMsg = {
+    file: string;
+    start: ErrorPosition;
+    finish: ErrorPosition;
     message: string;
 };
 
@@ -21,10 +26,10 @@ export const processErrors = (
             const filePath = "file:" + path.normalize(error.file);
             // TODO: make it underline token
             const range = new vscode.Range(
-                error.line - 1,
-                0,
-                error.line - 1,
-                error.column
+                error.start.line - 1,
+                error.start.column - 1,
+                error.finish.line - 1,
+                error.finish.column
             );
             let diagnostics = diagMap.get(filePath);
             if (!diagnostics) {
