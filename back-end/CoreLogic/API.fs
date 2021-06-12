@@ -62,10 +62,10 @@ let private compileFromASTs (asts: ASTT list) (topLevel: string) : CompilerRetur
         let warnings =
             w
             |> List.map (fun warning -> 
-                { file = ""
-                  line = 0L
-                  column = 0L
-                  message = warning })
+                { file = warning.file
+                  line = warning.start.Line
+                  column = warning.start.Column
+                  message = warning.value })
             |> Array.ofList
         { status = retWarnings
           errors = [||]
@@ -76,10 +76,10 @@ let private compileFromASTs (asts: ASTT list) (topLevel: string) : CompilerRetur
         let errors =
             errs
             |> List.map (fun err ->
-                { file = ""
-                  line = 0L
-                  column = 0L
-                  message = err })
+                { file = err.file
+                  line = err.start.Line
+                  column = err.start.Column
+                  message = err.value })
             |> Array.ofList
         { status = retFailure
           errors = errors
@@ -89,7 +89,7 @@ let private compileFromASTs (asts: ASTT list) (topLevel: string) : CompilerRetur
 let compile (files: VerilogFile array) (topLevel: string) : CompilerReturnType =
     files
     |> Array.resMap (fun file ->
-        match Parse.sourceText file.contents with
+        match Parse.sourceText file.name file.contents with
         | Success (res, _, _) -> Result.Ok res
         | Failure (msg, err, _) -> 
             Result.Error

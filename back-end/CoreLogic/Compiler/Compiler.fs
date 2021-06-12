@@ -11,13 +11,25 @@ open CommonHelpers
 module private Validate =
     let portsMatchDecs ports portDecs =
         let portNames = List.map fst portDecs
-        if List.sort ports <> List.sort portNames
-        then Errors.ProcessPorts.portsDontMatchPortDecs ports portNames
-        else Succ ()
+        ports
+        |> List.compResMap (fun port ->
+            portNames
+            |> List.tryFind (fun portName -> port.value = portName.value)
+            |> function
+            | Some _ -> Succ()
+            | None -> Errors.ProcessPorts.portNotDeclaredInBody port)
+        ?> fun _ ->
+            portNames
+            |> List.compResMap (fun portName ->
+                ports
+                |> List.tryFind (fun port -> port.value = portName.value)
+                |> function
+                | Some _ -> Succ()
+                | None -> Errors.ProcessPorts.portNotDeclaredInModDec portName)
 
     let uniqueIdentifier (varMap: VarMap) modInstNames name =
         // TODO: make sure name is not a keyword
-        match varMap.ContainsKey name, List.contains name modInstNames with
+        match varMap.ContainsKey name.value, List.contains name.value modInstNames with
         | true, _ -> Errors.UniqueNames.duplicateVarDefinition name
         | _, true -> Errors.UniqueNames.duplicateModInstDefinition name
         | _ -> Succ ()
@@ -32,40 +44,40 @@ module private Validate =
         ?>> ignore
 
     let isReg (varMap: VarMap) name =
-        if varMap.ContainsKey name
+        if varMap.ContainsKey name.value
         then
-            match varMap.[name].var with
+            match varMap.[name.value].var with
             | VarElem.Reg -> Succ ()
             | _ -> Errors.ProcessInitial.shouldBeReg name
         else Errors.ProcessInitial.regDoesNotExist name
 
-    let varExists (varMap: VarMap) (var: IdentifierT) =
-        if varMap.ContainsKey var
+    let varExists (varMap: VarMap) (var: WithPos<IdentifierT>) =
+        if varMap.ContainsKey var.value
         then Succ ()
         else Errors.General.varDoesNotExist var
 
-    let varsExist (varMap: VarMap) (vars: (IdentifierT * Range) list) =
+    let varsExist (varMap: VarMap) (vars: (WithPos<IdentifierT> * Range) list) =
         // TODO: check var range
         vars
         |> List.compResMap (fun (name, _) -> varExists varMap name)
         ?>> ignore
 
     let isUniqueModInst (modInstList: IdentifierT list) modInst =
-        if List.contains modInst modInstList
+        if List.contains modInst.value modInstList
         then Errors.ProcessModuleInstances.notUniqueModule modInst
         else Succ ()
 
-    let allPortsProvided modInstName (ports: 'a list) (expLst: ExpressionT list) =
+    let allPortsProvided modInst modInstName (ports: 'a list) (expLst: ExpressionT list) =
         if ports.Length = expLst.Length
         then Succ ()
-        else Errors.ProcessModuleInstances.portsDoNotMatch modInstName ports.Length expLst.Length
+        else Errors.ProcessModuleInstances.portsDoNotMatch modInst modInstName ports.Length expLst.Length
 
     let rec varLValueOnlyWritesReg (varMap: VarMap) varLVal =
         match varLVal with
         | VarLValueT.Ranged rv ->
-            if varMap.ContainsKey rv.name
+            if varMap.ContainsKey rv.name.value
             then
-                match varMap.[rv.name].var with
+                match varMap.[rv.name.value].var with
                 | Reg -> Succ()
                 | _ -> Errors.VarLValueE.shouldBeReg rv.name
             else Errors.VarLValueE.doesNotExist rv.name
@@ -77,11 +89,11 @@ module private Helpers =
         let rec toRangeListRec (offset, currLst) =
             function
             | NetLValueT.Ranged rangedNLV ->
-                if varMap.ContainsKey rangedNLV.name
+                if varMap.ContainsKey rangedNLV.name.value
                 then
-                    match varMap.[rangedNLV.name].var with
+                    match varMap.[rangedNLV.name.value].var with
                     | Wire _ -> 
-                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name].range rangedNLV.range
+                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name.value].range rangedNLV.range
                         let entry = (rangedNLV.name, range, range.ground().offset offset)
                         Succ (offset + range.size, entry::currLst)
                     | _ -> Errors.NetLValueE.shouldBeWire rangedNLV.name
@@ -96,11 +108,11 @@ module private Helpers =
         let rec toRangeListRec (offset, currLst) =
             function
             | VarLValueT.Ranged rangedNLV ->
-                if varMap.ContainsKey rangedNLV.name
+                if varMap.ContainsKey rangedNLV.name.value
                 then
-                    match varMap.[rangedNLV.name].var with
+                    match varMap.[rangedNLV.name.value].var with
                     | Reg -> 
-                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name].range rangedNLV.range
+                        let range = Util.optRangeTToRangeDefault varMap.[rangedNLV.name.value].range rangedNLV.range
                         let entry = (rangedNLV.name, range, range.ground().offset offset)
                         Succ (offset + range.size, entry::currLst)
                     | _ -> Errors.VarLValueE.shouldBeReg rangedNLV.name
@@ -111,7 +123,7 @@ module private Helpers =
         // Returns result of list of (name, idenRange, valueRange)
         toRangeListRec (0u,[]) varLVal ?>> snd
 
-    let squashIdenRangeList (idenRangeLst: (IdentifierT * Range) list) =
+    let squashIdenRangeList (idenRangeLst: (WithPos<IdentifierT> * Range) list) =
         idenRangeLst
         |> List.map (fun (iden, range) ->
             let newRange = 
@@ -141,7 +153,10 @@ module private Helpers =
             | CondExpression c -> getExprVarsRec c.Condition @ getExprVarsRec c.TrueVal @ getExprVarsRec c.FalseVal
         getExprVarsRec exp |> squashIdenRangeList
 
-    let getEventControlVars (statementVars: (IdentifierT * Range) list) (ec: EventControlT) =
+    let convExprVars =
+        List.map (fun (name, range) -> name.value, range)
+
+    let getEventControlVars (statementVars: (WithPos<IdentifierT> * Range) list) (ec: EventControlT) =
         match ec with
         | Star -> statementVars
         | EventList el ->
@@ -195,10 +210,10 @@ module private Helpers =
             match exp with
             | Primary p ->
                 match p with
-                | PrimaryT.Ranged r -> Primary (PrimaryT.Ranged { r with name = prefix + r.name })
+                | PrimaryT.Ranged r -> Primary (PrimaryT.Ranged { r with name = { r.name with value = prefix + r.name.value }})
                 | Brackets b -> Primary (Brackets (prefixExpression b))
                 | PrimaryT.Concat c -> Primary (PrimaryT.Concat (List.map prefixExpression c))
-                | _ -> Primary p
+                | _ -> exp
             | UniExpression ue -> UniExpression {| ue with Expression = prefixExpression ue.Expression |}
             | BinaryExpression be ->
                 BinaryExpression
@@ -216,7 +231,7 @@ module private Helpers =
               reqVars = prefixReqVars expCont.reqVars }
         let rec prefixVarLVal = 
             function
-            | VarLValueT.Ranged rv -> VarLValueT.Ranged { rv with name = prefix + rv.name }
+            | VarLValueT.Ranged rv -> VarLValueT.Ranged { rv with name = { rv.name with value = prefix + rv.name.value } }
             | VarLValueT.Concat c -> VarLValueT.Concat (List.map prefixVarLVal c)
         let rec prefixStatement stmt = 
             match stmt with
@@ -290,23 +305,23 @@ module private Helpers =
             initial = prefixedInitial
             alwaysBlocks = prefixedAlwaysBlocks}
 
-    let rec expToNetLVal port modInst exp  =
+    let rec expToNetLVal (loc: WithPos<'a>) port modInst exp  =
         let primaryToNetLVal =
             function
             | PrimaryT.Ranged rv -> Succ <| NetLValueT.Ranged rv
-            | Brackets b -> expToNetLVal port modInst b
+            | Brackets b -> expToNetLVal loc port modInst b
             | PrimaryT.Concat c -> 
                 c
-                |> List.compResMap (expToNetLVal port modInst)
+                |> List.compResMap (expToNetLVal loc port modInst)
                 ?>> NetLValueT.Concat
-            | _ -> Errors.ProcessModuleInstances.cannotDriveExpression port modInst
+            | _ -> Errors.ProcessModuleInstances.cannotDriveExpression loc port modInst
         match exp with
         | Primary p -> primaryToNetLVal p
-        | _ -> Errors.ProcessModuleInstances.cannotDriveExpression port modInst
+        | _ -> Errors.ProcessModuleInstances.cannotDriveExpression loc port modInst
 
-    let orderPorts (order: IdentifierT list) (ports: (IdentifierT * 'a) list) =
+    let orderPorts (order: WithPos<IdentifierT> list) (ports: (WithPos<IdentifierT> * 'a) list) =
         order
-        |> List.map (fun name -> List.find (fun (n,_) -> name = n) ports)
+        |> List.map (fun name -> List.find (fun (n,_) -> name.value = n.value) ports)
 
     let getPortsAndItems fPort fPost astInfo =
         match astInfo with
@@ -344,7 +359,7 @@ module private Helpers =
                           expRange = expRange
                           exp = 
                             { expression = netAssign.RHS
-                              reqVars = expVars }}
+                              reqVars = convExprVars expVars }}
                     VarMap.addDriver vMap' name driver))
 
     let rec statementTToStatement (varMap: VarMap) (statementOrNull: StatementOrNullT) : CompRes<Statement> =
@@ -356,10 +371,10 @@ module private Helpers =
                 | StatementT.BlockingAssignment ba ->
                     let expCont =
                         { expression = ba.RHS
-                          reqVars = getExprVars ba.RHS }
+                          reqVars = getExprVars ba.RHS |> convExprVars }
                     varLValToRangeList varMap ba.LHS
                     ?>> List.map (fun (name, drivenRange, expRange) ->
-                        { name = name
+                        { name = name.value
                           driver =
                             { drivenRange = drivenRange
                               expRange = expRange
@@ -369,10 +384,10 @@ module private Helpers =
                 | StatementT.NonblockingAssignment nba -> 
                     let expCont =
                         { expression = nba.RHS
-                          reqVars = getExprVars nba.RHS }
+                          reqVars = getExprVars nba.RHS |> convExprVars }
                     varLValToRangeList varMap nba.LHS
                     ?>> List.map (fun (name, drivenRange, expRange) ->
-                        { name = name
+                        { name = name.value
                           driver =
                             { drivenRange = drivenRange
                               expRange = expRange
@@ -387,7 +402,7 @@ module private Helpers =
                 | StatementT.Case cs -> 
                     let caseExpr =
                         { expression = cs.CaseExpr
-                          reqVars = getExprVars cs.CaseExpr }
+                          reqVars = getExprVars cs.CaseExpr |> convExprVars }
                     cs.Items
                     |> List.tryFind (fun item ->
                         match item with
@@ -408,7 +423,7 @@ module private Helpers =
                                         i.Elems
                                         |> List.map (fun exp ->
                                             { expression = exp
-                                              reqVars = getExprVars exp })
+                                              reqVars = getExprVars exp |> convExprVars })
                                     { conditions = conditions
                                       body = body }
                                 |> Some)
@@ -425,7 +440,7 @@ module private Helpers =
                         | hd::tl ->
                             let cond =
                                 { expression = hd.Condition
-                                  reqVars = getExprVars hd.Condition }
+                                  reqVars = getExprVars hd.Condition |> convExprVars }
                             statementTToStatement varMap hd.Body
                             ?> fun trueBody ->
                                 processElseIfs tl finalElse
@@ -441,7 +456,7 @@ module private Helpers =
                             Statement.Conditional
                                 { condition =
                                     { expression = cs.Condition
-                                      reqVars = getExprVars cs.Condition }
+                                      reqVars = getExprVars cs.Condition |> convExprVars }
                                   trueBody = trueBody
                                   falseBody = falseBody }
 
@@ -466,7 +481,10 @@ module private Internal =
                 pd.names
                 |> List.map (fun name ->
                     (name, { var = Reg; range = range }))
-        Helpers.getPortsAndItems processPD Map.ofList astInfo
+        let convPos =
+            List.map (fun (a, b) -> a.value, b)
+            >> Map.ofList
+        Helpers.getPortsAndItems processPD convPos astInfo
 
     let processModuleVariable (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
@@ -480,7 +498,7 @@ module private Internal =
                         match mid.decType with
                         | PortType.Wire -> { var = Wire []; range = range }
                         | PortType.Reg -> { var = Reg; range = range }
-                    vMap.Add(name, newEntry))
+                    vMap.Add(name.value, newEntry))
             ?>> fun varMap -> { netlist with varMap = varMap }
         | _ -> Succ netlist
 
@@ -494,7 +512,7 @@ module private Internal =
                 ?>> fun _ ->
                     // TODO: warning if range is not subset of var range
                     let lhs = 
-                        {| varName = rca.LHS.name
+                        {| varName = rca.LHS.name.value
                            range = Util.optRangeTToRangeDefault Range.max rca.LHS.range |}
                     { lhs = lhs
                       rhs = rhs })
@@ -529,8 +547,8 @@ module private Internal =
                 Helpers.statementTToStatement netlist.varMap ac.Statement
                 ?>> (fun stmt -> 
                     { eventControl =
-                        { ec = eventList
-                          reqVars = eventControlVars }
+                        { ec = List.map (fun (a, b, c) -> a, b.value, c) eventList
+                          reqVars = eventControlVars |> Helpers.convExprVars }
                       statement = stmt})
                 ?>> fun alwaysBlock ->
                     { netlist with alwaysBlocks = (netlist.alwaysBlocks.Length, alwaysBlock)::netlist.alwaysBlocks }
@@ -539,14 +557,14 @@ module private Internal =
     let rec processModuleInstances (asts: ASTT list) (netlist: Netlist) (item: NonPortModuleItemT) : CompRes<Netlist> =
         match item with
         | ModuleInstantiation mi ->
-            let moduleInstName = mi.Module.Name
-            let prefix = moduleInstName + ":"
+            let moduleInstName = mi.value.Module.Name
+            let prefix = moduleInstName.value + ":"
             Validate.isUniqueModInst netlist.modInstNames moduleInstName
             ?> fun _ ->
                 asts
-                |> List.tryFind (fun a -> a.name = mi.Name)
+                |> List.tryFind (fun a -> a.name = mi.value.Name.value)
                 |> function
-                | None -> Errors.ProcessModuleInstances.moduleDoesNotExist mi.Name
+                | None -> Errors.ProcessModuleInstances.moduleDoesNotExist mi.value.Name
                 | Some modAST ->
                     compileModule modAST asts
                     ?>> Helpers.applyPrefix prefix
@@ -561,10 +579,10 @@ module private Internal =
                             |> List.map (fun name -> name, pd.dir)
                         Helpers.getPortsAndItems processPD id modAST.info
                         ?> fun (ports, _) ->
-                            let prefixedPorts = ports |> List.map (fun (iden, pt) -> prefix + iden, pt)
-                            match mi.Module.PortConnections with
+                            let prefixedPorts = ports |> List.map (fun (iden, pt) -> {iden with value = prefix + iden.value }, pt)
+                            match mi.value.Module.PortConnections with
                             | Unnamed expLst ->
-                                Validate.allPortsProvided moduleInstName prefixedPorts expLst
+                                Validate.allPortsProvided mi moduleInstName.value prefixedPorts (List.map WithPos<ExpressionT>.getValue expLst)
                                 ?>> fun _ -> List.zip prefixedPorts expLst
                             | Named namedLst ->
                                 namedLst
@@ -572,11 +590,11 @@ module private Internal =
                                     let exp =
                                         match namedPort.Value with
                                         | Some e -> e
-                                        | None -> Primary (Number (VNum.unknown 63u))
+                                        | None -> WithPos<ExpressionT>.empty <| Primary (Number (VNum.unknown 63u))
                                     prefixedPorts
-                                    |> List.tryFind (fun (iden, _) -> iden = prefix + namedPort.Name)
+                                    |> List.tryFind (fun (iden, _) -> iden.value = prefix + namedPort.Name.value)
                                     |> function
-                                    | None -> Errors.ProcessModuleInstances.namedPortsDoNotMatch moduleInstName namedPort.Name
+                                    | None -> Errors.ProcessModuleInstances.namedPortsDoNotMatch moduleInstName.value namedPort.Name
                                     | Some port -> Succ (port, exp))
                             ?> fun portExpLst ->
                                 let inputs =
@@ -591,27 +609,26 @@ module private Internal =
                                     | PortDirAndType.Output _ -> Some (pName, exp)
                                     | _ -> None)
                                 |> List.compResMap (fun (pName, exp) ->
-                                    Helpers.expToNetLVal pName moduleInstName exp
+                                    Helpers.expToNetLVal exp pName.value moduleInstName.value exp.value
                                     ?>> fun netVal ->
-                                        let outExp = Primary (PrimaryT.Ranged { name = pName; range = None })
-                                        { NetAssignmentT.LHS = netVal; RHS = outExp })
+                                        { NetAssignmentT.LHS = netVal; RHS = Primary (PrimaryT.Ranged { name = pName; range = None }) })
                                 ?> fun outputNetAssigns ->
                                     let collectedVarMap = Map.fold (fun acc key value -> Map.add key value acc) subNetlist.varMap netlist.varMap
                                     let collectedVarMap' =
                                         (collectedVarMap, inputs)
                                         ||> List.fold (fun vMap (iden, exp) ->
                                             let expCont =
-                                                { expression = exp
-                                                  reqVars = Helpers.getExprVars exp }
+                                                { expression = exp.value
+                                                  reqVars = Helpers.getExprVars exp.value |> Helpers.convExprVars }
                                             let varElem = Wire [{ drivenRange = Range.max; expRange = Range.max; exp = expCont }]
-                                            let variable = { vMap.[iden] with var = varElem }
-                                            vMap.Add(iden, variable))
+                                            let variable = { vMap.[iden.value] with var = varElem }
+                                            vMap.Add(iden.value, variable))
                                     Helpers.registerNetAssigns collectedVarMap' outputNetAssigns
                         ?>> fun newVarMap ->
                             { varMap = newVarMap
                               initial = newInitial
                               alwaysBlocks = newAlwaysBlocks
-                              modInstNames = moduleInstName::netlist.modInstNames }
+                              modInstNames = moduleInstName.value::netlist.modInstNames }
         | _ -> Succ netlist
 
     and compileModule (ast: ASTT) (asts: ASTT list) : CompRes<Netlist> =

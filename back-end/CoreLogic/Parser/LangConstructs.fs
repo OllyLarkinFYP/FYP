@@ -7,14 +7,15 @@ open Token
 open Expression
 open ConstantExpression
 open CommonTypes
+open Utils
 
 module LangConstructs =
 
     // This acts as a forward declaration to allow the recursive grammar
     // Implementation can be found at the bottom of the page
-    let pStatement, pStatementImpl : Parser<StatementT,unit> * Parser<StatementT,unit> ref = createParserForwardedToRef()
+    let pStatement, pStatementImpl : Parser<StatementT,UserState> * Parser<StatementT,UserState> ref = createParserForwardedToRef()
 
-    let pStatementOrNull: Parser<StatementOrNullT,unit> =
+    let pStatementOrNull: Parser<StatementOrNullT,UserState> =
         choice [
             pStatement |>> Some
             Symbol.pSemiColon >>% None
@@ -26,7 +27,7 @@ module LangConstructs =
         |>> function
         | cond, body -> {| Condition = cond; Body = body |}
 
-    let pConditionalStatement: Parser<ConditionalStatementT,unit> = 
+    let pConditionalStatement: Parser<ConditionalStatementT,UserState> = 
         Keyword.pIf 
         >>. Symbol.pOpenRBrac 
         >>. pExpression 
@@ -42,20 +43,20 @@ module LangConstructs =
         | ((cond, ifBody), elseIfList), None -> 
             { ConditionalStatementT.Condition = cond; Body = ifBody; ElseIf = elseIfList; ElseBody = None }
 
-    let pCaseItem: Parser<CaseItemT,unit> = 
+    let pCaseItem: Parser<CaseItemT,UserState> = 
         choice [
             Keyword.pDefault >>. opt Symbol.pColon >>. pStatementOrNull |>> CaseItemT.Default
             sepBy1 pExpression Symbol.pComma .>>? Symbol.pColon .>>. pStatementOrNull |>> fun (exps, s) ->
                 CaseItemT.Item {| Elems = exps; Body = s |}
         ]
 
-    let pCaseStatement: Parser<CaseStatementT,unit> = 
+    let pCaseStatement: Parser<CaseStatementT,UserState> = 
         Keyword.pCase >>. Symbol.pOpenRBrac >>. pExpression .>> Symbol.pCloseRBrac .>>. many1 pCaseItem .>> Keyword.pEndCase
         |>> function
         | expr, items -> { CaseStatementT.CaseExpr = expr; Items = items }
 
-    let pRangedVar: Parser<RangedVarT,unit> =
-        pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
+    let pRangedVar: Parser<RangedVarT,UserState> =
+        withPos pIdentifier .>>. opt (Symbol.pOpenSBrac >>. pConstantRangeExpression .>> Symbol.pCloseSBrac) |>> fun (iden, range) ->
             { name = iden; range = range }
 
     let pEventExpression =
@@ -82,7 +83,7 @@ module LangConstructs =
 
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
-    let pNetLValue, pNetLValueImpl : Parser<NetLValueT,unit> * Parser<NetLValueT,unit> ref = createParserForwardedToRef()
+    let pNetLValue, pNetLValueImpl : Parser<NetLValueT,UserState> * Parser<NetLValueT,UserState> ref = createParserForwardedToRef()
 
     do pNetLValueImpl := 
         choice [
@@ -92,7 +93,7 @@ module LangConstructs =
 
     // This parser is self recursive so needs a forward reference
     // The implementation is defined underneath
-    let pVarLValue, pVarLValueImpl : Parser<VarLValueT,unit> * Parser<VarLValueT,unit> ref = createParserForwardedToRef()
+    let pVarLValue, pVarLValueImpl : Parser<VarLValueT,UserState> * Parser<VarLValueT,UserState> ref = createParserForwardedToRef()
 
     do pVarLValueImpl := 
         choice [
@@ -110,13 +111,13 @@ module LangConstructs =
         |>> function
         | lval, exp -> { NonblockingAssignmentT.LHS = lval; RHS = exp }
 
-    let pSeqBlock: Parser<SeqBlockT,unit> =
+    let pSeqBlock: Parser<SeqBlockT,UserState> =
         Keyword.pBegin >>. many pStatement .>> Keyword.pEnd
 
-    let pAlwaysConstruct: Parser<AlwaysConstructT,unit> = 
+    let pAlwaysConstruct: Parser<AlwaysConstructT,UserState> = 
         Keyword.pAlways >>. pProceduralTimingControlStatement
 
-    let pInitialConstruct: Parser<InitialConstructT,unit> = 
+    let pInitialConstruct: Parser<InitialConstructT,UserState> = 
         let pRangedConstAssignment =
             pRangedVar .>>? Symbol.pAssign .>>. pConstantExpression
             |>> function
@@ -142,7 +143,7 @@ module LangConstructs =
         | msb, lsb -> { RangeT.MSB = msb; LSB = lsb}
 
     let pListOfIdentifiers =
-        sepBy1 pIdentifier (attempt (Symbol.pComma .>> notFollowedBy (Keyword.pInput <|> Keyword.pOutput)))
+        sepBy1 (withPos pIdentifier) (attempt (Symbol.pComma .>> notFollowedBy (Keyword.pInput <|> Keyword.pOutput)))
 
     let pNetDeclaration =
         Keyword.pWire >>. opt pRange .>>. pListOfIdentifiers .>> Symbol.pSemiColon
@@ -195,23 +196,23 @@ module LangConstructs =
 
     let pListOfPortConnections =
         let named =
-            Symbol.pPeriod >>. pIdentifier .>>. opt (Symbol.pOpenRBrac >>. opt pExpression .>> Symbol.pCloseRBrac)
+            Symbol.pPeriod >>. withPos pIdentifier .>>. opt (Symbol.pOpenRBrac >>. opt (withPos pExpression) .>> Symbol.pCloseRBrac)
             |>> function
             | iden, None
             | iden, Some (None) -> {| Name = iden; Value = None |}
             | iden, Some (Some exp) -> {| Name = iden; Value = Some exp |}
         choice [
             sepBy1 named Symbol.pComma |>> PortConnectionT.Named
-            sepBy pExpression Symbol.pComma |>> PortConnectionT.Unnamed
+            sepBy (withPos pExpression) Symbol.pComma |>> PortConnectionT.Unnamed
         ]
 
     let pModuleInstance =
-        pIdentifier .>>? Symbol.pOpenRBrac .>>. pListOfPortConnections .>> Symbol.pCloseRBrac
+        withPos pIdentifier .>>? Symbol.pOpenRBrac .>>. pListOfPortConnections .>> Symbol.pCloseRBrac
         |>> function
         | iden, connections -> { ModuleInstanceT.Name = iden; PortConnections = connections }
 
     let pModuleInstantiation =
-        pIdentifier .>>.? pModuleInstance .>> Symbol.pSemiColon
+        withPos pIdentifier .>>.? pModuleInstance .>> Symbol.pSemiColon
         |>> function
         | iden, modInt -> { ModuleInstantiationT.Name = iden; Module = modInt }
 
@@ -221,7 +222,7 @@ module LangConstructs =
             pContinuousAssign |>> NonPortModuleItemT.ContinuousAssign
             pInitialConstruct |>> NonPortModuleItemT.InitialConstruct
             pAlwaysConstruct |>> NonPortModuleItemT.AlwaysConstruct
-            pModuleInstantiation |>> NonPortModuleItemT.ModuleInstantiation
+            withPos pModuleInstantiation |>> NonPortModuleItemT.ModuleInstantiation
         ]
 
     let pModuleItem =
@@ -230,12 +231,12 @@ module LangConstructs =
         op1 <|> op2
 
     let pListOfPorts = 
-        Symbol.pOpenRBrac >>. sepBy1 pIdentifier Symbol.pComma .>> Symbol.pCloseRBrac
+        Symbol.pOpenRBrac >>. sepBy1 (withPos pIdentifier) Symbol.pComma .>> Symbol.pCloseRBrac
 
     let pListOfPortDeclarations =
         Symbol.pOpenRBrac >>. sepBy pPortDeclaration Symbol.pComma .>> Symbol.pCloseRBrac
 
-    let pModuleDeclaration =
+    let pModuleDeclaration : Parser<ASTT,UserState> =
         // first keyword, identifier must be backtracable to catch second option
         let modDec1 = 
             Keyword.pModule >>? pIdentifier .>>.? attempt pListOfPorts .>> Symbol.pSemiColon .>>. many pModuleItem .>> Keyword.pEndModule
@@ -251,7 +252,7 @@ module LangConstructs =
                   info = ModDec2 {| ports = ports; body = moduleItems |}}
         modDec1 <|> modDec2
 
-    let pSourceText = 
+    let pSourceText : Parser<ASTT,UserState> = 
         spaces >>. pModuleDeclaration .>> eof
 
     do pStatementImpl := 

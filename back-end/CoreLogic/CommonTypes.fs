@@ -1,6 +1,22 @@
 namespace CommonTypes
 
 open System
+open FParsec
+
+type UserState = string
+
+type WithPos<'T> =
+    { file: string
+      start: Position
+      finish: Position
+      value: 'T }
+    with
+        static member getValue wp = wp.value 
+        static member empty value =
+            { file = ""
+              start = Position("",0L,0L,0L)
+              finish = Position("",0L,0L,0L)
+              value = value }
 
 type Range = 
     | Single of uint32
