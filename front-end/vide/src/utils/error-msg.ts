@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import Extension from "../extension-components";
 import { indentString } from "./indent-string";
@@ -17,7 +18,7 @@ export const processErrors = (
     const unlistedErrs: string[] = [];
     errors.forEach((error) => {
         if (error.file) {
-            const filePath = "/" + error.file.replace(/\\/g, "/");
+            const filePath = "file:" + path.normalize(error.file);
             // TODO: make it underline token
             const range = new vscode.Range(
                 error.line - 1,
