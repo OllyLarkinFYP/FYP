@@ -14,6 +14,12 @@ export function activate(context: vscode.ExtensionContext) {
     Extension.initOutputChannel(outputChannel);
 
     initialiseErrorChecking(context);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.simulate", () => {
+            vscode.window.showInformationMessage("Tried to simulate");
+        })
+    );
 }
 
 export function deactivate() {}
