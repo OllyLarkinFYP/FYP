@@ -213,17 +213,18 @@ let simulate (files: VerilogFile array) (topLevel: string) (inputs: APISimInp ar
           errors = [||]
           warnings = [||] }
 
+[<ExposeType>]
+type APIPort =
+    { name: string
+      input: bool }
+
 [<ExposeMethod>]
-let getPortNames (file: VerilogFile) : string array =
+let getPortNames (file: VerilogFile) : APIPort array =
     match Parse.sourceText file.name file.contents with
     | Failure _ -> [||]
     | Success (ast, _, _) ->
-        match ast.info with
-        | ModDec1 info ->
-            info.ports
-            |> List.map (WithPos<IdentifierT>.getValue)
-            |> Array.ofList
-        | ModDec2 info ->
-            info.ports
-            |> List.collect (fun port -> List.map WithPos<IdentifierT>.getValue port.names)
-            |> Array.ofList
+        Compile.getASTPorts ast
+        |> List.map (fun port ->
+            { name = port.name
+              input = port.pType = PortDirAndType.Input })
+        |> Array.ofList

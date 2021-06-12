@@ -651,3 +651,15 @@ module Compile =
         |> function
         | Some thisAst -> Internal.compileModule thisAst asts
         | None ->  Errors.CompilerAPI.astNotProvided modName
+
+    let getASTPorts (ast: ASTT) : {| name: IdentifierT; pType: PortDirAndType |} list =
+        let fPort (pd: PortDeclarationT) =
+            pd.names
+            |> List.map (fun name -> name, pd.dir)
+        let fPost =
+            List.map (fun (idenWithPos, dir) -> 
+                {| name = idenWithPos.value; pType = dir |})
+        match Helpers.getPortsAndItems fPort fPost ast.info with
+        | Succ (ports, _) -> ports
+        | Warn ((ports,_), _) -> ports
+        | Fail _ -> []
