@@ -3,6 +3,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import Extension from "../extension-components";
 import { indentString } from "./indent-string";
+import { platform } from "os";
 
 const backendPath = path.join(
     __dirname,
@@ -24,12 +25,17 @@ export const executeJob = (
     replyCallBack?: (reply: any) => void
 ) => {
     console.log("Executing job:", job);
-    const jobString = JSON.stringify({ ...job, id: 0 })
-        .replace(/\^/g, "^^")
-        .replace(/"/g, '\\"')
-        .replace(/</g, "^<")
-        .replace(/>/g, "^>")
-        .replace(/\|/g, "^|");
+    let jobString: string;
+    if (platform() === "win32") {
+        jobString = JSON.stringify({ ...job, id: 0 })
+            .replace(/\^/g, "^^")
+            .replace(/"/g, '\\"')
+            .replace(/</g, "^<")
+            .replace(/>/g, "^>")
+            .replace(/\|/g, "^|");
+    } else {
+        jobString = JSON.stringify({ ...job, id: 0 }).replace(/"/g, '\\"');
+    }
     exec(`dotnet ${backendPath} -j "${jobString}"`, (err, stdout, stderr) => {
         if (!err) {
             if (stderr) {
