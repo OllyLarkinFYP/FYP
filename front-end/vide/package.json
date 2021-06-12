@@ -32,13 +32,13 @@
             "commandPalette": [
                 {
                     "command": "vide.simulate",
-                    "when": "editorLangId == verilog"
+                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
                 }
             ],
             "editor/title": [
                 {
                     "command": "vide.simulate",
-                    "when": "editorLangId == verilog",
+                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/",
                     "group": "navigation"
                 }
             ]
