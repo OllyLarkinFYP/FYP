@@ -114,7 +114,7 @@ let compile (files: VerilogFile array) (topLevel: string) : CompilerReturnType =
 
 [<ExposeType>]
 type APISimInp =
-    { variable: string
+    { name: string
       repeating: bool
       values: string array }
 
@@ -151,7 +151,7 @@ let simulateFromPrevious (inputs: APISimInp array) (reqVars: string array) (cycl
                     if inp.repeating
                     then Repeating valLst
                     else Once valLst
-                inp.variable, simInput)
+                inp.name, simInput)
             |> Map.ofArray
         let validateReqVar reqVar =
             if netlist.varMap.ContainsKey reqVar
@@ -193,7 +193,7 @@ let simulateFromPrevious (inputs: APISimInp array) (reqVars: string array) (cycl
               warnings = [||] }
 
 [<ExposeMethod>]
-let simulate (files: VerilogFile array) (topLevel: string) (inputs: APISimInp array) (reqVars: string array) (cycles: uint) =
+let simulate (files: VerilogFile array) (topLevel: string) (inputs: APISimInp array) (reqVars: string array) (cycles: uint) : SimulatorReturnType =
     let compOut = compile files topLevel
     match compOut.status with
     | SUCCESS -> simulateFromPrevious inputs reqVars cycles
@@ -212,3 +212,19 @@ let simulate (files: VerilogFile array) (topLevel: string) (inputs: APISimInp ar
           output = [||]
           errors = [||]
           warnings = [||] }
+
+[<ExposeType>]
+type APIPort =
+    { name: string
+      input: bool }
+
+[<ExposeMethod>]
+let getPortNames (file: VerilogFile) : APIPort array =
+    match Parse.sourceText file.name file.contents with
+    | Failure _ -> [||]
+    | Success (ast, _, _) ->
+        Compile.getASTPorts ast
+        |> List.map (fun port ->
+            { name = port.name
+              input = port.pType = PortDirAndType.Input })
+        |> Array.ofList
