@@ -3,6 +3,7 @@
     "displayName": "VIDE",
     "description": "",
     "version": "0.0.1",
+    "publisher": "olly-larkin",
     "engines": {
         "vscode": "^1.56.0"
     },
