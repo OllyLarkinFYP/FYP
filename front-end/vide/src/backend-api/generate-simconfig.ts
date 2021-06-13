@@ -40,11 +40,19 @@ export const generateConfig = (module: vscode.TextDocument) => {
                     inputs: variables
                         .filter(({ input }) => input)
                         .map(({ name }) => {
-                            return {
-                                name: name,
-                                repeating: true,
-                                values: ["1", "0", "x"],
-                            };
+                            if (name.includes("clk") || name.includes("CLK")) {
+                                return {
+                                    name: name,
+                                    repeating: true,
+                                    values: ["0", "1"],
+                                };
+                            } else {
+                                return {
+                                    name: name,
+                                    repeating: true,
+                                    values: ["0", "1", "x"],
+                                };
+                            }
                         }),
                 };
                 const configText = JSON.stringify(configObj, null, 4);
