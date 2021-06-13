@@ -26,12 +26,21 @@
                 "title": "Simulate",
                 "category": "VIDE",
                 "icon": "$(debug-start)"
+            },
+            {
+                "command": "vide.waveform",
+                "title": "View Waveform",
+                "category": "VIDE"
             }
         ],
         "menus": {
             "commandPalette": [
                 {
                     "command": "vide.simulate",
+                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+                },
+                {
+                    "command": "vide.waveform",
                     "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
                 }
             ],

@@ -1,6 +1,27 @@
+import path = require("path");
 import * as vscode from "vscode";
 
+type Wave = {
+    name: string;
+    wave: string;
+    data?: string[];
+};
+
+type WaveGroup = Wave | [string, WaveGroup];
+
+type WaveJSON = {
+    signal: WaveGroup[];
+    head: { tock: number };
+    foot: { tock: number };
+    config: { hscale: number };
+};
+
 export default class Extension {
+    private static context?: vscode.ExtensionContext = undefined;
+    static setContext(context: vscode.ExtensionContext) {
+        this.context = context;
+    }
+
     private static outChannel?: vscode.OutputChannel = undefined;
     static initOutputChannel(outChannel: vscode.OutputChannel) {
         this.outChannel = outChannel;
@@ -46,5 +67,77 @@ export default class Extension {
     }
     static deleteFromDiagnostics(uri: vscode.Uri) {
         this.diagnosticsCollection?.delete(uri);
+    }
+
+    private static waveformView?: vscode.WebviewPanel = undefined;
+    private static waveJSON?: WaveJSON = {
+        signal: [
+            { name: "Wave 1", wave: "10101010" },
+            {
+                name: "Wave 2",
+                wave: "========",
+                data: ["A", "B", "C", "D", "E", "F", "G", "H"],
+            },
+            ["G1", { name: "Wave 3", wave: "01010101" }],
+        ],
+        head: { tock: 1 },
+        foot: { tock: 1 },
+        config: { hscale: 1 },
+    };
+    static setHTML(wave: WaveJSON) {
+        return `<!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/skins/default.js" type="text/javascript"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/wavedrom.min.js" type="text/javascript"></script>
+            </head>
+            <body onload="WaveDrom.ProcessAll()">
+                Test Test Test
+                <script type="WaveDrom">
+                ${JSON.stringify(wave)}
+                </script>
+            </body>
+        </html>`;
+    }
+    static displayWaveform() {
+        if (this.context && this.waveJSON) {
+            if (!this.waveformView) {
+                this.waveformView = vscode.window.createWebviewPanel(
+                    "vide",
+                    "Waveform",
+                    vscode.ViewColumn.Beside,
+                    { enableScripts: true }
+                );
+                this.waveformView.onDidDispose(() => {
+                    this.waveformView = undefined;
+                    console.log("Waveform view disposed.");
+                });
+            }
+
+            // const defaultScriptPath = this.waveformView.webview.asWebviewUri(
+            //     vscode.Uri.file(
+            //         path.join(
+            //             this.context.extensionPath,
+            //             "resources",
+            //             "sripts",
+            //             "default.js"
+            //         )
+            //     )
+            // );
+            // const wavedromScriptPath = this.waveformView.webview.asWebviewUri(
+            //     vscode.Uri.file(
+            //         path.join(
+            //             this.context.extensionPath,
+            //             "resources",
+            //             "sripts",
+            //             "wavedrom.min.js"
+            //         )
+            //     )
+            // );
+
+            this.waveformView.webview.html = this.setHTML(this.waveJSON);
+        } else {
+            console.error("No waveJSON to visualise...");
+        }
     }
 }

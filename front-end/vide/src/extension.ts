@@ -6,6 +6,8 @@ import { simulateFromModule, simulateFromConfig } from "./backend-api/simulate";
 export function activate(context: vscode.ExtensionContext) {
     console.log("VIDE is now active");
 
+    Extension.setContext(context);
+
     const diagnosticsCollection = vscode.languages.createDiagnosticCollection();
     context.subscriptions.push(diagnosticsCollection);
     Extension.initDiagnostics(diagnosticsCollection);
@@ -35,6 +37,12 @@ export function activate(context: vscode.ExtensionContext) {
                     "There is no active editor or open module to simulate"
                 );
             }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.waveform", () => {
+            Extension.displayWaveform();
         })
     );
 }
