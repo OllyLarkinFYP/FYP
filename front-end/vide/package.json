@@ -31,6 +31,16 @@
                 "command": "vide.waveform",
                 "title": "View Waveform",
                 "category": "VIDE"
+            },
+            {
+                "command": "vide.zoomInWave",
+                "title": "Zoom In Wave",
+                "category": "VIDE"
+            },
+            {
+                "command": "vide.zoomOutWave",
+                "title": "Zoom Out Wave",
+                "category": "VIDE"
             }
         ],
         "menus": {
@@ -40,8 +50,12 @@
                     "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
                 },
                 {
-                    "command": "vide.waveform",
-                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+                    "command": "vide.zoomInWave",
+                    "when": "vide.waveformOpen"
+                },
+                {
+                    "command": "vide.zoomOutWave",
+                    "when": "vide.waveformOpen"
                 }
             ],
             "editor/title": [
@@ -58,6 +72,18 @@
                 "key": "ctrl+r",
                 "mac": "cmd+r",
                 "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+            },
+            {
+                "command": "vide.zoomInWave",
+                "key": "ctrl+alt+oem_plus",
+                "mac": "cmd+alt+oem_plus",
+                "when": "vide.waveformOpen"
+            },
+            {
+                "command": "vide.zoomOutWave",
+                "key": "ctrl+alt+oem_minus",
+                "mac": "cmd+alt+oem_minus",
+                "when": "vide.waveformOpen"
             }
         ],
         "languages": [

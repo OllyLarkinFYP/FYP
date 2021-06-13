@@ -45,6 +45,18 @@ export function activate(context: vscode.ExtensionContext) {
             Extension.displayWaveform();
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.zoomInWave", () => {
+            Extension.zoomInWave();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.zoomOutWave", () => {
+            Extension.zoomOutWave();
+        })
+    );
 }
 
 export function deactivate() {}

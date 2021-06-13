@@ -85,18 +85,36 @@ export default class Extension {
         config: { hscale: 1 },
     };
     static setHTML(wave: WaveJSON) {
-        return `<!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/skins/default.js" type="text/javascript"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/wavedrom.min.js" type="text/javascript"></script>
-            </head>
-            <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
-                <script type="WaveDrom">
-                ${JSON.stringify(wave)}
-                </script>
-            </body>
-        </html>`;
+        if (this.waveformView) {
+            this.waveformView.webview.html = `<!DOCTYPE html>
+            <html lang="en">
+                <head>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/skins/default.js" type="text/javascript"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/wavedrom.min.js" type="text/javascript"></script>
+                </head>
+                <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
+                    <script type="WaveDrom">
+                    ${JSON.stringify(wave)}
+                    </script>
+                </body>
+            </html>`;
+        }
+    }
+    static zoomInWave() {
+        if (this.waveformView && this.waveJSON) {
+            this.waveJSON.config.hscale += 1;
+            this.setHTML(this.waveJSON);
+        }
+    }
+    static zoomOutWave() {
+        if (
+            this.waveformView &&
+            this.waveJSON &&
+            this.waveJSON.config.hscale > 1
+        ) {
+            this.waveJSON.config.hscale -= 1;
+            this.setHTML(this.waveJSON);
+        }
     }
     static displayWaveform() {
         if (this.context && this.waveJSON) {
@@ -104,11 +122,24 @@ export default class Extension {
                 this.waveformView = vscode.window.createWebviewPanel(
                     "vide",
                     "Waveform",
-                    vscode.ViewColumn.Beside,
+                    vscode.ViewColumn.Active,
                     { enableScripts: true }
+                );
+                vscode.commands.executeCommand(
+                    "setContext",
+                    "vide.waveformOpen",
+                    true
+                );
+                vscode.commands.executeCommand(
+                    "workbench.action.moveEditorToBelowGroup"
                 );
                 this.waveformView.onDidDispose(() => {
                     this.waveformView = undefined;
+                    vscode.commands.executeCommand(
+                        "setContext",
+                        "vide.waveformOpen",
+                        false
+                    );
                     console.log("Waveform view disposed.");
                 });
             }
@@ -134,7 +165,7 @@ export default class Extension {
             //     )
             // );
 
-            this.waveformView.webview.html = this.setHTML(this.waveJSON);
+            this.setHTML(this.waveJSON);
         } else {
             console.error("No waveJSON to visualise...");
         }
