@@ -35,12 +35,14 @@
             {
                 "command": "vide.zoomInWave",
                 "title": "Zoom In Wave",
-                "category": "VIDE"
+                "category": "VIDE",
+                "icon": "$(zoom-in)"
             },
             {
                 "command": "vide.zoomOutWave",
                 "title": "Zoom Out Wave",
-                "category": "VIDE"
+                "category": "VIDE",
+                "icon": "$(zoom-out)"
             }
         ],
         "menus": {
@@ -62,7 +64,17 @@
                 {
                     "command": "vide.simulate",
                     "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/",
-                    "group": "navigation"
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "vide.zoomInWave",
+                    "when": "vide.waveformOpen",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "vide.zoomOutWave",
+                    "when": "vide.waveformOpen",
+                    "group": "navigation@1"
                 }
             ]
         },
