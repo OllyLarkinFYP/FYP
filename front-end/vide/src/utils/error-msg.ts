@@ -29,7 +29,7 @@ export const processErrors = (
                 error.start.line - 1,
                 error.start.column - 1,
                 error.finish.line - 1,
-                error.finish.column
+                error.finish.column - 1
             );
             let diagnostics = diagMap.get(filePath);
             if (!diagnostics) {
