@@ -1,17 +1,14 @@
 import * as vscode from "vscode";
 import { executeJob, OutgoingJob } from "../utils/execute-job";
-import Extension from "../extension-components";
+import Extension, { SimulationData } from "../extension-components";
 import { getFilesStartingWith } from "../utils/get-files";
 import { generateConfig } from "./generate-simconfig";
 import { SimConfig, validateSimConfig } from "../simconfig";
-import { ErrorMsg } from "../utils/error-msg";
+import { ErrorMsg, processErrors } from "../utils/error-msg";
 
 type SimulatorReturn = {
     status: string;
-    output: {
-        name: string;
-        values: string[];
-    }[];
+    output: SimulationData;
     errors: ErrorMsg[];
     warnings: ErrorMsg[];
 };
@@ -71,13 +68,24 @@ const simulate = async (
 
     executeJob(job, (reply: SimulatorReturn) => {
         if (validateSimulatorReturn(reply)) {
-            const output = reply.output
-                .map(
-                    ({ name, values }) =>
-                        `Variable: ${name}\n` + `\t${values}\n`
-                )
-                .reduce((prev, curr) => prev + "\n" + curr);
-            Extension.sendInfoToOutputChannel(output);
+            switch (reply.status) {
+                case "success":
+                    Extension.clearDiagnostics();
+                    Extension.setSimulationDataAndDisplay(reply.output, config);
+                    break;
+                case "warnings":
+                    processErrors(reply.warnings, true);
+                    Extension.setSimulationDataAndDisplay(reply.output, config);
+                    break;
+                case "failure":
+                    processErrors(reply.errors);
+                    break;
+                default:
+                    vscode.window.showErrorMessage(
+                        "The call to the backend was invalid."
+                    );
+                    break;
+            }
         } else {
             console.error("Backend did not return the expected format.");
             vscode.window.showErrorMessage(

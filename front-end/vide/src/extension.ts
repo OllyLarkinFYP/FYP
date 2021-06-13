@@ -41,12 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vide.waveform", () => {
-            Extension.displayWaveform();
-        })
-    );
-
-    context.subscriptions.push(
         vscode.commands.registerCommand("vide.zoomInWave", () => {
             Extension.zoomInWave();
         })

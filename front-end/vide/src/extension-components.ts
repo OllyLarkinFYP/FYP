@@ -1,5 +1,5 @@
-import path = require("path");
 import * as vscode from "vscode";
+import { SimConfig } from "./simconfig";
 
 type Wave = {
     name: string;
@@ -15,6 +15,11 @@ type WaveJSON = {
     foot: { tock: number };
     config: { hscale: number };
 };
+
+export type SimulationData = {
+    name: string;
+    values: string[];
+}[];
 
 export default class Extension {
     private static context?: vscode.ExtensionContext = undefined;
@@ -70,21 +75,14 @@ export default class Extension {
     }
 
     private static waveformView?: vscode.WebviewPanel = undefined;
-    private static waveJSON?: WaveJSON = {
-        signal: [
-            { name: "Wave 1", wave: "10101010" },
-            {
-                name: "Wave 2",
-                wave: "========",
-                data: ["A", "B", "C", "D", "E", "F", "G", "H"],
-            },
-            ["G1", { name: "Wave 3", wave: "01010101" }],
-        ],
+    private static simulationData?: SimulationData = undefined;
+    private static waveJSON: WaveJSON = {
+        signal: [],
         head: { tock: 1 },
         foot: { tock: 1 },
-        config: { hscale: 1 },
+        config: { hscale: 2 },
     };
-    static setHTML(wave: WaveJSON) {
+    static setHTML() {
         if (this.waveformView) {
             this.waveformView.webview.html = `<!DOCTYPE html>
             <html lang="en">
@@ -94,80 +92,109 @@ export default class Extension {
                 </head>
                 <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
                     <script type="WaveDrom">
-                    ${JSON.stringify(wave)}
+                    ${JSON.stringify(this.waveJSON)}
                     </script>
                 </body>
             </html>`;
         }
     }
     static zoomInWave() {
-        if (this.waveformView && this.waveJSON) {
+        if (this.waveformView) {
             this.waveJSON.config.hscale += 1;
-            this.setHTML(this.waveJSON);
+            this.setHTML();
         }
     }
     static zoomOutWave() {
-        if (
-            this.waveformView &&
-            this.waveJSON &&
-            this.waveJSON.config.hscale > 1
-        ) {
+        if (this.waveformView && this.waveJSON.config.hscale > 1) {
             this.waveJSON.config.hscale -= 1;
-            this.setHTML(this.waveJSON);
+            this.setHTML();
         }
     }
+    static setSimulationDataAndDisplay(
+        data: SimulationData,
+        config: SimConfig
+    ) {
+        this.simulationData = data;
+        this.waveJSON.signal = data.map(({ name, values }) => {
+            let wave = "";
+            let dataArr: string[] = [];
+            let prevValue = "";
+            values.forEach((valueStr) => {
+                if (valueStr === prevValue) {
+                    wave += ".";
+                } else {
+                    if (valueStr.length > 1) {
+                        wave += "=";
+                        dataArr.push(valueStr);
+                    } else {
+                        // wave += valueStr;
+                        switch (valueStr) {
+                            case "1":
+                                wave += "h";
+                                break;
+                            case "0":
+                                wave += "l";
+                                break;
+                            default:
+                                wave += "x";
+                                break;
+                        }
+                    }
+                }
+                prevValue = valueStr;
+            });
+            return { name: name, wave: wave, data: dataArr };
+        });
+        this.displayWaveform();
+    }
     static displayWaveform() {
-        if (this.context && this.waveJSON) {
-            if (!this.waveformView) {
-                this.waveformView = vscode.window.createWebviewPanel(
-                    "vide",
-                    "Waveform",
-                    vscode.ViewColumn.Active,
-                    { enableScripts: true }
-                );
+        if (!this.waveformView) {
+            this.waveformView = vscode.window.createWebviewPanel(
+                "vide",
+                "Waveform",
+                vscode.ViewColumn.Active,
+                { enableScripts: true }
+            );
+            vscode.commands.executeCommand(
+                "setContext",
+                "vide.waveformOpen",
+                true
+            );
+            vscode.commands.executeCommand(
+                "workbench.action.moveEditorToBelowGroup"
+            );
+            this.waveformView.onDidDispose(() => {
+                this.waveformView = undefined;
                 vscode.commands.executeCommand(
                     "setContext",
                     "vide.waveformOpen",
-                    true
+                    false
                 );
-                vscode.commands.executeCommand(
-                    "workbench.action.moveEditorToBelowGroup"
-                );
-                this.waveformView.onDidDispose(() => {
-                    this.waveformView = undefined;
-                    vscode.commands.executeCommand(
-                        "setContext",
-                        "vide.waveformOpen",
-                        false
-                    );
-                    console.log("Waveform view disposed.");
-                });
-            }
-
-            // const defaultScriptPath = this.waveformView.webview.asWebviewUri(
-            //     vscode.Uri.file(
-            //         path.join(
-            //             this.context.extensionPath,
-            //             "resources",
-            //             "sripts",
-            //             "default.js"
-            //         )
-            //     )
-            // );
-            // const wavedromScriptPath = this.waveformView.webview.asWebviewUri(
-            //     vscode.Uri.file(
-            //         path.join(
-            //             this.context.extensionPath,
-            //             "resources",
-            //             "sripts",
-            //             "wavedrom.min.js"
-            //         )
-            //     )
-            // );
-
-            this.setHTML(this.waveJSON);
-        } else {
-            console.error("No waveJSON to visualise...");
+                console.log("Waveform view disposed.");
+            });
         }
+
+        this.setHTML();
+
+        // const defaultScriptPath = this.waveformView.webview.asWebviewUri(
+        //     vscode.Uri.file(
+        //         path.join(
+        //             this.context.extensionPath,
+        //             "resources",
+        //             "sripts",
+        //             "default.js"
+        //         )
+        //     )
+        // );
+        // const wavedromScriptPath = this.waveformView.webview.asWebviewUri(
+        //     vscode.Uri.file(
+        //         path.join(
+        //             this.context.extensionPath,
+        //             "resources",
+        //             "sripts",
+        //             "wavedrom.min.js"
+        //         )
+        //     )
+        // );
     }
 }

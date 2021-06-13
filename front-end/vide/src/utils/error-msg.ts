@@ -59,12 +59,20 @@ export const processErrors = (
         const msg = indentString(
             unlistedErrs.reduce((prev, curr) => prev + "\n\n" + curr)
         );
-        areWarnings
-            ? console.warn(
-                  `Warnings were generated when trying to build the project:\n\n${msg}`
-              )
-            : console.error(
-                  `Errors were generated when trying to build the project:\n\n${msg}`
-              );
+        if (areWarnings) {
+            console.warn(
+                `Warnings were generated when trying to build the project:${msg}`
+            );
+            vscode.window.showWarningMessage(
+                `Warnings were generated when trying to build the project:${msg}`
+            );
+        } else {
+            console.error(
+                `Errors were generated when trying to build the project:${msg}`
+            );
+            vscode.window.showErrorMessage(
+                `Errors were generated when trying to build the project:${msg}`
+            );
+        }
     }
 };

@@ -28,11 +28,6 @@
                 "icon": "$(debug-start)"
             },
             {
-                "command": "vide.waveform",
-                "title": "View Waveform",
-                "category": "VIDE"
-            },
-            {
                 "command": "vide.zoomInWave",
                 "title": "Zoom In Wave",
                 "category": "VIDE",
