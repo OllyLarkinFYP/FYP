@@ -91,8 +91,7 @@ export default class Extension {
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/skins/default.js" type="text/javascript"></script>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/wavedrom.min.js" type="text/javascript"></script>
             </head>
-            <body onload="WaveDrom.ProcessAll()">
-                Test Test Test
+            <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
                 <script type="WaveDrom">
                 ${JSON.stringify(wave)}
                 </script>
