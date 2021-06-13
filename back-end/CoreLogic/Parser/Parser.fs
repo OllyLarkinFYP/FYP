@@ -47,9 +47,9 @@ module private Helpers =
     let toWithPosResult (srcTxt: string) (file: string) (err: ParserError) (msg: string) : WithPos<string> =
         let tokenLength =
             match srcTxt.[int err.Position.Index..] with
-            | RegMatch @"([a-zA-Z_][a-zA-Z_$0-9]*)" groups -> groups.[0].Length
-            | RegMatch @"([0-9]*(?:'[bodh])?[_0-9]*)" groups -> groups.[0].Length
-            | RegMatch @"(\|\||&&|~\^|\^~|===|!==|==|!=|<=|>=|<<<|>>>|<<|>>|\*\*|~&|~\||)" groups -> groups.[0].Length
+            | RegMatch @"^([a-zA-Z_][a-zA-Z_$0-9]*)" groups -> groups.[0].Length
+            | RegMatch @"^([0-9]*(?:'[bodh])?[_0-9]+)" groups -> groups.[0].Length
+            | RegMatch @"^(\|\||&&|~\^|\^~|===|!==|==|!=|<=|>=|<<<|>>>|<<|>>|\*\*|~&|~\||)" groups -> groups.[0].Length
             | _ -> 1
         { file = file
           start = err.Position
