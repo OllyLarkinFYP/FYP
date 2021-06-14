@@ -15,7 +15,23 @@
             "description": "The vars that will be recorded in the output. For variables within a module instance, use the module instance name and a colon as a prefix (e.g. modinst:var)",
             "type": "array",
             "items": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "the name of the variable to include in the waveform",
+                        "type": "string"
+                    },
+                    "breakdown": {
+                        "description": "Should the waveform show the individual bits as well as the full signal",
+                        "type": "boolean"
+                    },
+                    "format": {
+                        "description": "The format that the numbers should be displayed in. Options are bin, oct, dec, or hex",
+                        "type": "string",
+                        "enum": ["bin", "oct", "hex", "dec"]
+                    }
+                },
+                "required": ["name", "breakdown", "format"]
             },
             "minItems": 1,
             "uniqueItems": true

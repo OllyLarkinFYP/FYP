@@ -36,7 +36,13 @@ export const generateConfig = (module: vscode.TextDocument) => {
             } else {
                 const configObj = {
                     cycles: 10,
-                    "requested vars": variables.map(({ name }) => name),
+                    "requested vars": variables.map(({ name, input }) => {
+                        return {
+                            name: name,
+                            breakdown: !input,
+                            format: "bin",
+                        };
+                    }),
                     inputs: variables
                         .filter(({ input }) => input)
                         .map(({ name }) => {

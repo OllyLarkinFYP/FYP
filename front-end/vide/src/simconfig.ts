@@ -1,6 +1,12 @@
+export type Format = "bin" | "oct" | "hex" | "dec";
+
 export type SimConfig = {
     cycles: number;
-    "requested vars": string[];
+    "requested vars": {
+        name: string;
+        breakdown: boolean;
+        format: Format;
+    }[];
     inputs: {
         name: string;
         repeating: boolean;
@@ -12,6 +18,10 @@ export const validateSimConfig = (config: SimConfig) => {
     return (
         config.cycles &&
         config["requested vars"] &&
+        config["requested vars"].every(
+            ({ name, breakdown, format }) =>
+                name !== undefined && breakdown !== undefined && format
+        ) &&
         config.inputs &&
         config.inputs.every(
             ({ name, repeating, values }) =>
