@@ -144,6 +144,7 @@ export default class Extension {
                         <script src="${wavedromJSUri}" type="text/javascript"></script>
                     </head>
                     <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
+                        <br>
                         <script type="WaveDrom">
                         ${JSON.stringify(this.waveJSON)}
                         </script>
