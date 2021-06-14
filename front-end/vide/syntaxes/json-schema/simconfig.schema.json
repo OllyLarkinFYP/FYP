@@ -24,8 +24,14 @@
                     "breakdown": {
                         "description": "Should the waveform show the individual bits as well as the full signal",
                         "type": "boolean"
+                    },
+                    "format": {
+                        "description": "The format that the numbers should be displayed in. Options are bin, oct, dec, or hex",
+                        "type": "string",
+                        "enum": ["bin", "oct", "hex", "dec"]
                     }
-                }
+                },
+                "required": ["name", "breakdown", "format"]
             },
             "minItems": 1,
             "uniqueItems": true

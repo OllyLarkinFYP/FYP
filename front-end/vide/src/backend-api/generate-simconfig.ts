@@ -40,6 +40,7 @@ export const generateConfig = (module: vscode.TextDocument) => {
                         return {
                             name: name,
                             breakdown: !input,
+                            format: "bin",
                         };
                     }),
                     inputs: variables

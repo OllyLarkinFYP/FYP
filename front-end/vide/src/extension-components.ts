@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { SimConfig } from "./simconfig";
+import { SimConfig, Format } from "./simconfig";
+import { baseConvert } from "./utils/base-convert";
 
 type Wave = {
     name: string;
@@ -22,7 +23,12 @@ export type SimulationData = {
     values: string[];
 }[];
 
-const getWave = (name: string, values: string[], index?: number): Wave => {
+const getWave = (
+    name: string,
+    values: string[],
+    format: Format,
+    index?: number
+): Wave => {
     let wave = "";
     let dataArr: string[] = [];
     let prevValue = "";
@@ -36,7 +42,7 @@ const getWave = (name: string, values: string[], index?: number): Wave => {
         } else {
             if (v.length > 1) {
                 wave += "=";
-                dataArr.push(valueStr);
+                dataArr.push(baseConvert(valueStr, format));
             } else {
                 wave += v === "1" ? "h" : v === "0" ? "l" : "x";
             }
@@ -162,17 +168,20 @@ export default class Extension {
     ) {
         this.simulationData = data;
         this.waveJSON.signal = data.map(({ name: name, values }): WaveGroup => {
-            const regVar = config["requested vars"].find(
+            const reqVar = config["requested vars"].find(
                 ({ name: varName }) => varName === name
             );
-            if (regVar && regVar.breakdown && values[0].length > 1) {
-                let waveGroup: WaveGroup = [name, getWave("full", values)];
+            if (reqVar && reqVar.breakdown && values[0].length > 1) {
+                let waveGroup: WaveGroup = [
+                    name,
+                    getWave("full", values, reqVar.format),
+                ];
                 for (let i = 0; i < values[0].length; i++) {
-                    waveGroup.push(getWave(`[${i}]`, values, i));
+                    waveGroup.push(getWave(`[${i}]`, values, reqVar.format, i));
                 }
                 return waveGroup;
             }
-            return getWave(name, values);
+            return getWave(name, values, reqVar?.format || "bin");
         });
         this.displayWaveform();
     }
