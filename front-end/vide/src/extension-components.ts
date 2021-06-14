@@ -107,6 +107,7 @@ export default class Extension {
 
     private static waveformView?: vscode.WebviewPanel = undefined;
     private static simulationData?: SimulationData = undefined;
+    private static simulationConfig?: SimConfig = undefined;
     private static waveJSON: WaveJSON = {
         signal: [],
         head: { tock: 1 },
@@ -143,6 +144,7 @@ export default class Extension {
                         <script src="${wavedromJSUri}" type="text/javascript"></script>
                     </head>
                     <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
+                        <br>
                         <script type="WaveDrom">
                         ${JSON.stringify(this.waveJSON)}
                         </script>
@@ -151,15 +153,26 @@ export default class Extension {
         }
     }
     static zoomInWave() {
-        if (this.waveformView) {
+        if (this.waveformView && this.simulationData && this.simulationConfig) {
             this.waveJSON.config.hscale += 1;
-            this.setHTML();
+            this.setSimulationDataAndDisplay(
+                this.simulationData,
+                this.simulationConfig
+            );
         }
     }
     static zoomOutWave() {
-        if (this.waveformView && this.waveJSON.config.hscale > 1) {
+        if (
+            this.waveformView &&
+            this.simulationData &&
+            this.simulationConfig &&
+            this.waveJSON.config.hscale > 1
+        ) {
             this.waveJSON.config.hscale -= 1;
-            this.setHTML();
+            this.setSimulationDataAndDisplay(
+                this.simulationData,
+                this.simulationConfig
+            );
         }
     }
     static setSimulationDataAndDisplay(
@@ -167,6 +180,7 @@ export default class Extension {
         config: SimConfig
     ) {
         this.simulationData = data;
+        this.simulationConfig = config;
         this.waveJSON.signal = data.map(({ name: name, values }): WaveGroup => {
             const reqVar = config["requested vars"].find(
                 ({ name: varName }) => varName === name
@@ -185,7 +199,7 @@ export default class Extension {
         });
         this.displayWaveform();
     }
-    static displayWaveform() {
+    private static displayWaveform() {
         if (!this.waveformView) {
             this.waveformView = vscode.window.createWebviewPanel(
                 "vide",
@@ -211,7 +225,31 @@ export default class Extension {
                 console.log("Waveform view disposed.");
             });
         }
-
+        this.cleanWaveJSON();
         this.setHTML();
+    }
+    private static cleanWaveJSON() {
+        const maxChars = (this.waveJSON.config.hscale - 1) * 5 + 3;
+        const trimWaveGroup = (wg: WaveGroup): WaveGroup => {
+            if (Array.isArray(wg)) {
+                let ret: WaveGroup = [wg[0]];
+                wg.slice(1).forEach((g) => {
+                    if (typeof g !== "string" && Array.isArray(ret)) {
+                        ret.push(trimWaveGroup(g));
+                    }
+                });
+                return ret;
+            } else {
+                return {
+                    ...wg,
+                    data: wg.data?.map((value) =>
+                        value.length <= maxChars ? value : "..."
+                    ),
+                };
+            }
+        };
+        this.waveJSON.signal = this.waveJSON.signal.map((wg) =>
+            trimWaveGroup(wg)
+        );
     }
 }
