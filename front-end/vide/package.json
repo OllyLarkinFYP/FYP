@@ -45,31 +45,31 @@
             "commandPalette": [
                 {
                     "command": "vide.simulate",
-                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+                    "when": "vide.dotnet-installed && resourceLangId == verilog || vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/"
                 },
                 {
                     "command": "vide.zoomInWave",
-                    "when": "vide.waveformOpen"
+                    "when": "vide.dotnet-installed && vide.waveformOpen"
                 },
                 {
                     "command": "vide.zoomOutWave",
-                    "when": "vide.waveformOpen"
+                    "when": "vide.dotnet-installed && vide.waveformOpen"
                 }
             ],
             "editor/title": [
                 {
                     "command": "vide.simulate",
-                    "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/",
+                    "when": "vide.dotnet-installed && resourceLangId == verilog || vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/",
                     "group": "navigation@3"
                 },
                 {
                     "command": "vide.zoomInWave",
-                    "when": "vide.waveformOpen",
+                    "when": "vide.dotnet-installed && vide.waveformOpen",
                     "group": "navigation@2"
                 },
                 {
                     "command": "vide.zoomOutWave",
-                    "when": "vide.waveformOpen",
+                    "when": "vide.dotnet-installed && vide.waveformOpen",
                     "group": "navigation@1"
                 }
             ]
@@ -79,19 +79,19 @@
                 "command": "vide.simulate",
                 "key": "ctrl+r",
                 "mac": "cmd+r",
-                "when": "resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/"
+                "when": "vide.dotnet-installed && (resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/)"
             },
             {
                 "command": "vide.zoomInWave",
                 "key": "ctrl+alt+oem_plus",
                 "mac": "cmd+alt+oem_plus",
-                "when": "vide.waveformOpen"
+                "when": "vide.dotnet-installed && vide.waveformOpen"
             },
             {
                 "command": "vide.zoomOutWave",
                 "key": "ctrl+alt+oem_minus",
                 "mac": "cmd+alt+oem_minus",
-                "when": "vide.waveformOpen"
+                "when": "vide.dotnet-installed && vide.waveformOpen"
             }
         ],
         "languages": [
