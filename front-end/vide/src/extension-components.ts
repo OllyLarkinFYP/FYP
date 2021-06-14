@@ -8,7 +8,7 @@ type Wave = {
     data?: string[];
 };
 
-type WaveGroup = Wave | [string, WaveGroup];
+type WaveGroup = Wave | [string, ...WaveGroup[]];
 
 type WaveJSON = {
     signal: WaveGroup[];
@@ -21,6 +21,30 @@ export type SimulationData = {
     name: string;
     values: string[];
 }[];
+
+const getWave = (name: string, values: string[], index?: number): Wave => {
+    let wave = "";
+    let dataArr: string[] = [];
+    let prevValue = "";
+    values.forEach((valueStr) => {
+        const v =
+            index === undefined
+                ? valueStr
+                : valueStr[valueStr.length - 1 - index];
+        if (v === prevValue) {
+            wave += ".";
+        } else {
+            if (v.length > 1) {
+                wave += "=";
+                dataArr.push(valueStr);
+            } else {
+                wave += v === "1" ? "h" : v === "0" ? "l" : "x";
+            }
+            prevValue = v;
+        }
+    });
+    return { name: name, wave: wave, data: dataArr };
+};
 
 export default class Extension {
     private static context?: vscode.ExtensionContext = undefined;
@@ -105,23 +129,19 @@ export default class Extension {
                     )
                 )
             );
-            console.log(
-                defaultJSUri.toString(),
-                defaultJSUri.path,
-                defaultJSUri.fsPath
-            );
-            this.waveformView.webview.html = `<!DOCTYPE html>
-            <html lang="en">
-                <head>
-                    <script src="${defaultJSUri}" type="text/javascript"></script>
-                    <script src="${wavedromJSUri}" type="text/javascript"></script>
-                </head>
-                <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
-                    <script type="WaveDrom">
-                    ${JSON.stringify(this.waveJSON)}
-                    </script>
-                </body>
-            </html>`;
+            this.waveformView.webview.html = `
+                <!DOCTYPE html>
+                <html lang="en">
+                    <head>
+                        <script src="${defaultJSUri}" type="text/javascript"></script>
+                        <script src="${wavedromJSUri}" type="text/javascript"></script>
+                    </head>
+                    <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
+                        <script type="WaveDrom">
+                        ${JSON.stringify(this.waveJSON)}
+                        </script>
+                    </body>
+                </html>`;
         }
     }
     static zoomInWave() {
@@ -141,35 +161,18 @@ export default class Extension {
         config: SimConfig
     ) {
         this.simulationData = data;
-        this.waveJSON.signal = data.map(({ name, values }) => {
-            let wave = "";
-            let dataArr: string[] = [];
-            let prevValue = "";
-            values.forEach((valueStr) => {
-                if (valueStr === prevValue) {
-                    wave += ".";
-                } else {
-                    if (valueStr.length > 1) {
-                        wave += "=";
-                        dataArr.push(valueStr);
-                    } else {
-                        // wave += valueStr;
-                        switch (valueStr) {
-                            case "1":
-                                wave += "h";
-                                break;
-                            case "0":
-                                wave += "l";
-                                break;
-                            default:
-                                wave += "x";
-                                break;
-                        }
-                    }
+        this.waveJSON.signal = data.map(({ name: name, values }): WaveGroup => {
+            const regVar = config["requested vars"].find(
+                ({ name: varName }) => varName === name
+            );
+            if (regVar && regVar.breakdown && values[0].length > 1) {
+                let waveGroup: WaveGroup = [name, getWave("full", values)];
+                for (let i = 0; i < values[0].length; i++) {
+                    waveGroup.push(getWave(`[${i}]`, values, i));
                 }
-                prevValue = valueStr;
-            });
-            return { name: name, wave: wave, data: dataArr };
+                return waveGroup;
+            }
+            return getWave(name, values);
         });
         this.displayWaveform();
     }
@@ -201,26 +204,5 @@ export default class Extension {
         }
 
         this.setHTML();
-
-        // const defaultScriptPath = this.waveformView.webview.asWebviewUri(
-        //     vscode.Uri.file(
-        //         path.join(
-        //             this.context.extensionPath,
-        //             "resources",
-        //             "sripts",
-        //             "default.js"
-        //         )
-        //     )
-        // );
-        // const wavedromScriptPath = this.waveformView.webview.asWebviewUri(
-        //     vscode.Uri.file(
-        //         path.join(
-        //             this.context.extensionPath,
-        //             "resources",
-        //             "sripts",
-        //             "wavedrom.min.js"
-        //         )
-        //     )
-        // );
     }
 }

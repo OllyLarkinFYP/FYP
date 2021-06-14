@@ -61,7 +61,7 @@ const simulate = async (
             files,
             "", // this should be blank so that it uses the first file
             config.inputs,
-            config["requested vars"],
+            config["requested vars"].map(({ name }) => name),
             config.cycles,
         ],
     };
