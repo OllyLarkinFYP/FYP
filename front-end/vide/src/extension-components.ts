@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { SimConfig } from "./simconfig";
 
@@ -83,12 +84,37 @@ export default class Extension {
         config: { hscale: 2 },
     };
     static setHTML() {
-        if (this.waveformView) {
+        if (this.waveformView && this.context) {
+            const defaultJSUri = this.waveformView.webview.asWebviewUri(
+                vscode.Uri.file(
+                    path.join(
+                        this.context.extensionPath,
+                        "resources",
+                        "scripts",
+                        "default.js"
+                    )
+                )
+            );
+            const wavedromJSUri = this.waveformView.webview.asWebviewUri(
+                vscode.Uri.file(
+                    path.join(
+                        this.context.extensionPath,
+                        "resources",
+                        "scripts",
+                        "wavedrom.min.js"
+                    )
+                )
+            );
+            console.log(
+                defaultJSUri.toString(),
+                defaultJSUri.path,
+                defaultJSUri.fsPath
+            );
             this.waveformView.webview.html = `<!DOCTYPE html>
             <html lang="en">
                 <head>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/skins/default.js" type="text/javascript"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/2.6.8/wavedrom.min.js" type="text/javascript"></script>
+                    <script src="${defaultJSUri}" type="text/javascript"></script>
+                    <script src="${wavedromJSUri}" type="text/javascript"></script>
                 </head>
                 <body style="background-color:white;" onload="WaveDrom.ProcessAll()">
                     <script type="WaveDrom">
