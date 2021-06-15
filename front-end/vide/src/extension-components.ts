@@ -66,19 +66,31 @@ export default class Extension {
     static sendErrorToOutputChannel(error: string, message: string) {
         this.outChannel?.clear();
         this.outChannel?.appendLine(message);
-        // this.outChannel?.show();
-        vscode.window.showErrorMessage(
-            `${error}. Check 'VIDE' output log for more details.`
-        );
+        vscode.window
+            .showErrorMessage(
+                `${error}. Check 'VIDE' output log for more details.`,
+                "Open Log"
+            )
+            .then((response) => {
+                if (response) {
+                    this.outChannel?.show();
+                }
+            });
         console.error(message);
     }
     static sendWarningToOutputChannel(warning: string, message: string) {
         this.outChannel?.clear();
         this.outChannel?.appendLine(message);
-        // this.outChannel?.show();
-        vscode.window.showWarningMessage(
-            `${warning}. Check 'VIDE' output log for more details.`
-        );
+        vscode.window
+            .showWarningMessage(
+                `${warning}. Check 'VIDE' output log for more details.`,
+                "Open Log"
+            )
+            .then((response) => {
+                if (response) {
+                    this.outChannel?.show();
+                }
+            });
         console.warn(message);
     }
     static sendInfoToOutputChannel(info: string) {
