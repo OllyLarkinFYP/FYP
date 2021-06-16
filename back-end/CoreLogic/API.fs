@@ -249,3 +249,21 @@ let getPortNames (file: VerilogFile) : APIPort array =
               input = port.pType = PortDirAndType.Input })
         |> Array.ofList
     | _ -> [||]
+
+[<ExposeMethod>]
+let getVariables (files: VerilogFile array) : string array =
+    let compOut = compile files ""
+    match compOut.status with
+    | SUCCESS ->
+        match lastNetlist with
+        | None -> [||]
+        | Some netlist ->
+            netlist.varMap
+            |> Map.toArray
+            |> Array.map (fun (name, _) -> name)
+    | WARNINGS ->
+        [||]
+    | FAILURE ->
+        [||]
+    | INVALID ->
+        [||]

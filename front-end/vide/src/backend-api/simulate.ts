@@ -2,9 +2,12 @@ import * as vscode from "vscode";
 import { executeJob, OutgoingJob } from "../utils/execute-job";
 import Extension, { SimulationData } from "../extension-components";
 import { getFilesStartingWith } from "../utils/get-files";
-import { generateConfig } from "./generate-simconfig";
+import { generateConfig } from "../generate-simconfig";
 import { SimConfig, validateSimConfig } from "../simconfig";
 import { ErrorMsg, processErrors } from "../utils/error-msg";
+import { getVariables } from "./available-variables";
+import { indentString } from "../utils/indent-string";
+import { getPorts } from "./available-ports";
 
 type SimulatorReturn = {
     status: string;
@@ -19,6 +22,16 @@ const validateSimulatorReturn = (simRet: SimulatorReturn) => {
         simRet.output &&
         simRet.output.every(({ name, values }) => name !== undefined && values)
     );
+};
+
+const getInvalidReqs = (config: SimConfig, available: string[]): string[] => {
+    let invalidVars: string[] = [];
+    config["requested vars"].map(({ name }) => {
+        if (!available.includes(name)) {
+            invalidVars.push(name);
+        }
+    });
+    return invalidVars;
 };
 
 // API:
@@ -54,43 +67,96 @@ const simulate = async (
         return;
     }
 
-    const files = await getFilesStartingWith(topLevelDoc);
-    const job: OutgoingJob = {
-        methodName: "simulate",
-        parameters: [
-            files,
-            "", // this should be blank so that it uses the first file
-            config.inputs,
-            config["requested vars"].map(({ name }) => name),
-            config.cycles,
-        ],
-    };
-
-    executeJob(job, (reply: SimulatorReturn) => {
-        if (validateSimulatorReturn(reply)) {
-            switch (reply.status) {
-                case "success":
-                    Extension.clearDiagnostics();
-                    Extension.setSimulationDataAndDisplay(reply.output, config);
-                    break;
-                case "warnings":
-                    processErrors(reply.warnings, true);
-                    Extension.setSimulationDataAndDisplay(reply.output, config);
-                    break;
-                case "failure":
-                    processErrors(reply.errors);
-                    break;
-                default:
-                    vscode.window.showErrorMessage(
-                        "The call to the backend was invalid."
-                    );
-                    break;
-            }
-        } else {
-            console.error("Backend did not return the expected format.");
-            vscode.window.showErrorMessage(
-                "Backend simulation did not return the expected format."
+    getVariables(topLevelDoc, async (availableVars) => {
+        const invalidReqs = getInvalidReqs(config, availableVars);
+        if (invalidReqs.length > 0) {
+            Extension.sendErrorToOutputChannel(
+                "Some requested variables could not be found in the compiled netlist",
+                "\nThe following requested variables were not found in the compiled netlist:\n" +
+                    indentString(invalidReqs.join("\n")) +
+                    "\n" +
+                    "The available variables are:\n" +
+                    indentString(availableVars.join("\n"))
             );
+        } else {
+            getPorts(
+                topLevelDoc,
+                (ports: { name: string; input: boolean }[]) => {
+                    let invalidPorts: string[] = [];
+                    config.inputs.forEach((inp) => {
+                        if (
+                            !ports.find(
+                                ({ name, input }) => input && inp.name === name
+                            )
+                        ) {
+                            invalidPorts.push(inp.name);
+                        }
+                    });
+                    if (invalidPorts.length > 0) {
+                        Extension.sendWarningToOutputChannel(
+                            "Some provided inputs for simulation could not be found in the compiled netlist",
+                            "These input variables could not be found in the netlist:\n" +
+                                indentString(invalidPorts.join("\n")) +
+                                "\n" +
+                                "The available ports are:\n" +
+                                indentString(
+                                    ports
+                                        .filter(({ input }) => input)
+                                        .map(({ name }) => name)
+                                        .join("\n")
+                                )
+                        );
+                    }
+                }
+            );
+
+            const files = await getFilesStartingWith(topLevelDoc);
+            const job: OutgoingJob = {
+                methodName: "simulate",
+                parameters: [
+                    files,
+                    "", // this should be blank so that it uses the first file
+                    config.inputs,
+                    config["requested vars"].map(({ name }) => name),
+                    config.cycles,
+                ],
+            };
+
+            executeJob(job, (reply: SimulatorReturn) => {
+                if (validateSimulatorReturn(reply)) {
+                    switch (reply.status) {
+                        case "success":
+                            Extension.clearDiagnostics();
+                            Extension.setSimulationDataAndDisplay(
+                                reply.output,
+                                config
+                            );
+                            break;
+                        case "warnings":
+                            processErrors(reply.warnings, true);
+                            Extension.setSimulationDataAndDisplay(
+                                reply.output,
+                                config
+                            );
+                            break;
+                        case "failure":
+                            processErrors(reply.errors);
+                            break;
+                        default:
+                            vscode.window.showErrorMessage(
+                                "The call to the backend was invalid."
+                            );
+                            break;
+                    }
+                } else {
+                    console.error(
+                        "Backend did not return the expected format."
+                    );
+                    vscode.window.showErrorMessage(
+                        "Backend simulation did not return the expected format."
+                    );
+                }
+            });
         }
     });
 };
