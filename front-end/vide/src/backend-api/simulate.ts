@@ -34,6 +34,22 @@ const getInvalidReqs = (config: SimConfig, available: string[]): string[] => {
     return invalidVars;
 };
 
+const duplicatReqVars = (config: SimConfig): boolean => {
+    const names = config["requested vars"].map(({ name }) => name);
+    const duplicates = names.filter(
+        (name, index) => names.indexOf(name) !== index
+    );
+    return duplicates.length > 0;
+};
+
+const duplicatInputs = (config: SimConfig): boolean => {
+    const names = config.inputs.map(({ name }) => name);
+    const duplicates = names.filter(
+        (name, index) => names.indexOf(name) !== index
+    );
+    return duplicates.length > 0;
+};
+
 // API:
 //      methodName: "simulate"
 //      parameters:
@@ -77,6 +93,16 @@ const simulate = async (
                     "\n" +
                     "The available variables are:\n" +
                     indentString(availableVars.join("\n"))
+            );
+        } else if (duplicatReqVars(config)) {
+            console.error("Duplicate requested vars");
+            vscode.window.showErrorMessage(
+                "Some variables have been requested multiple times. Duplicated requested variables are not supported."
+            );
+        } else if (duplicatInputs(config)) {
+            console.error("Duplicate input");
+            vscode.window.showErrorMessage(
+                "Some inputs have been provided multiple times. Duplicated inputs are not supported."
             );
         } else {
             getPorts(
