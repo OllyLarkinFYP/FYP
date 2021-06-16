@@ -25,7 +25,8 @@ export const addRequestedVar = (configDoc: vscode.TextDocument) => {
                     .showQuickPick(variables, {
                         canPickMany: false,
                         title: "Add new requested variable (1/3)",
-                        placeHolder: "Please choose a variable",
+                        placeHolder:
+                            "Please choose a variable or press escape to cancel",
                     })
                     .then((variable) => {
                         if (variable) {
