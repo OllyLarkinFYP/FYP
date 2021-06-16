@@ -3,6 +3,7 @@ import Extension from "./extension-components";
 import { initialiseErrorChecking } from "./error-checking";
 import { simulateFromModule, simulateFromConfig } from "./backend-api/simulate";
 import { checkDotnetVersion } from "./check-dotnet-ver";
+import { addRequestedVar } from "./add-requested-var";
 
 export function activate(context: vscode.ExtensionContext) {
     if (!checkDotnetVersion()) {
@@ -60,6 +61,19 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vide.zoomOutWave", () => {
             Extension.zoomOutWave();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.addRequestedVar", () => {
+            if (
+                vscode.window.activeTextEditor &&
+                vscode.window.activeTextEditor.document.fileName.match(
+                    /.*\.simconfig\.json/
+                )
+            ) {
+                addRequestedVar(vscode.window.activeTextEditor.document);
+            }
         })
     );
 }
