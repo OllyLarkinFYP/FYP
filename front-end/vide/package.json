@@ -39,6 +39,12 @@
                 "title": "Zoom Out Wave",
                 "category": "VIDE",
                 "icon": "$(zoom-out)"
+            },
+            {
+                "command": "vide.addRequestedVar",
+                "title": "Add Requested Variable",
+                "category": "VIDE",
+                "icon": "$(add)"
             }
         ],
         "menus": {
@@ -54,22 +60,31 @@
                 {
                     "command": "vide.zoomOutWave",
                     "when": "vide.dotnet-installed && vide.waveformOpen"
+                },
+                {
+                    "command": "vide.addRequestedVar",
+                    "when": "vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/"
                 }
             ],
             "editor/title": [
                 {
                     "command": "vide.simulate",
                     "when": "vide.dotnet-installed && resourceLangId == verilog || vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/",
-                    "group": "navigation@3"
+                    "group": "navigation@4"
                 },
                 {
                     "command": "vide.zoomInWave",
                     "when": "vide.dotnet-installed && vide.waveformOpen",
-                    "group": "navigation@2"
+                    "group": "navigation@3"
                 },
                 {
                     "command": "vide.zoomOutWave",
                     "when": "vide.dotnet-installed && vide.waveformOpen",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "vide.addRequestedVar",
+                    "when": "vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/",
                     "group": "navigation@1"
                 }
             ]
