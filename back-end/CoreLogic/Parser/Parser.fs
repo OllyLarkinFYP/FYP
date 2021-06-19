@@ -1,8 +1,10 @@
 namespace Parser
 
 open System
+open System.Text.RegularExpressions
 open FParsec
 open Parser
+open CommonTypes
 
 module private Helpers =
     // TODO: this really really needs to be made better
@@ -59,4 +61,7 @@ module Parse =
         let srcTxt = 
             source
             |> Helpers.removeComments
-        runParserOnString LangConstructs.pSourceText file "" srcTxt 
+        runParserOnString LangConstructs.pSourceText file "" srcTxt
+        |> function
+        | Success (res, _, _) -> Result.Ok res
+        | Failure (msg, err, _) -> Result.Error <| Helpers.toWithPosResult srcTxt file err msg

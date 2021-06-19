@@ -1,0 +1,14 @@
+{
+    "begin/end": {
+        "prefix": "begin",
+        "body": ["begin", "\t${0}", "end"]
+    },
+    "always": {
+        "prefix": "always",
+        "body": ["always @(${1}) begin", "\t${0}", "end"]
+    },
+    "always @*": {
+        "prefix": "always @*",
+        "body": ["always @* begin", "\t${0}", "end"]
+    }
+}

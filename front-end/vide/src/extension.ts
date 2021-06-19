@@ -1,26 +1,81 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import Extension from "./extension-components";
+import { initialiseErrorChecking } from "./error-checking";
+import { simulateFromModule, simulateFromConfig } from "./backend-api/simulate";
+import { checkDotnetVersion } from "./check-dotnet-ver";
+import { addRequestedVar } from "./add-requested-var";
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "vide" is now active!');
+    if (!checkDotnetVersion()) {
+        vscode.commands.executeCommand(
+            "setContext",
+            "vide.dotnet-installed",
+            false
+        );
+        return;
+    }
+    vscode.commands.executeCommand("setContext", "vide.dotnet-installed", true);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('vide.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from VIDE!');
-	});
+    console.log("VIDE is now active");
 
-	context.subscriptions.push(disposable);
+    Extension.setContext(context);
+
+    const diagnosticsCollection = vscode.languages.createDiagnosticCollection();
+    context.subscriptions.push(diagnosticsCollection);
+    Extension.initDiagnostics(diagnosticsCollection);
+
+    const outputChannel = vscode.window.createOutputChannel("VIDE");
+    context.subscriptions.push(outputChannel);
+    Extension.initOutputChannel(outputChannel);
+
+    initialiseErrorChecking(context);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.simulate", () => {
+            if (
+                vscode.window.activeTextEditor &&
+                vscode.window.activeTextEditor.document.languageId === "verilog"
+            ) {
+                simulateFromModule(vscode.window.activeTextEditor.document);
+            } else if (
+                vscode.window.activeTextEditor &&
+                /.*\.simconfig\.json/.test(
+                    vscode.window.activeTextEditor.document.fileName
+                )
+            ) {
+                simulateFromConfig(vscode.window.activeTextEditor.document);
+            } else {
+                vscode.window.showErrorMessage(
+                    "There is no active editor or open module to simulate"
+                );
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.zoomInWave", () => {
+            Extension.zoomInWave();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.zoomOutWave", () => {
+            Extension.zoomOutWave();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vide.addRequestedVar", () => {
+            if (
+                vscode.window.activeTextEditor &&
+                vscode.window.activeTextEditor.document.fileName.match(
+                    /.*\.simconfig\.json/
+                )
+            ) {
+                addRequestedVar(vscode.window.activeTextEditor.document);
+            }
+        })
+    );
 }
 
-// this method is called when your extension is deactivated
 export function deactivate() {}

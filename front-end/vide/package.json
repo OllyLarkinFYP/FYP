@@ -3,6 +3,7 @@
     "displayName": "VIDE",
     "description": "",
     "version": "0.0.1",
+    "publisher": "olly-larkin",
     "engines": {
         "vscode": "^1.56.0"
     },
@@ -10,21 +11,133 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:vide.helloWorld"
+        "workspaceContains:**/*.v"
     ],
     "main": "./out/extension.js",
     "contributes": {
+        "jsonValidation": [
+            {
+                "fileMatch": "*.simconfig.json",
+                "url": "./syntaxes/json-schema/simconfig.schema.json"
+            }
+        ],
         "commands": [
             {
-                "command": "vide.helloWorld",
-                "title": "Hello World"
+                "command": "vide.simulate",
+                "title": "Simulate",
+                "category": "VIDE",
+                "icon": "$(debug-start)"
+            },
+            {
+                "command": "vide.zoomInWave",
+                "title": "Zoom In Wave",
+                "category": "VIDE",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "vide.zoomOutWave",
+                "title": "Zoom Out Wave",
+                "category": "VIDE",
+                "icon": "$(zoom-out)"
+            },
+            {
+                "command": "vide.addRequestedVar",
+                "title": "Add Requested Variable",
+                "category": "VIDE",
+                "icon": "$(add)"
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "vide.simulate",
+                    "when": "vide.dotnet-installed && resourceLangId == verilog || vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/"
+                },
+                {
+                    "command": "vide.zoomInWave",
+                    "when": "vide.dotnet-installed && vide.waveformOpen"
+                },
+                {
+                    "command": "vide.zoomOutWave",
+                    "when": "vide.dotnet-installed && vide.waveformOpen"
+                },
+                {
+                    "command": "vide.addRequestedVar",
+                    "when": "vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "vide.simulate",
+                    "when": "vide.dotnet-installed && resourceLangId == verilog || vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/",
+                    "group": "navigation@4"
+                },
+                {
+                    "command": "vide.zoomInWave",
+                    "when": "vide.dotnet-installed && vide.waveformOpen",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "vide.zoomOutWave",
+                    "when": "vide.dotnet-installed && vide.waveformOpen",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "vide.addRequestedVar",
+                    "when": "vide.dotnet-installed && resourcePath =~ /.*\\.simconfig\\.json/",
+                    "group": "navigation@1"
+                }
+            ]
+        },
+        "keybindings": [
+            {
+                "command": "vide.simulate",
+                "key": "ctrl+r",
+                "mac": "cmd+r",
+                "when": "vide.dotnet-installed && (resourceLangId == verilog || resourcePath =~ /.*\\.simconfig\\.json/)"
+            },
+            {
+                "command": "vide.zoomInWave",
+                "key": "ctrl+alt+oem_plus",
+                "mac": "cmd+alt+oem_plus",
+                "when": "vide.dotnet-installed && vide.waveformOpen"
+            },
+            {
+                "command": "vide.zoomOutWave",
+                "key": "ctrl+alt+oem_minus",
+                "mac": "cmd+alt+oem_minus",
+                "when": "vide.dotnet-installed && vide.waveformOpen"
+            }
+        ],
+        "languages": [
+            {
+                "id": "verilog",
+                "extensions": [
+                    ".v"
+                ],
+                "configuration": "./syntaxes/verilog/verilog.language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "verilog",
+                "scopeName": "source.verilog",
+                "path": "./syntaxes/verilog/verilog.tmLanguage.xml"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "verilog",
+                "path": "./snippets/verilog.snippets.json"
             }
         ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "precompile": "ts-node build-backend.ts",
+        "build-backend": "ts-node build-backend.ts",
+        "precompile": "npm run build-backend",
         "compile": "tsc -p ./",
+        "prewatch": "npm run build-backend",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts"
@@ -44,5 +157,8 @@
         "ts-node": "^10.0.0",
         "typescript": "^4.3.2",
         "vscode-test": "^1.5.2"
+    },
+    "dependencies": {
+        "tiny-typed-emitter": "^2.0.3"
     }
 }

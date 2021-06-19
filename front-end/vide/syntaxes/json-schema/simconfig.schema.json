@@ -1,0 +1,66 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Simulation Configuration",
+    "description": "The configuration file which defines the properties for simulating the related module",
+    "required": ["cycles"],
+    "type": "object",
+    "properties": {
+        "cycles": {
+            "description": "The number of cycles that simualtion will run for",
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+        },
+        "requested vars": {
+            "description": "The vars that will be recorded in the output. For variables within a module instance, use the module instance name and a colon as a prefix (e.g. modinst:var)",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "the name of the variable to include in the waveform",
+                        "type": "string"
+                    },
+                    "breakdown": {
+                        "description": "Should the waveform show the individual bits as well as the full signal",
+                        "type": "boolean"
+                    },
+                    "format": {
+                        "description": "The format that the numbers should be displayed in. Options are bin, oct, dec, or hex",
+                        "type": "string",
+                        "enum": ["bin", "oct", "hex", "dec"]
+                    }
+                },
+                "required": ["name", "breakdown", "format"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+        },
+        "inputs": {
+            "description": "The inputs that will be provided to the module during simulation",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "repeating", "values"],
+                "properties": {
+                    "name": {
+                        "description": "The name of the variable",
+                        "type": "string"
+                    },
+                    "repeating": {
+                        "description": "Is the array of values repeating or not? (If not the last value will stay unchanged for the remaining cycles)",
+                        "type": "boolean"
+                    },
+                    "values": {
+                        "description": "The array of values that will be provided as inputs during simulation for this variable. If 'repeating' is true, then this will loop",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": "^([01X]+|[01x]+)$"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
