@@ -53,9 +53,41 @@ module SimulatorTests =
                 values = [| "0"; "1"; "1"; "0" |] }|]
         testSim "simulator runs" [|testProg|] inputs expOut
 
-    
+    let posedgeTriggersCorrectly =
+        let testProg = """
+            module test(input a, output reg b);
+                always @(posedge a) b = 1;
+                always @(negedge a) b = 0;
+            endmodule
+            """
+        let inputs =
+            [|{ name = "a"
+                repeating = false
+                values = [| "0"; "1" |] }|]
+        let expOut =
+            [|{ name = "b"
+                values = [| "0"; "1" |] }|]
+        testSim "posedge triggers" [|testProg|] inputs expOut
+
+    let negedgeTriggersCorrectly =
+        let testProg = """
+            module test(input a, output reg b);
+                always @(posedge a) b = 1;
+                always @(negedge a) b = 0;
+            endmodule
+            """
+        let inputs =
+            [|{ name = "a"
+                repeating = false
+                values = [| "1"; "0" |] }|]
+        let expOut =
+            [|{ name = "b"
+                values = [| "1"; "0" |] }|]
+        testSim "negedge triggers" [|testProg|] inputs expOut
     
     let allTests =
         testList "All Simulator Tests" [
             simulatorRuns
+            posedgeTriggersCorrectly
+            negedgeTriggersCorrectly
         ]
