@@ -84,10 +84,31 @@ module SimulatorTests =
             [|{ name = "b"
                 values = [| "1"; "0" |] }|]
         testSim "negedge triggers" [|testProg|] inputs expOut
+
+    let initialRunsAtBeginning =
+        let testProg = """
+            module test(input a, output reg [1:0] b);
+                reg [1:0] c;
+                initial begin 
+                    b = 0;
+                    c = 3;
+                end
+                always @(posedge a) b = c;
+            endmodule
+            """
+        let inputs =
+            [|{ name = "a" 
+                repeating = false 
+                values = [| "0"; "1" |] }|]
+        let expOut =
+            [|{ name = "b"
+                values = [| "00"; "11" |] }|]
+        testSim "initial runs at beginning" [|testProg|] inputs expOut
     
     let allTests =
         testList "All Simulator Tests" [
             simulatorRuns
             posedgeTriggersCorrectly
             negedgeTriggersCorrectly
+            initialRunsAtBeginning
         ]
