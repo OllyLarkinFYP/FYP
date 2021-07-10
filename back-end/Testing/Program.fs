@@ -9,6 +9,7 @@ let tests =
         VNumTests.allTests
         TokenTests.allTests
         ExpressionsTests.allTests
+        SimulatorTests.allTests
     ] 
 
 [<EntryPoint>] 

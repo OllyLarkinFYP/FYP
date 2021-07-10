@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Expecto" Version="9.0.2" />
+    <PackageReference Include="Expecto.FsCheck" Version="9.0.2" />
+    <PackageReference Include="FsCheck" Version="2.15.3" />
     <PackageReference Include="NUnit" Version="3.12.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
@@ -21,6 +23,7 @@
     <Compile Include="VNum.Test.fs" />
     <Compile Include="Parser/Tokens.Test.fs" />
     <Compile Include="Parser/Expressions.Test.fs" />
+    <Compile Include="Simulator.Test.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
