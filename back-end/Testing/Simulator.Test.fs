@@ -57,7 +57,6 @@ module SimulatorTests =
         let testProg = """
             module test(input a, output reg b);
                 always @(posedge a) b = 1;
-                always @(negedge a) b = 0;
             endmodule
             """
         let inputs =
@@ -66,14 +65,13 @@ module SimulatorTests =
                 values = [| "0"; "1" |] }|]
         let expOut =
             [|{ name = "b"
-                values = [| "0"; "1" |] }|]
+                values = [| "x"; "1" |] }|]
         testSim "posedge triggers" [|testProg|] inputs expOut
 
     let negedgeTriggersCorrectly =
         let testProg = """
             module test(input a, output reg b);
-                always @(posedge a) b = 1;
-                always @(negedge a) b = 0;
+                always @(negedge a) b = 1;
             endmodule
             """
         let inputs =
@@ -82,7 +80,7 @@ module SimulatorTests =
                 values = [| "1"; "0" |] }|]
         let expOut =
             [|{ name = "b"
-                values = [| "1"; "0" |] }|]
+                values = [| "x"; "1" |] }|]
         testSim "negedge triggers" [|testProg|] inputs expOut
 
     let initialRunsAtBeginning =
@@ -104,6 +102,21 @@ module SimulatorTests =
             [|{ name = "b"
                 values = [| "00"; "11" |] }|]
         testSim "initial runs at beginning" [|testProg|] inputs expOut
+
+    let alwaysBlockNoSelfTrigger =
+        let testProg = """
+            module test(input a, output reg b);
+                always @(posedge a, b) b = 1;
+            endmodule
+            """
+        let inputs =
+            [|{ name = "a" 
+                repeating = false 
+                values = [| "0"; "1" |] }|]
+        let expOut =
+            [|{ name = "b"
+                values = [| "x"; "1" |] }|]
+        testSim "always block cannot trigger itself" [|testProg|] inputs expOut
     
     let allTests =
         testList "All Simulator Tests" [
@@ -111,4 +124,5 @@ module SimulatorTests =
             posedgeTriggersCorrectly
             negedgeTriggersCorrectly
             initialRunsAtBeginning
+            alwaysBlockNoSelfTrigger
         ]
