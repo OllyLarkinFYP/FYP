@@ -117,6 +117,24 @@ module SimulatorTests =
             [|{ name = "b"
                 values = [| "x"; "1" |] }|]
         testSim "always block cannot trigger itself" [|testProg|] inputs expOut
+
+    let nonblockingAfterBlocking =
+        let testProg = """
+            module test(input a, output reg b);
+                always @(posedge a) begin
+                    b <= 1;
+                    b = 0;
+                end
+            endmodule
+            """
+        let inputs =
+            [|{ name = "a" 
+                repeating = false 
+                values = [| "1" |] }|]
+        let expOut =
+            [|{ name = "b"
+                values = [| "1" |] }|]
+        testSim "non-blocking assignment occurs after always block is run" [|testProg|] inputs expOut
     
     let allTests =
         testList "All Simulator Tests" [
@@ -125,4 +143,5 @@ module SimulatorTests =
             negedgeTriggersCorrectly
             initialRunsAtBeginning
             alwaysBlockNoSelfTrigger
+            nonblockingAfterBlocking
         ]
