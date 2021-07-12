@@ -1,6 +1,13 @@
 name: CI
 
-on: pull_request
+on:
+    push:
+        branches:
+            - main
+            - adding-tests
+    pull_request:
+        branches:
+            - main
 
 jobs:
     build-front-end:
