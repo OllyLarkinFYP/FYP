@@ -2,8 +2,12 @@
     "name": "vide",
     "displayName": "VIDE",
     "description": "",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "olly-larkin",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/OllyLarkinFYP/FYP/"
+    },
     "engines": {
         "vscode": "^1.56.0"
     },
