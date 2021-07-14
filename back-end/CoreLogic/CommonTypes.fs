@@ -183,11 +183,9 @@ type VNum(value: uint64, size: uint, unknownBits: uint list) =
         let newUnknowns =
             shiftedVal.unknownBits @ oldUnknowns
             |> List.distinct
-        let allOnes = ~~~0UL
-        // let mask = (allOnes <<< int (width - range.upper - 1u)) <<< int range.lower
         let mask =
             (0UL, [range.lower .. range.upper])
-            ||> List.fold (fun m v -> m ||| 1UL <<< int v)
+            ||> List.fold (fun m v -> m + (1UL <<< int v))
         let newVal = shiftedVal.value &&& mask
         let oldVal = this.value &&& (~~~mask)
         VNum(newVal ||| oldVal, this.size, newUnknowns).trim()
