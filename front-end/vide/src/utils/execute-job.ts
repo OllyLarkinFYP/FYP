@@ -32,7 +32,8 @@ export const executeJob = (
             .replace(/"/g, '\\"')
             .replace(/</g, "^<")
             .replace(/>/g, "^>")
-            .replace(/\|/g, "^|");
+            .replace(/\|/g, "^|")
+            .replace(/&/g, "^&");
     } else {
         jobString = JSON.stringify({ ...job, id: 0 }).replace(/"/g, '\\"');
     }
