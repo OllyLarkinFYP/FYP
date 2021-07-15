@@ -239,12 +239,16 @@ module private Helpers =
             | BlockingAssignment ba ->
                 ba
                 |> List.map (fun assignment ->
-                    { assignment with name = prefix + assignment.name })
+                    { name = prefix + assignment.name
+                      driver =
+                          { assignment.driver with exp = prefixExpCont assignment.driver.exp } })
                 |> BlockingAssignment
             | NonblockingAssignment nba -> 
                 nba
                 |> List.map (fun assignment ->
-                    { assignment with name = prefix + assignment.name })
+                    { name = prefix + assignment.name
+                      driver =
+                          { assignment.driver with exp = prefixExpCont assignment.driver.exp } })
                 |> NonblockingAssignment
             | Case cs -> 
                 let prefixCaseItem (ci: CaseItem) = 
