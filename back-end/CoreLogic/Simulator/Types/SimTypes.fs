@@ -105,7 +105,7 @@ module SimState =
 
     let addWire (varMap: VarMap) (state: SimState) iden range value =
         let (currVal, currRanges) =
-            if contains state iden range
+            if state.ContainsKey iden
             then state.[iden].value, state.[iden].simType.ranges
             else VNum.unknown varMap.[iden].range.size, []
         let cont =
