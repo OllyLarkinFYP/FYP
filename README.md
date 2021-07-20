@@ -2,6 +2,8 @@
 
 VIDE is a VSCode extension and a backend application that serves it to allow the editing and simulation of Verilog projects. A user guide can be found in chapter 9 of the report.
 
+A NuGet package was built specifically for use in this project and can be found at: https://github.com/OllyLarkinFYP/MethodDispatch. 
+
 ## Project Structure
 
 -   `back-end`: Contains the backend application code and tests that. The backend provides parsing, compiling, and simulation capabilities.
